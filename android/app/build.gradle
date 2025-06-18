@@ -20,7 +20,7 @@ try {
 }
 
 android {
-    namespace "com.zulip.flutter"
+    namespace "com.mygento.zulip"
 
     compileSdkVersion flutter.compileSdkVersion
 

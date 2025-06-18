@@ -2,7 +2,7 @@
 // See also: https://pub.dev/packages/pigeon
 @file:Suppress("UNCHECKED_CAST", "ArrayInDataClass")
 
-package com.zulip.flutter
+package com.mygento.zulip
 
 import android.util.Log
 import io.flutter.plugin.common.BasicMessageChannel
@@ -63,7 +63,7 @@ private object AndroidNotificationsPigeonUtils {
     }
     return a == b
   }
-      
+
 }
 
 /**

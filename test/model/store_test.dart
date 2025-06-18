@@ -352,7 +352,7 @@ void main() {
 
     // TODO test database gets updated correctly (an integration test with sqlite?)
   });
-  
+
   test('GlobalStore.updateZulipVersionData', () async {
     final [currentZulipVersion,          newZulipVersion             ]
         = ['10.0-beta2-302-gf5b08b11f4', '10.0-beta2-351-g75ac8fe961'];
@@ -1293,7 +1293,7 @@ void main() {
       // (This is probably the common case.)
       addTearDown(testBinding.reset);
       testBinding.firebaseMessagingInitialToken = '012abc';
-      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.zulip.flutter');
+      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.mygento.zulip');
       addTearDown(NotificationService.debugReset);
       await NotificationService.instance.start();
 
@@ -1304,7 +1304,7 @@ void main() {
       if (defaultTargetPlatform == TargetPlatform.android) {
         checkLastRequestFcm(token: '012abc');
       } else {
-        checkLastRequestApns(token: '012abc', appid: 'com.zulip.flutter');
+        checkLastRequestApns(token: '012abc', appid: 'com.mygento.zulip');
       }
 
       if (defaultTargetPlatform == TargetPlatform.android) {
@@ -1321,7 +1321,7 @@ void main() {
       // request for the token is still pending.
       addTearDown(testBinding.reset);
       testBinding.firebaseMessagingInitialToken = '012abc';
-      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.zulip.flutter');
+      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.mygento.zulip');
       addTearDown(NotificationService.debugReset);
       final startFuture = NotificationService.instance.start();
 
@@ -1345,7 +1345,7 @@ void main() {
       if (defaultTargetPlatform == TargetPlatform.android) {
         checkLastRequestFcm(token: '012abc');
       } else {
-        checkLastRequestApns(token: '012abc', appid: 'com.zulip.flutter');
+        checkLastRequestApns(token: '012abc', appid: 'com.mygento.zulip');
       }
 
       if (defaultTargetPlatform == TargetPlatform.android) {

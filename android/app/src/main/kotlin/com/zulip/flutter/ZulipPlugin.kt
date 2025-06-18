@@ -1,4 +1,4 @@
-package com.zulip.flutter
+package com.mygento.zulip
 
 import android.annotation.SuppressLint
 import android.content.ContentUris

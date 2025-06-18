@@ -1080,7 +1080,7 @@ class LiveGlobalStore extends GlobalStore {
     //     on Android, -> Flutter's PathUtils.getFilesDir -> https://developer.android.com/reference/android/content/Context#getFilesDir()
     //       -> empirically /data/data/com.zulipmobile/files/
     //     on iOS, -> "Library/Application Support" via https://developer.apple.com/documentation/foundation/nssearchpathdirectory/nsapplicationsupportdirectory
-    //     on Linux, -> "${XDG_DATA_HOME:-~/.local/share}/com.zulip.flutter/"
+    //     on Linux, -> "${XDG_DATA_HOME:-~/.local/share}/com.mygento.zulip/"
     //     All seem reasonable.
     //   path_provider's getApplicationDocumentsDirectory:
     //     on Android, -> Flutter's PathUtils.getDataDirectory -> https://developer.android.com/reference/android/content/Context#getDir(java.lang.String,%20int)
