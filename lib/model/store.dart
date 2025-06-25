@@ -26,6 +26,7 @@ import 'emoji.dart';
 import 'localizations.dart';
 import 'message.dart';
 import 'message_list.dart';
+import 'presence.dart';
 import 'recent_dm_conversations.dart';
 import 'recent_senders.dart';
 import 'channel.dart';
@@ -474,9 +475,12 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
     final channels = ChannelStoreImpl(initialSnapshot: initialSnapshot);
     return PerAccountStore._(
       core: core,
+      serverPresencePingIntervalSeconds: initialSnapshot.serverPresencePingIntervalSeconds,
+      serverPresenceOfflineThresholdSeconds: initialSnapshot.serverPresenceOfflineThresholdSeconds,
       realmWildcardMentionPolicy: initialSnapshot.realmWildcardMentionPolicy,
       realmMandatoryTopics: initialSnapshot.realmMandatoryTopics,
       realmWaitingPeriodThreshold: initialSnapshot.realmWaitingPeriodThreshold,
+      realmPresenceDisabled: initialSnapshot.realmPresenceDisabled,
       maxFileUploadSizeMib: initialSnapshot.maxFileUploadSizeMib,
       realmEmptyTopicDisplayName: initialSnapshot.realmEmptyTopicDisplayName,
       realmAllowMessageEditing: initialSnapshot.realmAllowMessageEditing,
@@ -498,8 +502,12 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
       ),
       users: UserStoreImpl(core: core, initialSnapshot: initialSnapshot),
       typingStatus: TypingStatus(core: core,
-        typingStartedExpiryPeriod: Duration(milliseconds: initialSnapshot.serverTypingStartedExpiryPeriodMilliseconds),
-      ),
+        typingStartedExpiryPeriod: Duration(milliseconds: initialSnapshot.serverTypingStartedExpiryPeriodMilliseconds)),
+      presence: Presence(core: core,
+        serverPresencePingInterval: Duration(seconds: initialSnapshot.serverPresencePingIntervalSeconds),
+        serverPresenceOfflineThresholdSeconds: initialSnapshot.serverPresenceOfflineThresholdSeconds,
+        realmPresenceDisabled: initialSnapshot.realmPresenceDisabled,
+        initial: initialSnapshot.presences),
       channels: channels,
       messages: MessageStoreImpl(core: core,
         realmEmptyTopicDisplayName: initialSnapshot.realmEmptyTopicDisplayName),
@@ -516,9 +524,12 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
 
   PerAccountStore._({
     required super.core,
+    required this.serverPresencePingIntervalSeconds,
+    required this.serverPresenceOfflineThresholdSeconds,
     required this.realmWildcardMentionPolicy,
     required this.realmMandatoryTopics,
     required this.realmWaitingPeriodThreshold,
+    required this.realmPresenceDisabled,
     required this.maxFileUploadSizeMib,
     required String? realmEmptyTopicDisplayName,
     required this.realmAllowMessageEditing,
@@ -532,6 +543,7 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
     required this.typingNotifier,
     required UserStoreImpl users,
     required this.typingStatus,
+    required this.presence,
     required ChannelStoreImpl channels,
     required MessageStoreImpl messages,
     required this.unreads,
@@ -570,12 +582,16 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
   ////////////////////////////////
   // Data attached to the realm or the server.
 
+  final int serverPresencePingIntervalSeconds;
+  final int serverPresenceOfflineThresholdSeconds;
+
   final RealmWildcardMentionPolicy realmWildcardMentionPolicy; // TODO(#668): update this realm setting
   final bool realmMandatoryTopics;  // TODO(#668): update this realm setting
   /// For docs, please see [InitialSnapshot.realmWaitingPeriodThreshold].
   final int realmWaitingPeriodThreshold;  // TODO(#668): update this realm setting
   final bool realmAllowMessageEditing; // TODO(#668): update this realm setting
   final int? realmMessageContentEditLimitSeconds; // TODO(#668): update this realm setting
+  final bool realmPresenceDisabled; // TODO(#668): update this realm setting
   final int maxFileUploadSizeMib; // No event for this.
 
   /// The display name to use for empty topics.
@@ -652,6 +668,8 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
   final UserStoreImpl _users;
 
   final TypingStatus typingStatus;
+
+  final Presence presence;
 
   /// Whether [user] has passed the realm's waiting period to be a full member.
   ///
@@ -952,6 +970,10 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
         assert(debugLog("server event: typing/${event.op} ${event.messageType}"));
         typingStatus.handleTypingEvent(event);
 
+      case PresenceEvent():
+        // TODO handle
+        break;
+
       case ReactionEvent():
         assert(debugLog("server event: reaction/${event.op}"));
         _messages.handleReactionEvent(event);
@@ -1214,6 +1236,7 @@ class UpdateMachine {
     // TODO do registerNotificationToken before registerQueue:
     //   https://github.com/zulip/zulip-flutter/pull/325#discussion_r1365982807
     unawaited(updateMachine.registerNotificationToken());
+    store.presence.start();
     return updateMachine;
   }
 
