@@ -32,6 +32,8 @@ extension GlobalSettingsStoreChecks on Subject<GlobalSettingsStore> {
   Subject<BrowserPreference?> get browserPreference => has((x) => x.browserPreference, 'browserPreference');
   Subject<BrowserPreference> get effectiveBrowserPreference => has((x) => x.effectiveBrowserPreference, 'effectiveBrowserPreference');
   Subject<UrlLaunchMode> getUrlLaunchMode(Uri url) => has((x) => x.getUrlLaunchMode(url), 'getUrlLaunchMode');
+  Subject<VisitFirstUnreadSetting> get visitFirstUnread => has((x) => x.visitFirstUnread, 'visitFirstUnread');
+  Subject<MarkReadOnScrollSetting> get markReadOnScroll => has((x) => x.markReadOnScroll, 'markReadOnScroll');
   Subject<bool> getBool(BoolGlobalSetting setting) => has((x) => x.getBool(setting), 'getBool(${setting.name}');
 }
 
@@ -45,7 +47,7 @@ extension GlobalStoreChecks on Subject<GlobalStore> {
 
 extension PerAccountStoreChecks on Subject<PerAccountStore> {
   Subject<ApiConnection> get connection => has((x) => x.connection, 'connection');
-  Subject<bool> get isLoading => has((x) => x.isLoading, 'isLoading');
+  Subject<bool> get isRecoveringEventStream => has((x) => x.isRecoveringEventStream, 'isRecoveringEventStream');
   Subject<Uri> get realmUrl => has((x) => x.realmUrl, 'realmUrl');
   Subject<String> get zulipVersion => has((x) => x.zulipVersion, 'zulipVersion');
   Subject<bool> get realmMandatoryTopics => has((x) => x.realmMandatoryTopics, 'realmMandatoryTopics');

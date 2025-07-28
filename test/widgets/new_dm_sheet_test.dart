@@ -3,13 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/basic.dart';
+import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/app_bar.dart';
 import 'package:zulip/widgets/compose_box.dart';
-import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/home.dart';
 import 'package:zulip/widgets/icons.dart';
 import 'package:zulip/widgets/new_dm_sheet.dart';
 import 'package:zulip/widgets/store.dart';
+import 'package:zulip/widgets/user.dart';
 
 import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
@@ -17,10 +19,14 @@ import '../flutter_checks.dart';
 import '../model/binding.dart';
 import '../model/test_store.dart';
 import '../test_navigation.dart';
+import 'finders.dart';
 import 'test_app.dart';
+
+late PerAccountStore store;
 
 Future<void> setupSheet(WidgetTester tester, {
   required List<User> users,
+  List<int>? mutedUserIds,
 }) async {
   addTearDown(testBinding.reset);
 
@@ -29,8 +35,11 @@ Future<void> setupSheet(WidgetTester tester, {
     ..onPushed = (route, _) => lastPushedRoute = route;
 
   await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
-  final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+  store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
   await store.addUsers(users);
+  if (mutedUserIds != null) {
+    await store.setMutedUsers(mutedUserIds);
+  }
 
   await tester.pumpWidget(TestZulipApp(
     navigatorObservers: [testNavObserver],
@@ -61,7 +70,8 @@ void main() {
   }
 
   Finder findUserTile(User user) =>
-    find.widgetWithText(InkWell, user.fullName).first;
+    find.ancestor(of: findText(user.fullName, includePlaceholders: false),
+      matching: find.byType(InkWell)).first;
 
   Finder findUserChip(User user) {
     final findAvatar = find.byWidgetPredicate((widget) =>
@@ -112,20 +122,59 @@ void main() {
       eg.user(fullName: 'Charlie Carter'),
     ];
 
-    testWidgets('shows all users initially', (tester) async {
+    testWidgets('shows full list initially', (tester) async {
       await setupSheet(tester, users: testUsers);
-      check(find.text('Alice Anderson')).findsOne();
-      check(find.text('Bob Brown')).findsOne();
-      check(find.text('Charlie Carter')).findsOne();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Bob Brown')).findsOne();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsOne();
+      check(find.byIcon(ZulipIcons.check_circle_unchecked)).findsExactly(3);
+      check(find.byIcon(ZulipIcons.check_circle_checked)).findsNothing();
     });
 
     testWidgets('shows filtered users based on search', (tester) async {
       await setupSheet(tester, users: testUsers);
       await tester.enterText(find.byType(TextField), 'Alice');
       await tester.pump();
-      check(find.text('Alice Anderson')).findsOne();
-      check(find.text('Charlie Carter')).findsNothing();
-      check(find.text('Bob Brown')).findsNothing();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsNothing();
+      check(findText(includePlaceholders: false, 'Bob Brown')).findsNothing();
+    });
+
+    testWidgets('deactivated users excluded', (tester) async {
+      // Omit a deactivated user both before there's a query…
+      final deactivatedUser = eg.user(fullName: 'Impostor Charlie', isActive: false);
+      await setupSheet(tester, users: [...testUsers, deactivatedUser]);
+      check(findText(includePlaceholders: false, 'Impostor Charlie')).findsNothing();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsOne();
+      check(find.byIcon(ZulipIcons.check_circle_unchecked)).findsExactly(3);
+
+      // … and after a query that would match their name.
+      await tester.enterText(find.byType(TextField), 'Charlie');
+      await tester.pump();
+      check(findText(includePlaceholders: false, 'Impostor Charlie')).findsNothing();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsOne();
+      check(find.byIcon(ZulipIcons.check_circle_unchecked)).findsExactly(1);
+    });
+
+    testWidgets('muted users excluded', (tester) async {
+      // Omit muted users both before there's a query…
+      final mutedUser = eg.user(fullName: 'Someone Muted');
+      await setupSheet(tester,
+        users: [...testUsers, mutedUser], mutedUserIds: [mutedUser.userId]);
+      check(findText(includePlaceholders: false, 'Someone Muted')).findsNothing();
+      check(findText(includePlaceholders: false, 'Muted user')).findsNothing();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(find.byIcon(ZulipIcons.check_circle_unchecked)).findsExactly(3);
+
+      // … and after a query.  One which matches both the user's actual name and
+      // the replacement text "Muted user", for good measure.
+      await tester.enterText(find.byType(TextField), 'e');
+      await tester.pump();
+      check(findText(includePlaceholders: false, 'Someone Muted')).findsNothing();
+      check(findText(includePlaceholders: false, 'Muted user')).findsNothing();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsOne();
+      check(find.byIcon(ZulipIcons.check_circle_unchecked)).findsExactly(2);
     });
 
     // TODO test sorting by recent-DMs
@@ -135,11 +184,11 @@ void main() {
       await setupSheet(tester, users: testUsers);
       await tester.enterText(find.byType(TextField), 'alice');
       await tester.pump();
-      check(find.text('Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
 
       await tester.enterText(find.byType(TextField), 'ALICE');
       await tester.pump();
-      check(find.text('Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
     });
 
     testWidgets('partial name and last name search handling', (tester) async {
@@ -147,31 +196,31 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'Ali');
       await tester.pump();
-      check(find.text('Alice Anderson')).findsOne();
-      check(find.text('Bob Brown')).findsNothing();
-      check(find.text('Charlie Carter')).findsNothing();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Bob Brown')).findsNothing();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsNothing();
 
       await tester.enterText(find.byType(TextField), 'Anderson');
       await tester.pump();
-      check(find.text('Alice Anderson')).findsOne();
-      check(find.text('Charlie Carter')).findsNothing();
-      check(find.text('Bob Brown')).findsNothing();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsNothing();
+      check(findText(includePlaceholders: false, 'Bob Brown')).findsNothing();
 
       await tester.enterText(find.byType(TextField), 'son');
       await tester.pump();
-      check(find.text('Alice Anderson')).findsOne();
-      check(find.text('Charlie Carter')).findsNothing();
-      check(find.text('Bob Brown')).findsNothing();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsOne();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsNothing();
+      check(findText(includePlaceholders: false, 'Bob Brown')).findsNothing();
     });
 
     testWidgets('shows empty state when no users match', (tester) async {
       await setupSheet(tester, users: testUsers);
       await tester.enterText(find.byType(TextField), 'Zebra');
       await tester.pump();
-      check(find.text('No users found')).findsOne();
-      check(find.text('Alice Anderson')).findsNothing();
-      check(find.text('Bob Brown')).findsNothing();
-      check(find.text('Charlie Carter')).findsNothing();
+      check(findText(includePlaceholders: false, 'No users found')).findsOne();
+      check(findText(includePlaceholders: false, 'Alice Anderson')).findsNothing();
+      check(findText(includePlaceholders: false, 'Bob Brown')).findsNothing();
+      check(findText(includePlaceholders: false, 'Charlie Carter')).findsNothing();
     });
 
     testWidgets('search text clears when user is selected', (tester) async {
@@ -241,7 +290,7 @@ void main() {
       await tester.tap(findUserTile(eg.selfUser));
       await tester.pump();
       checkUserSelected(tester, eg.selfUser, true);
-      check(find.text(eg.selfUser.fullName)).findsExactly(2);
+      check(findText(includePlaceholders: false, eg.selfUser.fullName)).findsExactly(2);
 
       await tester.tap(findUserTile(otherUser));
       await tester.pump();
@@ -253,7 +302,7 @@ void main() {
       final otherUser = eg.user(fullName: 'Other User');
       await setupSheet(tester, users: [eg.selfUser, otherUser]);
 
-      check(find.text(eg.selfUser.fullName)).findsOne();
+      check(findText(includePlaceholders: false, eg.selfUser.fullName)).findsOne();
 
       await tester.tap(findUserTile(otherUser));
       await tester.pump();
@@ -271,6 +320,69 @@ void main() {
       await tester.pump();
       checkUserSelected(tester, user1, true);
       checkUserSelected(tester, user2, true);
+    });
+  });
+
+  group('User status', () {
+    void checkFindsTileStatusEmoji(WidgetTester tester, User user, Finder emojiFinder) {
+      final statusEmojiFinder = find.ancestor(of: emojiFinder,
+        matching: find.byType(UserStatusEmoji));
+      final tileStatusEmojiFinder = find.descendant(of: findUserTile(user),
+        matching: statusEmojiFinder);
+      check(tester.widget<UserStatusEmoji>(tileStatusEmojiFinder)
+        .neverAnimate).isTrue();
+      check(tileStatusEmojiFinder).findsOne();
+    }
+
+    void checkFindsChipStatusEmoji(WidgetTester tester, User user, Finder emojiFinder) {
+      final statusEmojiFinder = find.ancestor(of: emojiFinder,
+        matching: find.byType(UserStatusEmoji));
+      final chipStatusEmojiFinder = find.descendant(of: findUserChip(user),
+        matching: statusEmojiFinder);
+      check(tester.widget<UserStatusEmoji>(chipStatusEmojiFinder)
+        .neverAnimate).isTrue();
+      check(chipStatusEmojiFinder).findsOne();
+    }
+
+    testWidgets('emoji & text are set -> emoji is displayed, text is not', (tester) async {
+      final user = eg.user();
+      await setupSheet(tester, users: [user]);
+      await store.changeUserStatus(user.userId, UserStatusChange(
+        text: OptionSome('Busy'),
+        emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
+          emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
+      await tester.pump();
+
+      checkFindsTileStatusEmoji(tester, user, find.text('\u{1f6e0}'));
+      check(findUserChip(user)).findsNothing();
+      check(find.textContaining('Busy')).findsNothing();
+
+      await tester.tap(findUserTile(user));
+      await tester.pump();
+
+      checkFindsTileStatusEmoji(tester, user, find.text('\u{1f6e0}'));
+      check(findUserChip(user)).findsOne();
+      checkFindsChipStatusEmoji(tester, user, find.text('\u{1f6e0}'));
+      check(find.textContaining('Busy')).findsNothing();
+    });
+
+    testWidgets('emoji is not set, text is set -> text is not displayed', (tester) async {
+      final user = eg.user();
+      await setupSheet(tester, users: [user]);
+      await store.changeUserStatus(user.userId, UserStatusChange(
+        text: OptionSome('Busy'), emoji: OptionNone()));
+      await tester.pump();
+
+      check(findUserTile(user)).findsOne();
+      check(findUserChip(user)).findsNothing();
+      check(find.textContaining('Busy')).findsNothing();
+
+      await tester.tap(findUserTile(user));
+      await tester.pump();
+
+      check(findUserTile(user)).findsOne();
+      check(findUserChip(user)).findsOne();
+      check(find.textContaining('Busy')).findsNothing();
     });
   });
 

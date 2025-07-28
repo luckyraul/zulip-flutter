@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 
 import '../api/core.dart';
@@ -12,8 +11,10 @@ import '../model/binding.dart';
 import 'actions.dart';
 import 'content.dart';
 import 'dialog.dart';
+import 'message_list.dart';
 import 'page.dart';
 import 'store.dart';
+import 'user.dart';
 
 /// Identifies which [LightboxHero]s should match up with each other
 /// to produce a hero animation.
@@ -166,6 +167,8 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    final store = PerAccountStoreWidget.of(context);
     final themeData = Theme.of(context);
 
     final appBarBackgroundColor = Colors.grey.shade900.withValues(alpha: 0.87);
@@ -174,11 +177,11 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
 
     PreferredSizeWidget? appBar;
     if (_headerFooterVisible) {
-      // TODO(#45): Format with e.g. "Yesterday at 4:47 PM"
-      final timestampText = DateFormat
-        .yMMMd(/* TODO(#278): Pass selected language here, I think? */)
-        .add_Hms()
-        .format(DateTime.fromMillisecondsSinceEpoch(widget.message.timestamp * 1000));
+      final timestampText = MessageTimestampStyle.lightbox
+        .format(widget.message.timestamp,
+          now: DateTime.now(),
+          twentyFourHourTimeMode: store.userSettings.twentyFourHourTime,
+          zulipLocalizations: zulipLocalizations);
 
       // We use plain [AppBar] instead of [ZulipAppBar], even though this page
       // has a [PerAccountStore], because:
@@ -194,13 +197,19 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
         shape: const Border(), // Remove bottom border from [AppBarTheme]
         elevation: appBarElevation,
         title: Row(children: [
-          Avatar(size: 36, borderRadius: 36 / 8, userId: widget.message.senderId),
+          Avatar(
+            size: 36,
+            borderRadius: 36 / 8,
+            userId: widget.message.senderId,
+            replaceIfMuted: false,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: RichText(
               text: TextSpan(children: [
                 TextSpan(
-                  text: '${widget.message.senderFullName}\n', // TODO(#716): use `store.senderDisplayName`
+                  // TODO write a test where the sender is muted; check this and avatar
+                  text: '${store.senderDisplayName(widget.message, replaceIfMuted: false)}\n',
 
                   // Restate default
                   style: themeData.textTheme.titleLarge!.copyWith(color: appBarForegroundColor)),

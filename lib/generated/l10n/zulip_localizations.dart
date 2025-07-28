@@ -8,6 +8,7 @@ import 'package:intl/intl.dart' as intl;
 import 'zulip_localizations_ar.dart';
 import 'zulip_localizations_de.dart';
 import 'zulip_localizations_en.dart';
+import 'zulip_localizations_fr.dart';
 import 'zulip_localizations_it.dart';
 import 'zulip_localizations_ja.dart';
 import 'zulip_localizations_nb.dart';
@@ -108,6 +109,7 @@ abstract class ZulipLocalizations {
     Locale('ar'),
     Locale('de'),
     Locale('en', 'GB'),
+    Locale('fr'),
     Locale('it'),
     Locale('ja'),
     Locale('nb'),
@@ -845,6 +847,18 @@ abstract class ZulipLocalizations {
   /// **'DMs with {others}'**
   String dmsWithOthersPageTitle(String others);
 
+  /// Placeholder for some message-list pages when there are no messages.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no messages here.'**
+  String get emptyMessageList;
+
+  /// Placeholder for the 'Search' page when there are no messages.
+  ///
+  /// In en, this message translates to:
+  /// **'No search results.'**
+  String get emptyMessageListSearch;
+
   /// Message list recipient header for a DM group that only includes yourself.
   ///
   /// In en, this message translates to:
@@ -1161,6 +1175,24 @@ abstract class ZulipLocalizations {
   /// **'Yesterday'**
   String get yesterday;
 
+  /// Label for the 'Invisible mode' switch on the profile page.
+  ///
+  /// In en, this message translates to:
+  /// **'Invisible mode'**
+  String get invisibleMode;
+
+  /// Error title when turning on invisible mode failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Error turning on invisible mode. Please try again.'**
+  String get turnOnInvisibleModeErrorTitle;
+
+  /// Error title when turning off invisible mode failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Error turning off invisible mode. Please try again.'**
+  String get turnOffInvisibleModeErrorTitle;
+
   /// Label for UserRole.owner
   ///
   /// In en, this message translates to:
@@ -1196,6 +1228,24 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Unknown'**
   String get userRoleUnknown;
+
+  /// Page title for the 'Search' message view.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchMessagesPageTitle;
+
+  /// Hint text for the message search text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchMessagesHintText;
+
+  /// Tooltip for the 'x' button in the search text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get searchMessagesClearButtonTooltip;
 
   /// Title for the page with unreads.
   ///
@@ -1263,11 +1313,11 @@ abstract class ZulipLocalizations {
   /// **'My profile'**
   String get mainMenuMyProfile;
 
-  /// Label for message list button leading to topic-list page. (Use ALL CAPS for cased alphabets: Latin, Greek, Cyrillic, etc.)
+  /// Tooltip for button to navigate to topic-list page.
   ///
   /// In en, this message translates to:
-  /// **'TOPICS'**
-  String get topicsButtonLabel;
+  /// **'Topics'**
+  String get topicsButtonTooltip;
 
   /// Tooltip for button to navigate to a given channel's feed
   ///
@@ -1563,19 +1613,13 @@ abstract class ZulipLocalizations {
   /// **'No earlier messages'**
   String get noEarlierMessages;
 
-  /// Name for a muted user to display in message list.
-  ///
-  /// In en, this message translates to:
-  /// **'Muted sender'**
-  String get mutedSender;
-
   /// Label for the button revealing hidden message from a muted sender in message list.
   ///
   /// In en, this message translates to:
-  /// **'Reveal message for muted sender'**
+  /// **'Reveal message'**
   String get revealButtonLabel;
 
-  /// Name for a muted user to display all over the app.
+  /// Text to display in place of a muted user's name.
   ///
   /// In en, this message translates to:
   /// **'Muted user'**
@@ -1616,6 +1660,7 @@ class _ZulipLocalizationsDelegate
     'ar',
     'de',
     'en',
+    'fr',
     'it',
     'ja',
     'nb',
@@ -1660,6 +1705,8 @@ ZulipLocalizations lookupZulipLocalizations(Locale locale) {
       return ZulipLocalizationsDe();
     case 'en':
       return ZulipLocalizationsEn();
+    case 'fr':
+      return ZulipLocalizationsFr();
     case 'it':
       return ZulipLocalizationsIt();
     case 'ja':

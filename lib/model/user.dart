@@ -1,11 +1,19 @@
+import 'package:flutter/foundation.dart';
+
 import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
+import 'algorithms.dart';
 import 'localizations.dart';
+import 'narrow.dart';
+import 'realm.dart';
 import 'store.dart';
 
 /// The portion of [PerAccountStore] describing the users in the realm.
-mixin UserStore on PerAccountStoreBase {
+mixin UserStore on PerAccountStoreBase, RealmStore {
+  @protected
+  RealmStore get realmStore;
+
   /// The user with the given ID, if that user is known.
   ///
   /// There may be other users that are perfectly real but are
@@ -27,7 +35,10 @@ mixin UserStore on PerAccountStoreBase {
   /// Consider using [userDisplayName].
   User? getUser(int userId);
 
-  /// All known users in the realm.
+  /// All known users in the realm, including deactivated users.
+  ///
+  /// Before presenting these users in the UI, consider whether to exclude
+  /// users who are deactivated (see [User.isActive]) or muted ([isUserMuted]).
   ///
   /// This may have a large number of elements, like tens of thousands.
   /// Consider [getUser] or other alternatives to iterating through this.
@@ -44,27 +55,92 @@ mixin UserStore on PerAccountStoreBase {
 
   /// The name to show the given user as in the UI, even for unknown users.
   ///
-  /// This is the user's [User.fullName] if the user is known,
-  /// and otherwise a translation of "(unknown user)".
+  /// If the user is muted and [replaceIfMuted] is true (the default),
+  /// this is [ZulipLocalizations.mutedUser].
+  ///
+  /// Otherwise this is the user's [User.fullName] if the user is known,
+  /// or (if unknown) [ZulipLocalizations.unknownUserName].
   ///
   /// When a [Message] is available which the user sent,
   /// use [senderDisplayName] instead for a better-informed fallback.
-  String userDisplayName(int userId) {
+  String userDisplayName(int userId, {bool replaceIfMuted = true}) {
+    if (replaceIfMuted && isUserMuted(userId)) {
+      return GlobalLocalizations.zulipLocalizations.mutedUser;
+    }
     return getUser(userId)?.fullName
       ?? GlobalLocalizations.zulipLocalizations.unknownUserName;
   }
 
   /// The name to show for the given message's sender in the UI.
   ///
-  /// If the user is known (see [getUser]), this is their current [User.fullName].
+  /// If the sender is muted and [replaceIfMuted] is true (the default),
+  /// this is [ZulipLocalizations.mutedUser].
+  ///
+  /// Otherwise, if the user is known (see [getUser]),
+  /// this is their current [User.fullName].
   /// If unknown, this uses the fallback value conveniently provided on the
   /// [Message] object itself, namely [Message.senderFullName].
   ///
   /// For a user who isn't the sender of some known message,
   /// see [userDisplayName].
-  String senderDisplayName(Message message) {
-    return getUser(message.senderId)?.fullName
-      ?? message.senderFullName;
+  String senderDisplayName(Message message, {bool replaceIfMuted = true}) {
+    final senderId = message.senderId;
+    if (replaceIfMuted && isUserMuted(senderId)) {
+      return GlobalLocalizations.zulipLocalizations.mutedUser;
+    }
+    return getUser(senderId)?.fullName ?? message.senderFullName;
+  }
+
+  /// The user's real email address, if known, for displaying in the UI.
+  ///
+  /// Returns null if self-user isn't able to see the user's real email address,
+  /// or if the user isn't actually a user we know about.
+  String? userDisplayEmail(int userId) {
+    final user = getUser(userId);
+    if (user == null) return null;
+    if (zulipFeatureLevel >= 163) { // TODO(server-7)
+      // A non-null value means self-user has access to [user]'s real email,
+      // while a null value means it doesn't have access to the email.
+      // Search for "delivery_email" in https://zulip.com/api/register-queue.
+      return user.deliveryEmail;
+    } else {
+      if (user.deliveryEmail != null) {
+        // A non-null value means self-user has access to [user]'s real email,
+        // while a null value doesn't necessarily mean it doesn't have access
+        // to the email, ....
+        return user.deliveryEmail;
+      } else if (emailAddressVisibility == EmailAddressVisibility.everyone) {
+        // ... we have to also check for [PerAccountStore.emailAddressVisibility].
+        // See:
+        //   * https://github.com/zulip/zulip-mobile/pull/5515#discussion_r997731727
+        //   * https://chat.zulip.org/#narrow/stream/378-api-design/topic/email.20address.20visibility/near/1296133
+        return user.email;
+      } else {
+        return null;
+      }
+    }
+  }
+
+  /// Whether [user] has passed the realm's waiting period to be a full member.
+  ///
+  /// See:
+  ///   https://zulip.com/api/roles-and-permissions#determining-if-a-user-is-a-full-member
+  ///
+  /// To determine if a user is a full member, callers must also check that the
+  /// user's role is at least [UserRole.member].
+  bool hasPassedWaitingPeriod(User user, {required DateTime byDate}) {
+    // [User.dateJoined] is in UTC. For logged-in users, the format is:
+    // YYYY-MM-DDTHH:mm+00:00, which includes the timezone offset for UTC.
+    // For logged-out spectators, the format is: YYYY-MM-DD, which doesn't
+    // include the timezone offset. In the later case, [DateTime.parse] will
+    // interpret it as the client's local timezone, which could lead to
+    // incorrect results; but that's acceptable for now because the app
+    // doesn't support viewing as a spectator.
+    //
+    // See the related discussion:
+    //   https://chat.zulip.org/#narrow/channel/412-api-documentation/topic/provide.20an.20explicit.20format.20for.20.60realm_user.2Edate_joined.60/near/1980194
+    final dateJoined = DateTime.parse(user.dateJoined);
+    return byDate.difference(dateJoined).inDays >= realmWaitingPeriodThreshold;
   }
 
   /// Whether the user with [userId] is muted by the self-user.
@@ -72,6 +148,76 @@ mixin UserStore on PerAccountStoreBase {
   /// Looks for [userId] in a private [Set],
   /// or in [event.mutedUsers] instead if event is non-null.
   bool isUserMuted(int userId, {MutedUsersEvent? event});
+
+  /// Whether the self-user has muted everyone in [narrow].
+  ///
+  /// Returns false for the self-DM.
+  ///
+  /// Calls [isUserMuted] for each participant, passing along [event].
+  bool shouldMuteDmConversation(DmNarrow narrow, {MutedUsersEvent? event}) {
+    if (narrow.otherRecipientIds.isEmpty) return false;
+    return narrow.otherRecipientIds.every(
+      (userId) => isUserMuted(userId, event: event));
+  }
+
+  /// Whether the given event might change the result of [shouldMuteDmConversation]
+  /// for its list of muted users, compared to the current state.
+  MutedUsersVisibilityEffect mightChangeShouldMuteDmConversation(MutedUsersEvent event);
+
+  /// The status of the user with the given ID.
+  ///
+  /// If no status is set for the user, returns [UserStatus.zero].
+  UserStatus getUserStatus(int userId);
+}
+
+/// Whether and how a given [MutedUsersEvent] may affect the results
+/// that [UserStore.shouldMuteDmConversation] would give for some messages.
+enum MutedUsersVisibilityEffect {
+  /// The event will have no effect on the visibility results.
+  none,
+
+  /// The event may change some visibility results from true to false.
+  muted,
+
+  /// The event may change some visibility results from false to true.
+  unmuted,
+
+  /// The event may change some visibility results from false to true,
+  /// and some from true to false.
+  mixed;
+}
+
+mixin ProxyUserStore on UserStore {
+  @protected
+  UserStore get userStore;
+
+  @override
+  User? getUser(int userId) => userStore.getUser(userId);
+
+  @override
+  Iterable<User> get allUsers => userStore.allUsers;
+
+  @override
+  bool isUserMuted(int userId, {MutedUsersEvent? event}) =>
+    userStore.isUserMuted(userId, event: event);
+
+  @override
+  MutedUsersVisibilityEffect mightChangeShouldMuteDmConversation(MutedUsersEvent event) =>
+    userStore.mightChangeShouldMuteDmConversation(event);
+
+  @override
+  UserStatus getUserStatus(int userId) => userStore.getUserStatus(userId);
+}
+
+/// A base class for [PerAccountStore] substores that need access to [UserStore]
+/// as well as to its prerequisites [CorePerAccountStore] and [RealmStore].
+abstract class HasUserStore extends HasRealmStore with UserStore, ProxyUserStore {
+  HasUserStore({required UserStore users})
+    : userStore = users, super(realm: users.realmStore);
+
+  @protected
+  @override
+  final UserStore userStore;
 }
 
 /// The implementation of [UserStore] that does the work.
@@ -79,16 +225,18 @@ mixin UserStore on PerAccountStoreBase {
 /// Generally the only code that should need this class is [PerAccountStore]
 /// itself.  Other code accesses this functionality through [PerAccountStore],
 /// or through the mixin [UserStore] which describes its interface.
-class UserStoreImpl extends PerAccountStoreBase with UserStore {
+class UserStoreImpl extends HasRealmStore with UserStore {
   UserStoreImpl({
-    required super.core,
+    required super.realm,
     required InitialSnapshot initialSnapshot,
   }) : _users = Map.fromEntries(
          initialSnapshot.realmUsers
          .followedBy(initialSnapshot.realmNonActiveUsers)
          .followedBy(initialSnapshot.crossRealmBots)
          .map((user) => MapEntry(user.userId, user))),
-       _mutedUsers = Set.from(initialSnapshot.mutedUsers.map((item) => item.id));
+       _mutedUsers = Set.from(initialSnapshot.mutedUsers.map((item) => item.id)),
+       _userStatuses = initialSnapshot.userStatuses.map((userId, change) =>
+         MapEntry(userId, change.apply(UserStatus.zero)));
 
   final Map<int, User> _users;
 
@@ -104,6 +252,34 @@ class UserStoreImpl extends PerAccountStoreBase with UserStore {
   bool isUserMuted(int userId, {MutedUsersEvent? event}) {
     return (event?.mutedUsers.map((item) => item.id) ?? _mutedUsers).contains(userId);
   }
+
+  @override
+  MutedUsersVisibilityEffect mightChangeShouldMuteDmConversation(MutedUsersEvent event) {
+    final sortedOld = _mutedUsers.toList()..sort();
+    final sortedNew = event.mutedUsers.map((u) => u.id).toList()..sort();
+    assert(isSortedWithoutDuplicates(sortedOld));
+    assert(isSortedWithoutDuplicates(sortedNew));
+    final union = setUnion(sortedOld, sortedNew);
+
+    final willMuteSome = sortedOld.length < union.length;
+    final willUnmuteSome = sortedNew.length < union.length;
+
+    switch ((willUnmuteSome, willMuteSome)) {
+      case (true, false):
+        return MutedUsersVisibilityEffect.unmuted;
+      case (false, true):
+        return MutedUsersVisibilityEffect.muted;
+      case (true, true):
+        return MutedUsersVisibilityEffect.mixed;
+      case (false, false): // TODO(log)?
+        return MutedUsersVisibilityEffect.none;
+    }
+  }
+
+  final Map<int, UserStatus> _userStatuses;
+
+  @override
+  UserStatus getUserStatus(int userId) => _userStatuses[userId] ?? UserStatus.zero;
 
   void handleRealmUserEvent(RealmUserEvent event) {
     switch (event) {
@@ -142,6 +318,11 @@ class UserStoreImpl extends PerAccountStoreBase with UserStore {
           }
         }
     }
+  }
+
+  void handleUserStatusEvent(UserStatusEvent event) {
+    _userStatuses[event.userId] =
+      event.change.apply(getUserStatus(event.userId));
   }
 
   void handleMutedUsersEvent(MutedUsersEvent event) {

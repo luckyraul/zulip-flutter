@@ -26,23 +26,25 @@ import 'package:zulip/widgets/app_bar.dart';
 import 'package:zulip/widgets/button.dart';
 import 'package:zulip/widgets/compose_box.dart';
 import 'package:zulip/widgets/content.dart';
-import 'package:zulip/widgets/emoji.dart';
 import 'package:zulip/widgets/home.dart';
 import 'package:zulip/widgets/icons.dart';
 import 'package:zulip/widgets/inbox.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:share_plus_platform_interface/method_channel/method_channel_share.dart';
 import 'package:zulip/widgets/subscription_list.dart';
+import 'package:zulip/widgets/user.dart';
 import '../api/fake_api.dart';
 
 import '../example_data.dart' as eg;
 import '../flutter_checks.dart';
 import '../model/binding.dart';
+import '../model/content_test.dart';
 import '../model/test_store.dart';
 import '../stdlib_checks.dart';
 import '../test_clipboard.dart';
+import '../test_images.dart';
 import '../test_share_plus.dart';
-import 'compose_box_checks.dart';
+import 'checks.dart';
 import 'dialog_checks.dart';
 import 'test_app.dart';
 
@@ -53,27 +55,37 @@ late FakeApiConnection connection;
 Future<void> setupToMessageActionSheet(WidgetTester tester, {
   required Message message,
   required Narrow narrow,
+  User? selfUser,
+  User? sender,
+  List<int>? mutedUserIds,
   bool? realmAllowMessageEditing,
   int? realmMessageContentEditLimitSeconds,
   bool shouldSetServerEmojiData = true,
   bool useLegacyServerEmojiData = false,
+  Future<void> Function()? beforeLongPress,
 }) async {
   addTearDown(testBinding.reset);
-  assert(narrow.containsMessage(message));
+  // TODO(#1667) will be null in a search narrow; remove `!`.
+  assert(narrow.containsMessage(message)!);
 
+  selfUser ??= eg.selfUser;
+  final selfAccount = eg.account(user: selfUser);
   await testBinding.globalStore.add(
-    eg.selfAccount,
+    selfAccount,
     eg.initialSnapshot(
       realmAllowMessageEditing: realmAllowMessageEditing,
       realmMessageContentEditLimitSeconds: realmMessageContentEditLimitSeconds,
     ));
-  store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+  store = await testBinding.globalStore.perAccount(selfAccount.id);
   await store.addUsers([
-    eg.selfUser,
-    eg.user(userId: message.senderId),
+    selfUser,
+    sender ?? eg.user(userId: message.senderId),
     if (narrow is DmNarrow)
       ...narrow.otherRecipientIds.map((id) => eg.user(userId: id)),
   ]);
+  if (mutedUserIds != null) {
+    await store.setMutedUsers(mutedUserIds);
+  }
   if (message is StreamMessage) {
     final stream = eg.stream(streamId: message.streamId);
     await store.addStream(stream);
@@ -88,11 +100,13 @@ Future<void> setupToMessageActionSheet(WidgetTester tester, {
 
   connection.prepare(json: eg.newestGetMessagesResult(
     foundOldest: true, messages: [message]).toJson());
-  await tester.pumpWidget(TestZulipApp(accountId: eg.selfAccount.id,
+  await tester.pumpWidget(TestZulipApp(accountId: selfAccount.id,
     child: MessageListPage(initNarrow: narrow)));
 
   // global store, per-account store, and message list get loaded
   await tester.pumpAndSettle();
+
+  await beforeLongPress?.call();
 
   // Request the message action sheet.
   //
@@ -850,6 +864,81 @@ void main() {
   });
 
   group('message action sheet', () {
+    group('header', () {
+      void checkSenderAndTimestampShown(WidgetTester tester, {required int senderId}) {
+        check(find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is Avatar && widget.userId == senderId))
+        ).findsOne();
+        final expectedTimestampColor = MessageListTheme.of(
+          tester.element(find.byType(BottomSheet))).labelTime;
+        // TODO check the timestamp text itself, when it's convenient to do so:
+        //   https://github.com/zulip/zulip-flutter/pull/1624#discussion_r2181383754
+        check(find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byWidgetPredicate((widget) =>
+            widget is Text
+            && widget.style?.color == expectedTimestampColor
+            && (widget.style?.fontFeatures?.contains(FontFeature.enable('c2sc')) ?? false)))
+        ).findsOne();
+      }
+
+      testWidgets('message sender and content shown', (tester) async {
+        final message = eg.streamMessage(
+          timestamp: 1671409088,
+          content: ContentExample.userMentionPlain.html);
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: TopicNarrow.ofMessage(message));
+        checkSenderAndTimestampShown(tester, senderId: message.senderId);
+        check(find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byType(UserMention))
+        ).findsOne();
+      });
+
+      testWidgets('muted sender also shown', (tester) async {
+        final message = eg.streamMessage(
+          timestamp: 1671409088,
+          content: ContentExample.userMentionPlain.html);
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: TopicNarrow.ofMessage(message),
+          mutedUserIds: [message.senderId],
+          beforeLongPress: () async {
+            check(find.byType(MessageContent)).findsNothing();
+            await tester.tap(
+              find.widgetWithText(ZulipWebUiKitButton, 'Reveal message'));
+            await tester.pump();
+            check(find.byType(MessageContent)).findsOne();
+          },
+        );
+        checkSenderAndTimestampShown(tester, senderId: message.senderId);
+        check(find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byType(UserMention))
+        ).findsOne();
+      });
+
+      testWidgets('poll is rendered', (tester) async {
+        final submessageContent = eg.pollWidgetData(
+          question: 'poll', options: ['First option', 'Second option']);
+        final message = eg.streamMessage(
+          timestamp: 1671409088,
+          sender: eg.selfUser,
+          submessages: [eg.submessage(content: submessageContent)]);
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: TopicNarrow.ofMessage(message));
+        checkSenderAndTimestampShown(tester, senderId: message.senderId);
+        check(find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('First option'))
+        ).findsOne();
+      });
+    });
+
     group('ReactionButtons', () {
       testWidgets('absent if ServerEmojiData not loaded', (tester) async {
         final message = eg.streamMessage();
@@ -1118,11 +1207,13 @@ void main() {
         });
 
         testWidgets('no error if user lost posting permission after action sheet opened', (tester) async {
+          final selfUser = eg.user(role: UserRole.member);
           final stream = eg.stream();
           final message = eg.streamMessage(stream: stream);
-          await setupToMessageActionSheet(tester, message: message, narrow: TopicNarrow.ofMessage(message));
+          await setupToMessageActionSheet(tester, selfUser: selfUser,
+            message: message, narrow: TopicNarrow.ofMessage(message));
 
-          await store.handleEvent(RealmUserUpdateEvent(id: 1, userId: eg.selfUser.userId,
+          await store.handleEvent(RealmUserUpdateEvent(id: 1, userId: selfUser.userId,
             role: UserRole.guest));
           await store.handleEvent(eg.channelUpdateEvent(stream,
             property: ChannelPropertyName.channelPostPolicy,
@@ -1154,7 +1245,8 @@ void main() {
         });
 
         testWidgets('no error if recipient was deactivated while raw-content request in progress', (tester) async {
-          final message = eg.dmMessage(from: eg.selfUser, to: [eg.otherUser]);
+          final otherUser = eg.user();
+          final message = eg.dmMessage(from: eg.selfUser, to: [otherUser]);
           await setupToMessageActionSheet(tester,
             message: message,
             narrow: DmNarrow.ofMessage(message, selfUserId: eg.selfUser.userId));
@@ -1167,7 +1259,7 @@ void main() {
           await tapQuoteAndReplyButton(tester);
           await tester.pump(const Duration(seconds: 1)); // message not yet fetched
 
-          await store.handleEvent(RealmUserUpdateEvent(id: 1, userId: eg.otherUser.userId,
+          await store.handleEvent(RealmUserUpdateEvent(id: 1, userId: otherUser.userId,
             isActive: false));
           await tester.pump();
           // no error
@@ -1332,6 +1424,79 @@ void main() {
             expectedTitle: zulipLocalizations.errorMarkAsUnreadFailedTitle,
             expectedMessage: 'NetworkException: Oops (ClientException: Oops)');
         });
+      });
+    });
+
+    group('UnrevealMutedMessageButton', () {
+      final user = eg.user(userId: 1, fullName: 'User', avatarUrl: '/foo.png');
+      final message = eg.streamMessage(sender: user,
+        content: '<p>A message</p>', reactions: [eg.unicodeEmojiReaction]);
+
+      final revealButtonFinder = find.widgetWithText(ZulipWebUiKitButton,
+        'Reveal message');
+
+      final contentFinder = find.descendant(
+        of: find.byType(MessageContent),
+        matching: find.text('A message', findRichText: true));
+
+      testWidgets('not visible if message is from normal sender (not muted)', (tester) async {
+        prepareBoringImageHttpClient();
+
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: const CombinedFeedNarrow(),
+          sender: user);
+        check(store.isUserMuted(user.userId)).isFalse();
+
+        check(find.byIcon(ZulipIcons.eye_off, skipOffstage: false)).findsNothing();
+
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      testWidgets('visible if message is from muted sender and revealed', (tester) async {
+        prepareBoringImageHttpClient();
+
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: const CombinedFeedNarrow(),
+          sender: user,
+          mutedUserIds: [user.userId],
+          beforeLongPress: () async {
+            check(contentFinder).findsNothing();
+            await tester.tap(revealButtonFinder);
+            await tester.pump();
+            check(contentFinder).findsOne();
+          },
+        );
+
+        check(find.byIcon(ZulipIcons.eye_off, skipOffstage: false)).findsOne();
+
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      testWidgets('when pressed, unreveals the message', (tester) async {
+        prepareBoringImageHttpClient();
+
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: const CombinedFeedNarrow(),
+          sender: user,
+          mutedUserIds: [user.userId],
+          beforeLongPress: () async {
+            check(contentFinder).findsNothing();
+            await tester.tap(revealButtonFinder);
+            await tester.pump();
+            check(contentFinder).findsOne();
+          });
+
+        await tester.ensureVisible(find.byIcon(ZulipIcons.eye_off, skipOffstage: false));
+        await tester.tap(find.byIcon(ZulipIcons.eye_off));
+        await tester.pumpAndSettle();
+
+        check(contentFinder).findsNothing();
+        check(revealButtonFinder).findsOne();
+
+        debugNetworkImageHttpClientProvider = null;
       });
     });
 
@@ -1568,7 +1733,11 @@ void main() {
             connection.prepare(json: GetMessageResult(
               message: eg.streamMessage(content: 'foo')).toJson());
             await tapEdit(tester);
-            await tester.pump(Duration.zero);
+            await tester.pump();
+            // Default duration of bottom-sheet exit animation,
+            // plus 1ms fudge factor (why needed?)
+            // TODO(#1668) get this dynamically instead of hard-coding
+            await tester.pump(Duration(milliseconds: 200 + 1));
             await tester.enterText(find.byWidgetPredicate(
                 (widget) => widget is TextField && widget.controller?.text == 'foo'),
               'bar');
@@ -1672,8 +1841,4 @@ void main() {
       });
     });
   });
-}
-
-extension UnicodeEmojiWidgetChecks on Subject<UnicodeEmojiWidget> {
-  Subject<UnicodeEmojiDisplay> get emojiDisplay => has((x) => x.emojiDisplay, 'emojiDisplay');
 }

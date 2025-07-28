@@ -14,7 +14,6 @@ import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
 import '../api/route/events.dart';
-import '../api/route/messages.dart';
 import '../api/backoff.dart';
 import '../api/route/realm.dart';
 import '../log.dart';
@@ -25,8 +24,8 @@ import 'database.dart';
 import 'emoji.dart';
 import 'localizations.dart';
 import 'message.dart';
-import 'message_list.dart';
 import 'presence.dart';
+import 'realm.dart';
 import 'recent_dm_conversations.dart';
 import 'recent_senders.dart';
 import 'channel.dart';
@@ -35,6 +34,7 @@ import 'settings.dart';
 import 'typing_status.dart';
 import 'unreads.dart';
 import 'user.dart';
+import 'user_group.dart';
 
 export 'package:drift/drift.dart' show Value;
 export 'database.dart' show Account, AccountsCompanion, AccountAlreadyExistsException;
@@ -362,21 +362,21 @@ class CorePerAccountStore {
 /// A base class for [PerAccountStore] and its substores,
 /// with getters providing the items in [CorePerAccountStore].
 abstract class PerAccountStoreBase {
-  PerAccountStoreBase({required CorePerAccountStore core})
-    : _core = core;
+  PerAccountStoreBase({required this.core});
 
-  final CorePerAccountStore _core;
+  @protected
+  final CorePerAccountStore core;
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Where data comes from in the first place.
 
-  GlobalStore get _globalStore => _core._globalStore;
+  GlobalStore get _globalStore => core._globalStore;
 
-  ApiConnection get connection => _core.connection;
+  ApiConnection get connection => core.connection;
 
-  String get queueId => _core.queueId;
+  String get queueId => core.queueId;
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Data attached to the realm or the server.
 
   /// Always equal to `account.realmUrl` and `connection.realmUrl`.
@@ -393,10 +393,10 @@ abstract class PerAccountStoreBase {
 
   String get zulipVersion => account.zulipVersion;
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Data attached to the self-account on the realm.
 
-  int get accountId => _core.accountId;
+  int get accountId => core.accountId;
 
   /// The [Account] this store belongs to.
   ///
@@ -411,7 +411,7 @@ abstract class PerAccountStoreBase {
   /// This always equals the [Account.userId] on [account].
   ///
   /// For the corresponding [User] object, see [UserStore.selfUser].
-  int get selfUserId => _core.selfUserId;
+  int get selfUserId => core.selfUserId;
 }
 
 const _tryResolveUrl = tryResolveUrl;
@@ -433,7 +433,15 @@ Uri? tryResolveUrl(Uri baseUrl, String reference) {
 /// This class does not attempt to poll an event queue
 /// to keep the data up to date.  For that behavior, see
 /// [UpdateMachine].
-class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStore, SavedSnippetStore, UserStore, ChannelStore, MessageStore {
+class PerAccountStore extends PerAccountStoreBase with
+    ChangeNotifier,
+    UserGroupStore, ProxyUserGroupStore,
+    RealmStore, ProxyRealmStore,
+    EmojiStore, ProxyEmojiStore,
+    SavedSnippetStore,
+    UserStore, ProxyUserStore,
+    ChannelStore, ProxyChannelStore,
+    MessageStore, ProxyMessageStore {
   /// Construct a store for the user's data, starting from the given snapshot.
   ///
   /// The global store must already have been updated with
@@ -472,50 +480,29 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
       accountId: accountId,
       selfUserId: account.userId,
     );
-    final channels = ChannelStoreImpl(initialSnapshot: initialSnapshot);
+    final realm = RealmStoreImpl(core: core, initialSnapshot: initialSnapshot);
+    final users = UserStoreImpl(realm: realm, initialSnapshot: initialSnapshot);
+    final channels = ChannelStoreImpl(users: users,
+      initialSnapshot: initialSnapshot);
     return PerAccountStore._(
       core: core,
-      serverPresencePingIntervalSeconds: initialSnapshot.serverPresencePingIntervalSeconds,
-      serverPresenceOfflineThresholdSeconds: initialSnapshot.serverPresenceOfflineThresholdSeconds,
-      realmWildcardMentionPolicy: initialSnapshot.realmWildcardMentionPolicy,
-      realmMandatoryTopics: initialSnapshot.realmMandatoryTopics,
-      realmWaitingPeriodThreshold: initialSnapshot.realmWaitingPeriodThreshold,
-      realmPresenceDisabled: initialSnapshot.realmPresenceDisabled,
-      maxFileUploadSizeMib: initialSnapshot.maxFileUploadSizeMib,
-      realmEmptyTopicDisplayName: initialSnapshot.realmEmptyTopicDisplayName,
-      realmAllowMessageEditing: initialSnapshot.realmAllowMessageEditing,
-      realmMessageContentEditLimitSeconds: initialSnapshot.realmMessageContentEditLimitSeconds,
-      realmDefaultExternalAccounts: initialSnapshot.realmDefaultExternalAccounts,
-      customProfileFields: _sortCustomProfileFields(initialSnapshot.customProfileFields),
-      emailAddressVisibility: initialSnapshot.emailAddressVisibility,
-      emoji: EmojiStoreImpl(
-        core: core, allRealmEmoji: initialSnapshot.realmEmoji),
+      groups: UserGroupStoreImpl(core: core,
+        groups: initialSnapshot.realmUserGroups),
+      realm: realm,
+      emoji: EmojiStoreImpl(core: core,
+        allRealmEmoji: initialSnapshot.realmEmoji),
       userSettings: initialSnapshot.userSettings,
-      savedSnippets: SavedSnippetStoreImpl(
-        core: core, savedSnippets: initialSnapshot.savedSnippets ?? []),
-      typingNotifier: TypingNotifier(
-        core: core,
-        typingStoppedWaitPeriod: Duration(
-          milliseconds: initialSnapshot.serverTypingStoppedWaitPeriodMilliseconds),
-        typingStartedWaitPeriod: Duration(
-          milliseconds: initialSnapshot.serverTypingStartedWaitPeriodMilliseconds),
-      ),
-      users: UserStoreImpl(core: core, initialSnapshot: initialSnapshot),
-      typingStatus: TypingStatus(core: core,
-        typingStartedExpiryPeriod: Duration(milliseconds: initialSnapshot.serverTypingStartedExpiryPeriodMilliseconds)),
-      presence: Presence(core: core,
-        serverPresencePingInterval: Duration(seconds: initialSnapshot.serverPresencePingIntervalSeconds),
-        serverPresenceOfflineThresholdSeconds: initialSnapshot.serverPresenceOfflineThresholdSeconds,
-        realmPresenceDisabled: initialSnapshot.realmPresenceDisabled,
+      savedSnippets: SavedSnippetStoreImpl(core: core,
+        savedSnippets: initialSnapshot.savedSnippets ?? []),
+      typingNotifier: TypingNotifier(realm: realm),
+      users: users,
+      typingStatus: TypingStatus(realm: realm),
+      presence: Presence(realm: realm,
         initial: initialSnapshot.presences),
       channels: channels,
-      messages: MessageStoreImpl(core: core,
-        realmEmptyTopicDisplayName: initialSnapshot.realmEmptyTopicDisplayName),
-      unreads: Unreads(
-        initial: initialSnapshot.unreadMsgs,
-        core: core,
-        channelStore: channels,
-      ),
+      messages: MessageStoreImpl(realm: realm),
+      unreads: Unreads(core: core, channelStore: channels,
+        initial: initialSnapshot.unreadMsgs),
       recentDmConversationsView: RecentDmConversationsView(core: core,
         initial: initialSnapshot.recentPrivateConversations),
       recentSenders: RecentSenders(),
@@ -524,19 +511,8 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
 
   PerAccountStore._({
     required super.core,
-    required this.serverPresencePingIntervalSeconds,
-    required this.serverPresenceOfflineThresholdSeconds,
-    required this.realmWildcardMentionPolicy,
-    required this.realmMandatoryTopics,
-    required this.realmWaitingPeriodThreshold,
-    required this.realmPresenceDisabled,
-    required this.maxFileUploadSizeMib,
-    required String? realmEmptyTopicDisplayName,
-    required this.realmAllowMessageEditing,
-    required this.realmMessageContentEditLimitSeconds,
-    required this.realmDefaultExternalAccounts,
-    required this.customProfileFields,
-    required this.emailAddressVisibility,
+    required UserGroupStoreImpl groups,
+    required RealmStoreImpl realm,
     required EmojiStoreImpl emoji,
     required this.userSettings,
     required SavedSnippetStoreImpl savedSnippets,
@@ -549,17 +525,18 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
     required this.unreads,
     required this.recentDmConversationsView,
     required this.recentSenders,
-  }) : _realmEmptyTopicDisplayName = realmEmptyTopicDisplayName,
+  }) : _groups = groups,
+       _realm = realm,
        _emoji = emoji,
        _savedSnippets = savedSnippets,
        _users = users,
        _channels = channels,
        _messages = messages;
 
-  ////////////////////////////////////////////////////////////////
+  //|//////////////////////////////////////////////////////////////
   // Data.
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Where data comes from in the first place.
 
   UpdateMachine? get updateMachine => _updateMachine;
@@ -570,81 +547,44 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
     _updateMachine = value;
   }
 
-  bool get isLoading => _isLoading;
-  bool _isLoading = false;
+  bool get isRecoveringEventStream => _isRecoveringEventStream;
+  bool _isRecoveringEventStream = false;
   @visibleForTesting
-  set isLoading(bool value) {
-    if (_isLoading == value) return;
-    _isLoading = value;
+  set isRecoveringEventStream(bool value) {
+    if (_isRecoveringEventStream == value) return;
+    _isRecoveringEventStream = value;
     notifyListeners();
   }
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Data attached to the realm or the server.
 
-  final int serverPresencePingIntervalSeconds;
-  final int serverPresenceOfflineThresholdSeconds;
-
-  final RealmWildcardMentionPolicy realmWildcardMentionPolicy; // TODO(#668): update this realm setting
-  final bool realmMandatoryTopics;  // TODO(#668): update this realm setting
-  /// For docs, please see [InitialSnapshot.realmWaitingPeriodThreshold].
-  final int realmWaitingPeriodThreshold;  // TODO(#668): update this realm setting
-  final bool realmAllowMessageEditing; // TODO(#668): update this realm setting
-  final int? realmMessageContentEditLimitSeconds; // TODO(#668): update this realm setting
-  final bool realmPresenceDisabled; // TODO(#668): update this realm setting
-  final int maxFileUploadSizeMib; // No event for this.
-
-  /// The display name to use for empty topics.
-  ///
-  /// This should only be accessed when FL >= 334, since topics cannot
-  /// be empty otherwise.
-  // TODO(server-10) simplify this
-  String get realmEmptyTopicDisplayName {
-    assert(zulipFeatureLevel >= 334);
-    assert(_realmEmptyTopicDisplayName != null); // TODO(log)
-    return _realmEmptyTopicDisplayName ?? 'general chat';
-  }
-  final String? _realmEmptyTopicDisplayName; // TODO(#668): update this realm setting
-
-  final Map<String, RealmDefaultExternalAccount> realmDefaultExternalAccounts;
-  List<CustomProfileField> customProfileFields;
-  /// For docs, please see [InitialSnapshot.emailAddressVisibility].
-  final EmailAddressVisibility? emailAddressVisibility; // TODO(#668): update this realm setting
-
-  ////////////////////////////////
-  // The realm's repertoire of available emoji.
-
+  // (User groups come before even realm settings,
+  // because they'll be used for interpreting many realm settings.)
+  @protected
   @override
-  EmojiDisplay emojiDisplayFor({
-    required ReactionType emojiType,
-    required String emojiCode,
-    required String emojiName
-  }) {
-    return _emoji.emojiDisplayFor(
-      emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName);
-  }
+  UserGroupStore get userGroupStore => _groups;
+  final UserGroupStoreImpl _groups;
 
+  @protected
   @override
-  Map<String, List<String>>? get debugServerEmojiData => _emoji.debugServerEmojiData;
+  RealmStore get realmStore => _realm;
+  final RealmStoreImpl _realm;
 
-  @override
   void setServerEmojiData(ServerEmojiData data) {
     _emoji.setServerEmojiData(data);
     notifyListeners();
   }
 
+  @protected
   @override
-  Iterable<EmojiCandidate> popularEmojiCandidates() => _emoji.popularEmojiCandidates();
+  EmojiStore get emojiStore => _emoji;
+  final EmojiStoreImpl _emoji;
 
-  @override
-  Iterable<EmojiCandidate> allEmojiCandidates() => _emoji.allEmojiCandidates();
-
-  EmojiStoreImpl _emoji;
-
-  ////////////////////////////////
+  //|//////////////////////////////
   // Data attached to the self-account on the realm.
 
-  final UserSettings? userSettings; // TODO(server-5)
+  final UserSettings userSettings;
 
   @override
   Map<int, SavedSnippet> get savedSnippets => _savedSnippets.savedSnippets;
@@ -652,170 +592,55 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
 
   final TypingNotifier typingNotifier;
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Users and data about them.
 
+  @protected
   @override
-  User? getUser(int userId) => _users.getUser(userId);
-
-  @override
-  Iterable<User> get allUsers => _users.allUsers;
-
-  @override
-  bool isUserMuted(int userId, {MutedUsersEvent? event}) =>
-    _users.isUserMuted(userId, event: event);
-
+  UserStore get userStore => _users;
   final UserStoreImpl _users;
 
   final TypingStatus typingStatus;
 
   final Presence presence;
 
-  /// Whether [user] has passed the realm's waiting period to be a full member.
-  ///
-  /// See:
-  ///   https://zulip.com/api/roles-and-permissions#determining-if-a-user-is-a-full-member
-  ///
-  /// To determine if a user is a full member, callers must also check that the
-  /// user's role is at least [UserRole.member].
-  bool hasPassedWaitingPeriod(User user, {required DateTime byDate}) {
-    // [User.dateJoined] is in UTC. For logged-in users, the format is:
-    // YYYY-MM-DDTHH:mm+00:00, which includes the timezone offset for UTC.
-    // For logged-out spectators, the format is: YYYY-MM-DD, which doesn't
-    // include the timezone offset. In the later case, [DateTime.parse] will
-    // interpret it as the client's local timezone, which could lead to
-    // incorrect results; but that's acceptable for now because the app
-    // doesn't support viewing as a spectator.
-    //
-    // See the related discussion:
-    //   https://chat.zulip.org/#narrow/channel/412-api-documentation/topic/provide.20an.20explicit.20format.20for.20.60realm_user.2Edate_joined.60/near/1980194
-    final dateJoined = DateTime.parse(user.dateJoined);
-    return byDate.difference(dateJoined).inDays >= realmWaitingPeriodThreshold;
-  }
-
-  /// The given user's real email address, if known, for displaying in the UI.
-  ///
-  /// Returns null if self-user isn't able to see [user]'s real email address.
-  String? userDisplayEmail(User user) {
-    if (zulipFeatureLevel >= 163) { // TODO(server-7)
-      // A non-null value means self-user has access to [user]'s real email,
-      // while a null value means it doesn't have access to the email.
-      // Search for "delivery_email" in https://zulip.com/api/register-queue.
-      return user.deliveryEmail;
-    } else {
-      if (user.deliveryEmail != null) {
-        // A non-null value means self-user has access to [user]'s real email,
-        // while a null value doesn't necessarily mean it doesn't have access
-        // to the email, ....
-        return user.deliveryEmail;
-      } else if (emailAddressVisibility == EmailAddressVisibility.everyone) {
-        // ... we have to also check for [PerAccountStore.emailAddressVisibility].
-        // See:
-        //   * https://github.com/zulip/zulip-mobile/pull/5515#discussion_r997731727
-        //   * https://chat.zulip.org/#narrow/stream/378-api-design/topic/email.20address.20visibility/near/1296133
-        return user.email;
-      } else {
-        return null;
-      }
-    }
-  }
-
-  ////////////////////////////////
+  //|//////////////////////////////
   // Streams, topics, and stuff about them.
 
+  @protected
   @override
-  Map<int, ZulipStream> get streams => _channels.streams;
-  @override
-  Map<String, ZulipStream> get streamsByName => _channels.streamsByName;
-  @override
-  Map<int, Subscription> get subscriptions => _channels.subscriptions;
-  @override
-  UserTopicVisibilityPolicy topicVisibilityPolicy(int streamId, TopicName topic) =>
-    _channels.topicVisibilityPolicy(streamId, topic);
-  @override
-  Map<int, Map<TopicName, UserTopicVisibilityPolicy>> get debugTopicVisibility =>
-    _channels.debugTopicVisibility;
-
+  ChannelStore get channelStore => _channels;
   final ChannelStoreImpl _channels;
 
-  bool hasPostingPermission({
-    required ZulipStream inChannel,
-    required User user,
-    required DateTime byDate,
-  }) {
-    final role = user.role;
-    // We let the users with [unknown] role to send the message, then the server
-    // will decide to accept it or not based on its actual role.
-    if (role == UserRole.unknown) return true;
-
-    switch (inChannel.channelPostPolicy) {
-      case ChannelPostPolicy.any:             return true;
-      case ChannelPostPolicy.fullMembers:     {
-        if (!role.isAtLeast(UserRole.member)) return false;
-        return role == UserRole.member
-          ? hasPassedWaitingPeriod(user, byDate: byDate)
-          : true;
-      }
-      case ChannelPostPolicy.moderators:      return role.isAtLeast(UserRole.moderator);
-      case ChannelPostPolicy.administrators:  return role.isAtLeast(UserRole.administrator);
-      case ChannelPostPolicy.unknown:         return true;
-    }
-  }
-
-  ////////////////////////////////
+  //|//////////////////////////////
   // Messages, and summaries of messages.
 
-  @override
-  Map<int, Message> get messages => _messages.messages;
-  @override
-  Map<int, OutboxMessage> get outboxMessages => _messages.outboxMessages;
-  @override
-  void registerMessageList(MessageListView view) =>
-    _messages.registerMessageList(view);
-  @override
-  void unregisterMessageList(MessageListView view) =>
-    _messages.unregisterMessageList(view);
-  @override
-  void markReadFromScroll(Iterable<int> messageIds) =>
-    _messages.markReadFromScroll(messageIds);
-  @override
-  Future<void> sendMessage({required MessageDestination destination, required String content}) {
-    assert(!_disposed);
-    return _messages.sendMessage(destination: destination, content: content);
-  }
-  @override
-  OutboxMessage takeOutboxMessage(int localMessageId) =>
-    _messages.takeOutboxMessage(localMessageId);
-  @override
+  /// Reconcile a batch of just-fetched messages with the store,
+  /// mutating the list.
+  ///
+  /// This is called after a [getMessages] request to report the result
+  /// to the store.
+  ///
+  /// The list's length will not change, but some entries may be replaced
+  /// by a different [Message] object with the same [Message.id],
+  /// and the store will also be updated.
+  /// When this method returns, all [Message] objects in the list
+  /// will be present in the map `this.messages`.
+  ///
+  /// The list entries may be mutated to remove
+  /// [Message.matchContent] and [Message.matchTopic]
+  /// (since these are appropriate for search views but not the central store).
+  /// The values of those fields should therefore be captured,
+  /// as needed for search, before this is called.
   void reconcileMessages(List<Message> messages) {
     _messages.reconcileMessages(messages);
     // TODO(#649) notify [unreads] of the just-fetched messages
     // TODO(#650) notify [recentDmConversationsView] of the just-fetched messages
   }
-  @override
-  bool? getEditMessageErrorStatus(int messageId) {
-    assert(!_disposed);
-    return _messages.getEditMessageErrorStatus(messageId);
-  }
-  @override
-  void editMessage({
-    required int messageId,
-    required String originalRawContent,
-    required String newContent,
-  }) {
-    assert(!_disposed);
-    return _messages.editMessage(messageId: messageId,
-      originalRawContent: originalRawContent, newContent: newContent);
-  }
-  @override
-  ({String originalRawContent, String newContent}) takeFailedMessageEdit(int messageId) {
-    assert(!_disposed);
-    return _messages.takeFailedMessageEdit(messageId);
-  }
 
+  @protected
   @override
-  Set<MessageListView> get debugMessageListViews => _messages.debugMessageListViews;
-
+  MessageStore get messageStore => _messages;
   final MessageStoreImpl _messages;
 
   final Unreads unreads;
@@ -824,13 +649,13 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
 
   final RecentSenders recentSenders;
 
-  ////////////////////////////////
+  //|//////////////////////////////
   // Other digests of data.
 
   final AutocompleteViewManager autocompleteViewManager = AutocompleteViewManager();
 
   // End of data.
-  ////////////////////////////////////////////////////////////////
+  //|//////////////////////////////////////////////////////////////
 
   /// Called when the app is reassembled during debugging, e.g. for hot reload.
   ///
@@ -849,6 +674,7 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
     recentDmConversationsView.dispose();
     unreads.dispose();
     _messages.dispose();
+    presence.dispose();
     typingStatus.dispose();
     typingNotifier.dispose();
     updateMachine?.dispose();
@@ -881,17 +707,24 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
         }
         switch (event.property!) {
           case UserSettingName.twentyFourHourTime:
-            userSettings?.twentyFourHourTime        = event.value as bool;
+            userSettings.twentyFourHourTime        = event.value as TwentyFourHourTimeMode;
           case UserSettingName.displayEmojiReactionUsers:
-            userSettings?.displayEmojiReactionUsers = event.value as bool;
+            userSettings.displayEmojiReactionUsers = event.value as bool;
           case UserSettingName.emojiset:
-            userSettings?.emojiset                  = event.value as Emojiset;
+            userSettings.emojiset                  = event.value as Emojiset;
+          case UserSettingName.presenceEnabled:
+            userSettings.presenceEnabled           = event.value as bool;
         }
         notifyListeners();
 
       case CustomProfileFieldsEvent():
         assert(debugLog("server event: custom_profile_fields"));
-        customProfileFields = _sortCustomProfileFields(event.fields);
+        _realm.handleCustomProfileFieldsEvent(event);
+        notifyListeners();
+
+      case UserGroupEvent():
+        assert(debugLog("server event: user_group/${event.op}"));
+        _groups.handleUserGroupEvent(event);
         notifyListeners();
 
       case RealmUserAddEvent():
@@ -926,6 +759,11 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
         _channels.handleSubscriptionEvent(event);
         notifyListeners();
 
+      case UserStatusEvent():
+        assert(debugLog("server event: user_status"));
+        _users.handleUserStatusEvent(event);
+        notifyListeners();
+
       case UserTopicEvent():
         assert(debugLog("server event: user_topic"));
         _messages.handleUserTopicEvent(event);
@@ -935,6 +773,10 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
 
       case MessageEvent():
         assert(debugLog("server event: message ${jsonEncode(event.message.toJson())}"));
+        // Assert against malformed events that might be created in test code.
+        assert(event.message.matchContent == null);
+        assert(event.message.matchTopic == null);
+
         _messages.handleMessageEvent(event);
         unreads.handleMessageEvent(event);
         recentDmConversationsView.handleMessageEvent(event);
@@ -980,27 +822,14 @@ class PerAccountStore extends PerAccountStoreBase with ChangeNotifier, EmojiStor
 
       case MutedUsersEvent():
         assert(debugLog("server event: muted_users"));
+        _messages.handleMutedUsersEvent(event);
+        // Update _users last, so other handlers can compare to the old value.
         _users.handleMutedUsersEvent(event);
         notifyListeners();
 
       case UnexpectedEvent():
         assert(debugLog("server event: ${jsonEncode(event.toJson())}")); // TODO log better
     }
-  }
-
-  static List<CustomProfileField> _sortCustomProfileFields(List<CustomProfileField> initialCustomProfileFields) {
-    // TODO(server): The realm-wide field objects have an `order` property,
-    //   but the actual API appears to be that the fields should be shown in
-    //   the order they appear in the array (`custom_profile_fields` in the
-    //   API; our `realmFields` array here.)  See chat thread:
-    //     https://chat.zulip.org/#narrow/stream/378-api-design/topic/custom.20profile.20fields/near/1382982
-    //
-    // We go on to put at the start of the list any fields that are marked for
-    // displaying in the "profile summary".  (Possibly they should be at the
-    // start of the list in the first place, but make sure just in case.)
-    final displayFields = initialCustomProfileFields.where((e) => e.displayInProfileSummary == true);
-    final nonDisplayFields = initialCustomProfileFields.where((e) => e.displayInProfileSummary != true);
-    return displayFields.followedBy(nonDisplayFields).toList();
   }
 
   @override
@@ -1390,7 +1219,13 @@ class UpdateMachine {
         final GetEventsResult result;
         try {
           result = await getEvents(store.connection,
-            queueId: store.queueId, lastEventId: lastEventId);
+            queueId: store.queueId,
+            lastEventId: lastEventId,
+            // If the UI shows we're busy getting event-polling to work again,
+            // ask the server to tell us immediately that it's working again,
+            // rather than waiting for an event, which could take up to a minute
+            // in the case of a heartbeat event. See #979.
+            dontBlock: store.isRecoveringEventStream ? true : null);
           if (_disposed) return;
         } catch (e, stackTrace) {
           if (_disposed) return;
@@ -1457,14 +1292,14 @@ class UpdateMachine {
     // if we stayed at the max backoff interval; partway toward what would
     // happen if we weren't backing off at all.
     //
-    // But at least for [getEvents] requests, as here, it should be OK,
-    // because this is a long-poll.  That means a typical successful request
-    // takes a long time to come back; in fact longer than our max backoff
-    // duration (which is 10 seconds).  So if we're getting a mix of successes
-    // and failures, the successes themselves should space out the requests.
+    // Successful retries won't actually space out the requests, because retries
+    // are done with the `dont_block` param, asking the server to respond
+    // immediately instead of waiting through the long-poll period.
+    // (See comments on that code for why this behavior is helpful.)
+    // If server logs show pressure from too many requests, we can investigate.
     _pollBackoffMachine = null;
 
-    store.isLoading = false;
+    store.isRecoveringEventStream = false;
     _accumulatedTransientFailureCount = 0;
     reportErrorToUserBriefly(null);
   }
@@ -1483,7 +1318,7 @@ class UpdateMachine {
   ///  * [_handlePollError], which handles errors from the rest of [poll]
   ///    and errors this method rethrows.
   Future<void> _handlePollRequestError(Object error, StackTrace stackTrace) async {
-    store.isLoading = true;
+    store.isRecoveringEventStream = true;
 
     if (error is! ApiRequestException) {
       // Some unexpected error, outside even making the HTTP request.
@@ -1541,7 +1376,7 @@ class UpdateMachine {
     // or an unexpected exception representing a bug in our code or the server.
     // Either way, the show must go on.  So reload server data from scratch.
 
-    store.isLoading = true;
+    store.isRecoveringEventStream = true;
 
     bool isUnexpected;
     // TODO(#1054): handle auth failure

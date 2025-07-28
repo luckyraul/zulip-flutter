@@ -267,6 +267,20 @@ extension PerAccountStoreTestExtension on PerAccountStore {
     }
   }
 
+  Future<void> setMutedUsers(List<int> userIds) async {
+    await handleEvent(eg.mutedUsersEvent(userIds));
+  }
+
+  Future<void> changeUserStatus(int userId, UserStatusChange change) async {
+    await handleEvent(UserStatusEvent(id: 1, userId: userId, change: change));
+  }
+
+  Future<void> changeUserStatuses(Map<int, UserStatusChange> changes) async {
+    for (final MapEntry(key: userId, value: change) in changes.entries) {
+      await changeUserStatus(userId, change);
+    }
+  }
+
   Future<void> addStream(ZulipStream stream) async {
     await addStreams([stream]);
   }
@@ -283,7 +297,7 @@ extension PerAccountStoreTestExtension on PerAccountStore {
     await handleEvent(SubscriptionAddEvent(id: 1, subscriptions: subscriptions));
   }
 
-  Future<void> addUserTopic(ZulipStream stream, String topic, UserTopicVisibilityPolicy visibilityPolicy) async {
+  Future<void> setUserTopic(ZulipStream stream, String topic, UserTopicVisibilityPolicy visibilityPolicy) async {
     await handleEvent(eg.userTopicEvent(stream.streamId, topic, visibilityPolicy));
   }
 

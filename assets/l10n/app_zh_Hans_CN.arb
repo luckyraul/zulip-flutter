@@ -1083,9 +1083,9 @@
   "@mainMenuMyProfile": {
     "description": "Label for main-menu button leading to the user's own profile."
   },
-  "topicsButtonLabel": "话题",
-  "@topicsButtonLabel": {
-    "description": "Label for message list button leading to topic-list page. (Use ALL CAPS for cased alphabets: Latin, Greek, Cyrillic, etc.)"
+  "topicsButtonTooltip": "话题",
+  "@topicsButtonTooltip": {
+    "description": "Tooltip for button to navigate to topic-list page."
   },
   "notifSelfUser": "您",
   "@notifSelfUser": {
@@ -1130,10 +1130,6 @@
   "revealButtonLabel": "显示静音用户发送的消息",
   "@revealButtonLabel": {
     "description": "Label for the button revealing hidden message from a muted sender in message list."
-  },
-  "mutedSender": "静音发送者",
-  "@mutedSender": {
-    "description": "Name for a muted user to display in message list."
   },
   "mutedUser": "静音用户",
   "@mutedUser": {

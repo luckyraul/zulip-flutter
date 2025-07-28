@@ -444,6 +444,12 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
   }
 
   @override
+  String get emptyMessageList => 'Póki co brak wiadomości.';
+
+  @override
+  String get emptyMessageListSearch => 'Brak wyników wyszukiwania.';
+
+  @override
   String get messageListGroupYouWithYourself => 'Zapiski na własne konto';
 
   @override
@@ -641,6 +647,17 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
   String get yesterday => 'Wczoraj';
 
   @override
+  String get invisibleMode => 'Tryb ukrycia';
+
+  @override
+  String get turnOnInvisibleModeErrorTitle =>
+      'Problem z włączeniem trybu ukrycia. Spróbuj ponownie.';
+
+  @override
+  String get turnOffInvisibleModeErrorTitle =>
+      'Problem z wyłączeniem trybu ukrycia. Spróbuj ponownie.';
+
+  @override
   String get userRoleOwner => 'Właściciel';
 
   @override
@@ -657,6 +674,15 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
 
   @override
   String get userRoleUnknown => 'Nieznany';
+
+  @override
+  String get searchMessagesPageTitle => 'Szukaj';
+
+  @override
+  String get searchMessagesHintText => 'Szukaj';
+
+  @override
+  String get searchMessagesClearButtonTooltip => 'Wyczyść';
 
   @override
   String get inboxPageTitle => 'Odebrane';
@@ -694,7 +720,7 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
   String get mainMenuMyProfile => 'Mój profil';
 
   @override
-  String get topicsButtonLabel => 'WĄTKI';
+  String get topicsButtonTooltip => 'Wątki';
 
   @override
   String get channelFeedButtonTooltip => 'Strumień kanału';
@@ -868,10 +894,7 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
   String get noEarlierMessages => 'Brak historii';
 
   @override
-  String get mutedSender => 'Wyciszony nadawca';
-
-  @override
-  String get revealButtonLabel => 'Odsłoń wiadomość od wyciszonego użytkownika';
+  String get revealButtonLabel => 'Odsłoń wiadomość';
 
   @override
   String get mutedUser => 'Wyciszony użytkownik';

@@ -731,9 +731,9 @@
   "@mainMenuMyProfile": {
     "description": "Label for main-menu button leading to the user's own profile."
   },
-  "topicsButtonLabel": "TEME",
-  "@topicsButtonLabel": {
-    "description": "Label for message list button leading to topic-list page. (Use ALL CAPS for cased alphabets: Latin, Greek, Cyrillic, etc.)"
+  "topicsButtonTooltip": "Teme",
+  "@topicsButtonTooltip": {
+    "description": "Tooltip for button to navigate to topic-list page."
   },
   "channelFeedButtonTooltip": "Sporočila kanala",
   "@channelFeedButtonTooltip": {
@@ -894,10 +894,6 @@
   "noEarlierMessages": "Ni starejših sporočil",
   "@noEarlierMessages": {
     "description": "Text to show at the start of a message list if there are no earlier messages."
-  },
-  "mutedSender": "Utišan pošiljatelj",
-  "@mutedSender": {
-    "description": "Name for a muted user to display in message list."
   },
   "revealButtonLabel": "Prikaži sporočilo utišanega pošiljatelja",
   "@revealButtonLabel": {

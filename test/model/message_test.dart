@@ -118,6 +118,29 @@ void main() {
   }));
 
   group('sendMessage', () {
+    test('smoke', () async {
+      final store = eg.store(initialSnapshot: eg.initialSnapshot(
+        queueId: 'fb67bf8a-c031-47cc-84cf-ed80accacda8'));
+      final connection = store.connection as FakeApiConnection;
+      final stream = eg.stream();
+      connection.prepare(json: SendMessageResult(id: 12345).toJson());
+      await store.sendMessage(
+        destination: StreamDestination(stream.streamId, eg.t('world')),
+        content: 'hello');
+      check(connection.takeRequests()).single.isA<http.Request>()
+        ..method.equals('POST')
+        ..url.path.equals('/api/v1/messages')
+        ..bodyFields.deepEquals({
+          'type': 'stream',
+          'to': stream.streamId.toString(),
+          'topic': 'world',
+          'content': 'hello',
+          'read_by_sender': 'true',
+          'queue_id': 'fb67bf8a-c031-47cc-84cf-ed80accacda8',
+          'local_id': store.outboxMessages.keys.single.toString(),
+        });
+    });
+
     final stream = eg.stream();
     final streamDestination = StreamDestination(stream.streamId, eg.t('some topic'));
     late StreamMessage message;
@@ -517,6 +540,37 @@ void main() {
       store.reconcileMessages(messages);
       check(messages).single.identicalTo(message);
       check(store.messages).deepEquals({1: message});
+    });
+
+    test('matchContent and matchTopic are removed', () async {
+      await prepare();
+      final message1 = eg.streamMessage(id: 1, content: '<p>foo</p>');
+      await addMessages([message1]);
+      check(store.messages).deepEquals({1: message1});
+      final otherMessage1 = eg.streamMessage(id: 1, content: '<p>foo</p>',
+        matchContent: 'some highlighted content',
+        matchTopic: 'some highlighted topic');
+      final message2 = eg.streamMessage(id: 2, content: '<p>bar</p>',
+        matchContent: 'some highlighted content',
+        matchTopic: 'some highlighted topic');
+      final messages = [otherMessage1, message2];
+      store.reconcileMessages(messages);
+
+      Condition<Object?> conditionIdenticalAndNullMatchFields(Message message) {
+        return (it) => it.isA<Message>()
+                         ..identicalTo(message)
+                         ..matchContent.isNull()..matchTopic.isNull();
+      }
+
+      check(messages).deepEquals([
+        conditionIdenticalAndNullMatchFields(message1),
+        conditionIdenticalAndNullMatchFields(message2),
+      ]);
+
+      check(store.messages).deepEquals({
+        1: conditionIdenticalAndNullMatchFields(message1),
+        2: conditionIdenticalAndNullMatchFields(message2),
+      });
     });
   });
 

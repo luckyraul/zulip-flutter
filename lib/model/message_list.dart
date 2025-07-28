@@ -13,6 +13,7 @@ import 'content.dart';
 import 'message.dart';
 import 'narrow.dart';
 import 'store.dart';
+import 'user.dart';
 
 export '../api/route/messages.dart' show Anchor, AnchorCode, NumericAnchor;
 
@@ -105,6 +106,18 @@ enum FetchingStatus {
 ///
 /// This comprises much of the guts of [MessageListView].
 mixin _MessageSequence {
+  /// Whether each message should have its own recipient header,
+  /// even if it's in the same conversation as the previous message.
+  ///
+  /// In some message-list views, notably "Mentions" and "Starred",
+  /// it would be misleading to give the impression that consecutive messages
+  /// in the same conversation were sent one after the other
+  /// with no other messages in between.
+  /// By giving each message its own recipient header (a `true` value for this),
+  /// we intend to avoid giving that impression.
+  @visibleForTesting
+  bool get oneMessagePerBlock;
+
   /// A sequence number for invalidating stale fetches.
   int generation = 0;
 
@@ -244,16 +257,10 @@ mixin _MessageSequence {
     }
   }
 
-  ZulipMessageContent _parseMessageContent(Message message) {
-    final poll = message.poll;
-    if (poll != null) return PollContent(poll);
-    return parseContent(message.content);
-  }
-
   /// Update data derived from the content of the index-th message.
   void _reparseContent(int index) {
     final message = messages[index];
-    final content = _parseMessageContent(message);
+    final content = parseMessageContent(message);
     contents[index] = content;
 
     final itemIndex = findItemWithMessageId(message.id);
@@ -270,7 +277,7 @@ mixin _MessageSequence {
   void _addMessage(Message message) {
     assert(contents.length == messages.length);
     messages.add(message);
-    contents.add(_parseMessageContent(message));
+    contents.add(parseMessageContent(message));
     assert(contents.length == messages.length);
     _processMessage(messages.length - 1);
   }
@@ -349,7 +356,7 @@ mixin _MessageSequence {
     assert(contents.length == messages.length);
     messages.insertAll(index, toInsert);
     contents.insertAll(index, toInsert.map(
-      (message) => _parseMessageContent(message)));
+      (message) => parseMessageContent(message)));
     assert(contents.length == messages.length);
     if (index <= middleMessage) {
       middleMessage += messages.length - oldLength;
@@ -412,7 +419,7 @@ mixin _MessageSequence {
   void _recompute() {
     assert(contents.length == messages.length);
     contents.clear();
-    contents.addAll(messages.map((message) => _parseMessageContent(message)));
+    contents.addAll(messages.map((message) => parseMessageContent(message)));
     assert(contents.length == messages.length);
     _reprocessAll();
   }
@@ -435,7 +442,11 @@ mixin _MessageSequence {
     required MessageListMessageBaseItem Function(bool canShareSender) buildItem,
   }) {
     final bool canShareSender;
-    if (prevMessage == null || !haveSameRecipient(prevMessage, message)) {
+    if (
+      prevMessage == null
+      || oneMessagePerBlock
+      || !haveSameRecipient(prevMessage, message)
+    ) {
       items.add(MessageListRecipientHeaderItem(message));
       canShareSender = false;
     } else {
@@ -598,9 +609,18 @@ class MessageListView with ChangeNotifier, _MessageSequence {
 
   /// The narrow shown in this message list.
   ///
-  /// This can change over time, notably if showing a topic that gets moved.
+  /// This can change over time, notably if showing a topic that gets moved,
+  /// or if [renarrowAndFetch] is called.
   Narrow get narrow => _narrow;
   Narrow _narrow;
+
+  /// Set [narrow] to [newNarrow], reset, [notifyListeners], and [fetchInitial].
+  void renarrowAndFetch(Narrow newNarrow) {
+    _narrow = newNarrow;
+    _reset();
+    notifyListeners();
+    fetchInitial();
+  }
 
   /// The anchor point this message list starts from in the message history.
   ///
@@ -623,6 +643,16 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     super.dispose();
   }
 
+  @override bool get oneMessagePerBlock => switch (narrow) {
+    CombinedFeedNarrow()
+      || ChannelNarrow()
+      || TopicNarrow()
+      || DmNarrow() => false,
+    MentionsNarrow()
+      || StarredMessagesNarrow()
+      || KeywordSearchNarrow() => true,
+  };
+
   /// Whether [message] should actually appear in this message list,
   /// given that it does belong to the narrow.
   ///
@@ -633,10 +663,12 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   bool _messageVisible(MessageBase message) {
     switch (narrow) {
       case CombinedFeedNarrow():
-        return switch (message.conversation) {
+        final conversation = message.conversation;
+        return switch (conversation) {
           StreamConversation(:final streamId, :final topic) =>
             store.isTopicVisible(streamId, topic),
-          DmConversation() => true,
+          DmConversation() => !store.shouldMuteDmConversation(
+            DmNarrow.ofConversation(conversation, selfUserId: store.selfUserId)),
         };
 
       case ChannelNarrow(:final streamId):
@@ -647,28 +679,16 @@ class MessageListView with ChangeNotifier, _MessageSequence {
 
       case TopicNarrow():
       case DmNarrow():
-      case MentionsNarrow():
-      case StarredMessagesNarrow():
         return true;
-    }
-  }
 
-  /// Whether this event could affect the result that [_messageVisible]
-  /// would ever have returned for any possible message in this message list.
-  VisibilityEffect _canAffectVisibility(UserTopicEvent event) {
-    switch (narrow) {
-      case CombinedFeedNarrow():
-        return store.willChangeIfTopicVisible(event);
-
-      case ChannelNarrow(:final streamId):
-        if (event.streamId != streamId) return VisibilityEffect.none;
-        return store.willChangeIfTopicVisibleInStream(event);
-
-      case TopicNarrow():
-      case DmNarrow():
       case MentionsNarrow():
       case StarredMessagesNarrow():
-        return VisibilityEffect.none;
+      case KeywordSearchNarrow():
+        if (message.conversation case DmConversation(:final allRecipientIds)) {
+          return !store.shouldMuteDmConversation(DmNarrow(
+            allRecipientIds: allRecipientIds, selfUserId: store.selfUserId));
+        }
+        return true;
     }
   }
 
@@ -683,9 +703,51 @@ class MessageListView with ChangeNotifier, _MessageSequence {
 
       case TopicNarrow():
       case DmNarrow():
+        return true;
+
       case MentionsNarrow():
       case StarredMessagesNarrow():
-        return true;
+      case KeywordSearchNarrow():
+        return false;
+    }
+  }
+
+  /// Whether this event could affect the result that [_messageVisible]
+  /// would ever have returned for any possible message in this message list.
+  UserTopicVisibilityEffect _canAffectVisibility(UserTopicEvent event) {
+    switch (narrow) {
+      case CombinedFeedNarrow():
+        return store.willChangeIfTopicVisible(event);
+
+      case ChannelNarrow(:final streamId):
+        if (event.streamId != streamId) return UserTopicVisibilityEffect.none;
+        return store.willChangeIfTopicVisibleInStream(event);
+
+      case TopicNarrow():
+      case DmNarrow():
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+      case KeywordSearchNarrow():
+        return UserTopicVisibilityEffect.none;
+    }
+  }
+
+  /// Whether this event could affect the result that [_messageVisible]
+  /// would ever have returned for any possible message in this message list.
+  MutedUsersVisibilityEffect _mutedUsersEventCanAffectVisibility(MutedUsersEvent event) {
+    switch(narrow) {
+      case CombinedFeedNarrow():
+        return store.mightChangeShouldMuteDmConversation(event);
+
+      case ChannelNarrow():
+      case TopicNarrow():
+      case DmNarrow():
+        return MutedUsersVisibilityEffect.none;
+
+      case MentionsNarrow():
+      case StarredMessagesNarrow():
+      case KeywordSearchNarrow():
+        return store.mightChangeShouldMuteDmConversation(event);
     }
   }
 
@@ -700,6 +762,17 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   Future<void> fetchInitial() async {
     assert(!fetched && !haveOldest && !haveNewest && !busyFetchingMore);
     assert(messages.isEmpty && contents.isEmpty);
+
+    if (narrow case KeywordSearchNarrow(keyword: '')) {
+      // The server would reject an empty keyword search; skip the request.
+      // TODO this seems like an awkward layer to handle this at --
+      //   probably better if the UI code doesn't take it to this point.
+      _haveOldest = true;
+      _haveNewest = true;
+      _setStatus(FetchingStatus.idle, was: FetchingStatus.unstarted);
+      return;
+    }
+
     _setStatus(FetchingStatus.fetchInitial, was: FetchingStatus.unstarted);
     // TODO schedule all this in another isolate
     final generation = this.generation;
@@ -914,7 +987,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   bool _shouldAddOutboxMessage(OutboxMessage outboxMessage) {
     assert(haveNewest);
     return !outboxMessage.hidden
-      && narrow.containsMessage(outboxMessage)
+      && narrow.containsMessage(outboxMessage) == true
       && _messageVisible(outboxMessage);
   }
 
@@ -962,10 +1035,10 @@ class MessageListView with ChangeNotifier, _MessageSequence {
 
   void handleUserTopicEvent(UserTopicEvent event) {
     switch (_canAffectVisibility(event)) {
-      case VisibilityEffect.none:
+      case UserTopicVisibilityEffect.none:
         return;
 
-      case VisibilityEffect.muted:
+      case UserTopicVisibilityEffect.muted:
         bool removed = _removeMessagesWhere((message) =>
           message is StreamMessage
             && message.streamId == event.streamId
@@ -980,7 +1053,35 @@ class MessageListView with ChangeNotifier, _MessageSequence {
           notifyListeners();
         }
 
-      case VisibilityEffect.unmuted:
+      case UserTopicVisibilityEffect.unmuted:
+        // TODO get the newly-unmuted messages from the message store
+        // For now, we simplify the task by just refetching this message list
+        // from scratch.
+        if (fetched) {
+          _reset();
+          notifyListeners();
+          fetchInitial();
+        }
+    }
+  }
+
+  void handleMutedUsersEvent(MutedUsersEvent event) {
+    switch (_mutedUsersEventCanAffectVisibility(event)) {
+      case MutedUsersVisibilityEffect.none:
+        return;
+
+      case MutedUsersVisibilityEffect.muted:
+        final anyRemoved = _removeMessagesWhere((message) {
+          if (message is! DmMessage) return false;
+          final narrow = DmNarrow.ofMessage(message, selfUserId: store.selfUserId);
+          return store.shouldMuteDmConversation(narrow, event: event);
+        });
+        if (anyRemoved) {
+          notifyListeners();
+        }
+
+      case MutedUsersVisibilityEffect.mixed:
+      case MutedUsersVisibilityEffect.unmuted:
         // TODO get the newly-unmuted messages from the message store
         // For now, we simplify the task by just refetching this message list
         // from scratch.
@@ -1001,7 +1102,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   /// Add [MessageEvent.message] to this view, if it belongs here.
   void handleMessageEvent(MessageEvent event) {
     final message = event.message;
-    if (!narrow.containsMessage(message) || !_messageVisible(message)) {
+    if (narrow.containsMessage(message) != true || !_messageVisible(message)) {
       assert(event.localMessageId == null || outboxMessages.none((message) =>
         message.localMessageId == int.parse(event.localMessageId!, radix: 10)));
       return;
@@ -1076,9 +1177,7 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     switch (propagateMode) {
       case PropagateMode.changeAll:
       case PropagateMode.changeLater:
-        _narrow = newNarrow;
-        _reset();
-        fetchInitial();
+        renarrowAndFetch(newNarrow);
       case PropagateMode.changeOne:
     }
   }
@@ -1099,10 +1198,17 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       case CombinedFeedNarrow():
       case MentionsNarrow():
       case StarredMessagesNarrow():
-        // The messages were and remain in this narrow.
-        // TODO(#421): … except they may have become muted or not.
+        // The messages didn't enter or leave this narrow.
+        // TODO(#1255): … except they may have become muted or not.
         //   We'll handle that at the same time as we handle muting itself changing.
         // Recipient headers, and downstream of those, may change, though.
+        _messagesMovedInternally(messageIds);
+
+      case KeywordSearchNarrow():
+        // This might not be quite true, since matches can be determined by
+        // the topic alone, and topics change. Punt on trying to add/remove
+        // messages, though, because we aren't equipped to evaluate the match
+        // without asking the server.
         _messagesMovedInternally(messageIds);
 
       case ChannelNarrow(:final streamId):

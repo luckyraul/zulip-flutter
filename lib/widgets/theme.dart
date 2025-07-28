@@ -154,6 +154,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     composeBoxBg: const Color(0xffffffff),
     contextMenuCancelText: const Color(0xff222222),
     contextMenuItemBg: const Color(0xff6159e1),
+    contextMenuItemIcon: const Color(0xff4f42c9),
     contextMenuItemLabel: const Color(0xff242631),
     contextMenuItemMeta: const Color(0xff626573),
     contextMenuItemText: const Color(0xff381da7),
@@ -170,7 +171,17 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     labelEdited: const HSLColor.fromAHSL(0.35, 0, 0, 0).toColor(),
     labelMenuButton: const Color(0xff222222),
     labelSearchPrompt: const Color(0xff000000).withValues(alpha: 0.5),
+    listMenuItemBg: const Color(0xffcbcdd6),
+    listMenuItemIcon: const Color(0xff9194a3),
+    listMenuItemText: const Color(0xff2d303c),
+
+    // Keep the color here and the corresponding non-dark mode entry in
+    // ios/Runner/Assets.xcassets/LaunchBackground.colorset/Contents.json
+    // in sync.
     mainBackground: const Color(0xfff0f0f0),
+
+    neutralButtonBg: const Color(0xff8c84ae),
+    neutralButtonLabel: const Color(0xff433d5c),
     radioBorder: Color(0xffbbbdc8),
     radioFillSelected: Color(0xff4370f0),
     statusAway: Color(0xff73788c).withValues(alpha: 0.25),
@@ -184,12 +195,13 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     title: const Color(0xff1a1a1a),
     bgSearchInput: const Color(0xffe3e3e3),
     textMessage: const Color(0xff262626),
+    textMessageMuted: const Color(0xff262626).withValues(alpha: 0.6),
     channelColorSwatches: ChannelColorSwatches.light,
+    avatarPlaceholderBg: const Color(0x33808080),
+    avatarPlaceholderIcon: Colors.black.withValues(alpha: 0.5),
     contextMenuCancelBg: const Color(0xff797986).withValues(alpha: 0.15),
     contextMenuCancelPressedBg: const Color(0xff797986).withValues(alpha: 0.20),
     dmHeaderBg: const HSLColor.fromAHSL(1, 46, 0.35, 0.93).toColor(),
-    groupDmConversationIcon: Colors.black.withValues(alpha: 0.5),
-    groupDmConversationIconBg: const Color(0x33808080),
     inboxItemIconMarker: const HSLColor.fromAHSL(0.5, 0, 0, 0.2).toColor(),
     loginOrDivider: const Color(0xffdedede),
     loginOrDividerText: const Color(0xff575757),
@@ -201,6 +213,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     subscriptionListHeaderLine: const HSLColor.fromAHSL(0.2, 240, 0.1, 0.5).toColor(),
     subscriptionListHeaderText: const HSLColor.fromAHSL(1.0, 240, 0.1, 0.5).toColor(),
     unreadCountBadgeTextForChannel: Colors.black.withValues(alpha: 0.9),
+    userStatusText: const Color(0xff808080),
   );
 
   static final dark = DesignVariables._(
@@ -230,6 +243,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     composeBoxBg: const Color(0xff0f0f0f),
     contextMenuCancelText: const Color(0xffffffff).withValues(alpha: 0.75),
     contextMenuItemBg: const Color(0xff7977fe),
+    contextMenuItemIcon: const Color(0xff9398fd),
     contextMenuItemLabel: const Color(0xffdfe1e8),
     contextMenuItemMeta: const Color(0xff9194a3),
     contextMenuItemText: const Color(0xff9398fd),
@@ -246,7 +260,17 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     labelEdited: const HSLColor.fromAHSL(0.35, 0, 0, 1).toColor(),
     labelMenuButton: const Color(0xffffffff).withValues(alpha: 0.85),
     labelSearchPrompt: const Color(0xffffffff).withValues(alpha: 0.5),
+    listMenuItemBg: const Color(0xff2d303c),
+    listMenuItemIcon: const Color(0xff767988),
+    listMenuItemText: const Color(0xffcbcdd6),
+
+    // Keep the color here and the corresponding dark mode entry in
+    // ios/Runner/Assets.xcassets/LaunchBackground.colorset/Contents.json
+    // in sync.
     mainBackground: const Color(0xff1d1d1d),
+
+    neutralButtonBg: const Color(0xffd4d1e0),
+    neutralButtonLabel: const Color(0xffa9a3c2),
     radioBorder: Color(0xff626573),
     radioFillSelected: Color(0xff4e7cfa),
     statusAway: Color(0xffabaeba).withValues(alpha: 0.30),
@@ -260,15 +284,16 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     title: const Color(0xffffffff).withValues(alpha: 0.9),
     bgSearchInput: const Color(0xff313131),
     textMessage: const Color(0xffffffff).withValues(alpha: 0.8),
+    textMessageMuted: const Color(0xffffffff).withValues(alpha: 0.5),
     channelColorSwatches: ChannelColorSwatches.dark,
+    // TODO(design-dark) need proper dark-theme color (this is ad hoc)
+    avatarPlaceholderBg: const Color(0x33cccccc),
+    // TODO(design-dark) need proper dark-theme color (this is ad hoc)
+    avatarPlaceholderIcon: Colors.white.withValues(alpha: 0.5),
     contextMenuCancelBg: const Color(0xff797986).withValues(alpha: 0.15), // the same as the light mode in Figma
     contextMenuCancelPressedBg: const Color(0xff797986).withValues(alpha: 0.20), // the same as the light mode in Figma
     // TODO(design-dark) need proper dark-theme color (this is ad hoc)
     dmHeaderBg: const HSLColor.fromAHSL(1, 46, 0.15, 0.2).toColor(),
-    // TODO(design-dark) need proper dark-theme color (this is ad hoc)
-    groupDmConversationIcon: Colors.white.withValues(alpha: 0.5),
-    // TODO(design-dark) need proper dark-theme color (this is ad hoc)
-    groupDmConversationIconBg: const Color(0x33cccccc),
     inboxItemIconMarker: const HSLColor.fromAHSL(0.4, 0, 0, 1).toColor(),
     loginOrDivider: const Color(0xff424242),
     loginOrDividerText: const Color(0xffa8a8a8),
@@ -285,6 +310,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     // TODO(design-dark) need proper dark-theme color (this is ad hoc)
     subscriptionListHeaderText: const HSLColor.fromAHSL(1.0, 240, 0.1, 0.75).toColor(),
     unreadCountBadgeTextForChannel: Colors.white.withValues(alpha: 0.9),
+    // TODO(design-dark) unchanged in dark theme?
+    userStatusText: const Color(0xff808080),
   );
 
   DesignVariables._({
@@ -314,6 +341,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.composeBoxBg,
     required this.contextMenuCancelText,
     required this.contextMenuItemBg,
+    required this.contextMenuItemIcon,
     required this.contextMenuItemLabel,
     required this.contextMenuItemMeta,
     required this.contextMenuItemText,
@@ -330,7 +358,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.labelEdited,
     required this.labelMenuButton,
     required this.labelSearchPrompt,
+    required this.listMenuItemBg,
+    required this.listMenuItemIcon,
+    required this.listMenuItemText,
     required this.mainBackground,
+    required this.neutralButtonBg,
+    required this.neutralButtonLabel,
     required this.radioBorder,
     required this.radioFillSelected,
     required this.statusAway,
@@ -340,12 +373,13 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.title,
     required this.bgSearchInput,
     required this.textMessage,
+    required this.textMessageMuted,
     required this.channelColorSwatches,
+    required this.avatarPlaceholderBg,
+    required this.avatarPlaceholderIcon,
     required this.contextMenuCancelBg,
     required this.contextMenuCancelPressedBg,
     required this.dmHeaderBg,
-    required this.groupDmConversationIcon,
-    required this.groupDmConversationIconBg,
     required this.inboxItemIconMarker,
     required this.loginOrDivider,
     required this.loginOrDividerText,
@@ -357,6 +391,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.subscriptionListHeaderLine,
     required this.subscriptionListHeaderText,
     required this.unreadCountBadgeTextForChannel,
+    required this.userStatusText,
   });
 
   /// The [DesignVariables] from the context's active theme.
@@ -395,6 +430,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color composeBoxBg;
   final Color contextMenuCancelText;
   final Color contextMenuItemBg;
+  final Color contextMenuItemIcon;
   final Color contextMenuItemLabel;
   final Color contextMenuItemMeta;
   final Color contextMenuItemText;
@@ -411,7 +447,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color labelEdited;
   final Color labelMenuButton;
   final Color labelSearchPrompt;
+  final Color listMenuItemBg;
+  final Color listMenuItemIcon;
+  final Color listMenuItemText;
   final Color mainBackground;
+  final Color neutralButtonBg;
+  final Color neutralButtonLabel;
   final Color radioBorder;
   final Color radioFillSelected;
   final Color statusAway;
@@ -421,16 +462,17 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color title;
   final Color bgSearchInput;
   final Color textMessage;
+  final Color textMessageMuted;
 
   // Not exactly from the Figma design, but from Vlad anyway.
   final ChannelColorSwatches channelColorSwatches;
 
   // Not named variables in Figma; taken from older Figma drafts, or elsewhere.
+  final Color avatarPlaceholderBg;
+  final Color avatarPlaceholderIcon;
   final Color contextMenuCancelBg; // In Figma, but unnamed.
   final Color contextMenuCancelPressedBg; // In Figma, but unnamed.
   final Color dmHeaderBg;
-  final Color groupDmConversationIcon;
-  final Color groupDmConversationIconBg;
   final Color inboxItemIconMarker;
   final Color loginOrDivider; // TODO(design-dark) need proper dark-theme color (this is ad hoc)
   final Color loginOrDividerText; // TODO(design-dark) need proper dark-theme color (this is ad hoc)
@@ -442,6 +484,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color subscriptionListHeaderLine;
   final Color subscriptionListHeaderText;
   final Color unreadCountBadgeTextForChannel;
+  final Color userStatusText; // In Figma, but unnamed.
 
   @override
   DesignVariables copyWith({
@@ -471,6 +514,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? composeBoxBg,
     Color? contextMenuCancelText,
     Color? contextMenuItemBg,
+    Color? contextMenuItemIcon,
     Color? contextMenuItemLabel,
     Color? contextMenuItemMeta,
     Color? contextMenuItemText,
@@ -487,7 +531,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? labelEdited,
     Color? labelMenuButton,
     Color? labelSearchPrompt,
+    Color? listMenuItemBg,
+    Color? listMenuItemIcon,
+    Color? listMenuItemText,
     Color? mainBackground,
+    Color? neutralButtonBg,
+    Color? neutralButtonLabel,
     Color? radioBorder,
     Color? radioFillSelected,
     Color? statusAway,
@@ -497,12 +546,13 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? title,
     Color? bgSearchInput,
     Color? textMessage,
+    Color? textMessageMuted,
     ChannelColorSwatches? channelColorSwatches,
+    Color? avatarPlaceholderBg,
+    Color? avatarPlaceholderIcon,
     Color? contextMenuCancelBg,
     Color? contextMenuCancelPressedBg,
     Color? dmHeaderBg,
-    Color? groupDmConversationIcon,
-    Color? groupDmConversationIconBg,
     Color? inboxItemIconMarker,
     Color? loginOrDivider,
     Color? loginOrDividerText,
@@ -514,6 +564,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? subscriptionListHeaderLine,
     Color? subscriptionListHeaderText,
     Color? unreadCountBadgeTextForChannel,
+    Color? userStatusText,
   }) {
     return DesignVariables._(
       background: background ?? this.background,
@@ -542,6 +593,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       composeBoxBg: composeBoxBg ?? this.composeBoxBg,
       contextMenuCancelText: contextMenuCancelText ?? this.contextMenuCancelText,
       contextMenuItemBg: contextMenuItemBg ?? this.contextMenuItemBg,
+      contextMenuItemIcon: contextMenuItemIcon ?? this.contextMenuItemIcon,
       contextMenuItemLabel: contextMenuItemLabel ?? this.contextMenuItemLabel,
       contextMenuItemMeta: contextMenuItemMeta ?? this.contextMenuItemMeta,
       contextMenuItemText: contextMenuItemText ?? this.contextMenuItemText,
@@ -558,7 +610,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       labelEdited: labelEdited ?? this.labelEdited,
       labelMenuButton: labelMenuButton ?? this.labelMenuButton,
       labelSearchPrompt: labelSearchPrompt ?? this.labelSearchPrompt,
+      listMenuItemBg: listMenuItemBg ?? this.listMenuItemBg,
+      listMenuItemIcon: listMenuItemIcon ?? this.listMenuItemIcon,
+      listMenuItemText: listMenuItemText ?? this.listMenuItemText,
       mainBackground: mainBackground ?? this.mainBackground,
+      neutralButtonBg: neutralButtonBg ?? this.neutralButtonBg,
+      neutralButtonLabel: neutralButtonLabel ?? this.neutralButtonLabel,
       radioBorder: radioBorder ?? this.radioBorder,
       radioFillSelected: radioFillSelected ?? this.radioFillSelected,
       statusAway: statusAway ?? this.statusAway,
@@ -568,12 +625,13 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       title: title ?? this.title,
       bgSearchInput: bgSearchInput ?? this.bgSearchInput,
       textMessage: textMessage ?? this.textMessage,
+      textMessageMuted: textMessageMuted ?? this.textMessageMuted,
       channelColorSwatches: channelColorSwatches ?? this.channelColorSwatches,
+      avatarPlaceholderBg: avatarPlaceholderBg ?? this.avatarPlaceholderBg,
+      avatarPlaceholderIcon: avatarPlaceholderIcon ?? this.avatarPlaceholderIcon,
       contextMenuCancelBg: contextMenuCancelBg ?? this.contextMenuCancelBg,
       contextMenuCancelPressedBg: contextMenuCancelPressedBg ?? this.contextMenuCancelPressedBg,
       dmHeaderBg: dmHeaderBg ?? this.dmHeaderBg,
-      groupDmConversationIcon: groupDmConversationIcon ?? this.groupDmConversationIcon,
-      groupDmConversationIconBg: groupDmConversationIconBg ?? this.groupDmConversationIconBg,
       inboxItemIconMarker: inboxItemIconMarker ?? this.inboxItemIconMarker,
       loginOrDivider: loginOrDivider ?? this.loginOrDivider,
       loginOrDividerText: loginOrDividerText ?? this.loginOrDividerText,
@@ -585,6 +643,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       subscriptionListHeaderLine: subscriptionListHeaderLine ?? this.subscriptionListHeaderLine,
       subscriptionListHeaderText: subscriptionListHeaderText ?? this.subscriptionListHeaderText,
       unreadCountBadgeTextForChannel: unreadCountBadgeTextForChannel ?? this.unreadCountBadgeTextForChannel,
+      userStatusText: userStatusText ?? this.userStatusText,
     );
   }
 
@@ -620,6 +679,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       composeBoxBg: Color.lerp(composeBoxBg, other.composeBoxBg, t)!,
       contextMenuCancelText: Color.lerp(contextMenuCancelText, other.contextMenuCancelText, t)!,
       contextMenuItemBg: Color.lerp(contextMenuItemBg, other.contextMenuItemBg, t)!,
+      contextMenuItemIcon: Color.lerp(contextMenuItemIcon, other.contextMenuItemIcon, t)!,
       contextMenuItemLabel: Color.lerp(contextMenuItemLabel, other.contextMenuItemLabel, t)!,
       contextMenuItemMeta: Color.lerp(contextMenuItemMeta, other.contextMenuItemMeta, t)!,
       contextMenuItemText: Color.lerp(contextMenuItemText, other.contextMenuItemText, t)!,
@@ -636,7 +696,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       labelEdited: Color.lerp(labelEdited, other.labelEdited, t)!,
       labelMenuButton: Color.lerp(labelMenuButton, other.labelMenuButton, t)!,
       labelSearchPrompt: Color.lerp(labelSearchPrompt, other.labelSearchPrompt, t)!,
+      listMenuItemBg: Color.lerp(listMenuItemBg, other.listMenuItemBg, t)!,
+      listMenuItemIcon: Color.lerp(listMenuItemIcon, other.listMenuItemIcon, t)!,
+      listMenuItemText: Color.lerp(listMenuItemText, other.listMenuItemText, t)!,
       mainBackground: Color.lerp(mainBackground, other.mainBackground, t)!,
+      neutralButtonBg: Color.lerp(neutralButtonBg, other.neutralButtonBg, t)!,
+      neutralButtonLabel: Color.lerp(neutralButtonLabel, other.neutralButtonLabel, t)!,
       radioBorder: Color.lerp(radioBorder, other.radioBorder, t)!,
       radioFillSelected: Color.lerp(radioFillSelected, other.radioFillSelected, t)!,
       statusAway: Color.lerp(statusAway, other.statusAway, t)!,
@@ -646,12 +711,13 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       title: Color.lerp(title, other.title, t)!,
       bgSearchInput: Color.lerp(bgSearchInput, other.bgSearchInput, t)!,
       textMessage: Color.lerp(textMessage, other.textMessage, t)!,
+      textMessageMuted: Color.lerp(textMessageMuted, other.textMessageMuted, t)!,
       channelColorSwatches: ChannelColorSwatches.lerp(channelColorSwatches, other.channelColorSwatches, t),
+      avatarPlaceholderBg: Color.lerp(avatarPlaceholderBg, other.avatarPlaceholderBg, t)!,
+      avatarPlaceholderIcon: Color.lerp(avatarPlaceholderIcon, other.avatarPlaceholderIcon, t)!,
       contextMenuCancelBg: Color.lerp(contextMenuCancelBg, other.contextMenuCancelBg, t)!,
       contextMenuCancelPressedBg: Color.lerp(contextMenuCancelPressedBg, other.contextMenuCancelPressedBg, t)!,
       dmHeaderBg: Color.lerp(dmHeaderBg, other.dmHeaderBg, t)!,
-      groupDmConversationIcon: Color.lerp(groupDmConversationIcon, other.groupDmConversationIcon, t)!,
-      groupDmConversationIconBg: Color.lerp(groupDmConversationIconBg, other.groupDmConversationIconBg, t)!,
       inboxItemIconMarker: Color.lerp(inboxItemIconMarker, other.inboxItemIconMarker, t)!,
       loginOrDivider: Color.lerp(loginOrDivider, other.loginOrDivider, t)!,
       loginOrDividerText: Color.lerp(loginOrDividerText, other.loginOrDividerText, t)!,
@@ -663,6 +729,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       subscriptionListHeaderLine: Color.lerp(subscriptionListHeaderLine, other.subscriptionListHeaderLine, t)!,
       subscriptionListHeaderText: Color.lerp(subscriptionListHeaderText, other.subscriptionListHeaderText, t)!,
       unreadCountBadgeTextForChannel: Color.lerp(unreadCountBadgeTextForChannel, other.unreadCountBadgeTextForChannel, t)!,
+      userStatusText: Color.lerp(userStatusText, other.userStatusText, t)!,
     );
   }
 }

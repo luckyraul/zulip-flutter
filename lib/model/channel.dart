@@ -1,8 +1,12 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 
 import '../api/model/events.dart';
 import '../api/model/initial_snapshot.dart';
 import '../api/model/model.dart';
+import 'store.dart';
+import 'user.dart';
 
 /// The portion of [PerAccountStore] for channels, topics, and stuff about them.
 ///
@@ -10,7 +14,7 @@ import '../api/model/model.dart';
 /// implementation of [PerAccountStore], to avoid circularity.
 ///
 /// The data structures described here are implemented at [ChannelStoreImpl].
-mixin ChannelStore {
+mixin ChannelStore on UserStore {
   /// All known channels/streams, indexed by [ZulipStream.streamId].
   ///
   /// The same [ZulipStream] objects also appear in [streamsByName].
@@ -41,6 +45,8 @@ mixin ChannelStore {
   ///
   /// For policies directly applicable in the UI, see
   /// [isTopicVisibleInStream] and [isTopicVisible].
+  ///
+  /// Topics are treated case-insensitively; see [TopicName.isSameAs].
   UserTopicVisibilityPolicy topicVisibilityPolicy(int streamId, TopicName topic);
 
   /// The raw data structure underlying [topicVisibilityPolicy].
@@ -69,10 +75,10 @@ mixin ChannelStore {
 
   /// Whether the given event will change the result of [isTopicVisibleInStream]
   /// for its stream and topic, compared to the current state.
-  VisibilityEffect willChangeIfTopicVisibleInStream(UserTopicEvent event) {
+  UserTopicVisibilityEffect willChangeIfTopicVisibleInStream(UserTopicEvent event) {
     final streamId = event.streamId;
     final topic = event.topicName;
-    return VisibilityEffect._fromBeforeAfter(
+    return UserTopicVisibilityEffect._fromBeforeAfter(
       _isTopicVisibleInStream(topicVisibilityPolicy(streamId, topic)),
       _isTopicVisibleInStream(event.visibilityPolicy));
   }
@@ -106,10 +112,10 @@ mixin ChannelStore {
 
   /// Whether the given event will change the result of [isTopicVisible]
   /// for its stream and topic, compared to the current state.
-  VisibilityEffect willChangeIfTopicVisible(UserTopicEvent event) {
+  UserTopicVisibilityEffect willChangeIfTopicVisible(UserTopicEvent event) {
     final streamId = event.streamId;
     final topic = event.topicName;
-    return VisibilityEffect._fromBeforeAfter(
+    return UserTopicVisibilityEffect._fromBeforeAfter(
       _isTopicVisible(streamId, topicVisibilityPolicy(streamId, topic)),
       _isTopicVisible(streamId, event.visibilityPolicy));
   }
@@ -132,12 +138,37 @@ mixin ChannelStore {
         return true;
     }
   }
+
+  bool hasPostingPermission({
+    required ZulipStream inChannel,
+    required User user,
+    required DateTime byDate,
+  }) {
+    final role = user.role;
+    // We let the users with [unknown] role to send the message, then the server
+    // will decide to accept it or not based on its actual role.
+    if (role == UserRole.unknown) return true;
+
+    switch (inChannel.channelPostPolicy) {
+      case ChannelPostPolicy.any:             return true;
+      case ChannelPostPolicy.fullMembers:     {
+        if (!role.isAtLeast(UserRole.member)) return false;
+        if (role == UserRole.member) {
+          return hasPassedWaitingPeriod(user, byDate: byDate);
+        }
+        return true;
+      }
+      case ChannelPostPolicy.moderators:      return role.isAtLeast(UserRole.moderator);
+      case ChannelPostPolicy.administrators:  return role.isAtLeast(UserRole.administrator);
+      case ChannelPostPolicy.unknown:         return true;
+    }
+  }
 }
 
 /// Whether and how a given [UserTopicEvent] will affect the results
 /// that [ChannelStore.isTopicVisible] or [ChannelStore.isTopicVisibleInStream]
 /// would give for some messages.
-enum VisibilityEffect {
+enum UserTopicVisibilityEffect {
   /// The event will have no effect on the visibility results.
   none,
 
@@ -147,13 +178,35 @@ enum VisibilityEffect {
   /// The event will change some visibility results from false to true.
   unmuted;
 
-  factory VisibilityEffect._fromBeforeAfter(bool before, bool after) {
+  factory UserTopicVisibilityEffect._fromBeforeAfter(bool before, bool after) {
     return switch ((before, after)) {
-      (false, true) => VisibilityEffect.unmuted,
-      (true, false) => VisibilityEffect.muted,
-      _             => VisibilityEffect.none,
+      (false, true) => UserTopicVisibilityEffect.unmuted,
+      (true, false) => UserTopicVisibilityEffect.muted,
+      _             => UserTopicVisibilityEffect.none,
     };
   }
+}
+
+mixin ProxyChannelStore on ChannelStore {
+  @protected
+  ChannelStore get channelStore;
+
+  @override
+  Map<int, ZulipStream> get streams => channelStore.streams;
+
+  @override
+  Map<String, ZulipStream> get streamsByName => channelStore.streamsByName;
+
+  @override
+  Map<int, Subscription> get subscriptions => channelStore.subscriptions;
+
+  @override
+  UserTopicVisibilityPolicy topicVisibilityPolicy(int streamId, TopicName topic) =>
+    channelStore.topicVisibilityPolicy(streamId, topic);
+
+  @override
+  Map<int, Map<TopicName, UserTopicVisibilityPolicy>> get debugTopicVisibility =>
+    channelStore.debugTopicVisibility;
 }
 
 /// The implementation of [ChannelStore] that does the work.
@@ -161,8 +214,11 @@ enum VisibilityEffect {
 /// Generally the only code that should need this class is [PerAccountStore]
 /// itself.  Other code accesses this functionality through [PerAccountStore],
 /// or through the mixin [ChannelStore] which describes its interface.
-class ChannelStoreImpl with ChannelStore {
-  factory ChannelStoreImpl({required InitialSnapshot initialSnapshot}) {
+class ChannelStoreImpl extends HasUserStore with ChannelStore {
+  factory ChannelStoreImpl({
+    required UserStore users,
+    required InitialSnapshot initialSnapshot,
+  }) {
     final subscriptions = Map.fromEntries(initialSnapshot.subscriptions.map(
       (subscription) => MapEntry(subscription.streamId, subscription)));
 
@@ -171,17 +227,18 @@ class ChannelStoreImpl with ChannelStore {
       streams.putIfAbsent(stream.streamId, () => stream);
     }
 
-    final topicVisibility = <int, Map<TopicName, UserTopicVisibilityPolicy>>{};
+    final topicVisibility = <int, TopicKeyedMap<UserTopicVisibilityPolicy>>{};
     for (final item in initialSnapshot.userTopics ?? const <UserTopicItem>[]) {
       if (_warnInvalidVisibilityPolicy(item.visibilityPolicy)) {
         // Not a value we expect. Keep it out of our data structures. // TODO(log)
         continue;
       }
-      final forStream = topicVisibility.putIfAbsent(item.streamId, () => {});
+      final forStream = topicVisibility.putIfAbsent(item.streamId, () => makeTopicKeyedMap());
       forStream[item.topicName] = item.visibilityPolicy;
     }
 
     return ChannelStoreImpl._(
+      users: users,
       streams: streams,
       streamsByName: streams.map((_, stream) => MapEntry(stream.name, stream)),
       subscriptions: subscriptions,
@@ -190,6 +247,7 @@ class ChannelStoreImpl with ChannelStore {
   }
 
   ChannelStoreImpl._({
+    required super.users,
     required this.streams,
     required this.streamsByName,
     required this.subscriptions,
@@ -204,9 +262,9 @@ class ChannelStoreImpl with ChannelStore {
   final Map<int, Subscription> subscriptions;
 
   @override
-  Map<int, Map<TopicName, UserTopicVisibilityPolicy>> get debugTopicVisibility => topicVisibility;
+  Map<int, TopicKeyedMap<UserTopicVisibilityPolicy>> get debugTopicVisibility => topicVisibility;
 
-  final Map<int, Map<TopicName, UserTopicVisibilityPolicy>> topicVisibility;
+  final Map<int, TopicKeyedMap<UserTopicVisibilityPolicy>> topicVisibility;
 
   @override
   UserTopicVisibilityPolicy topicVisibilityPolicy(int streamId, TopicName topic) {
@@ -322,7 +380,7 @@ class ChannelStoreImpl with ChannelStore {
           case SubscriptionProperty.color:
             subscription.color                  = event.value as int;
           case SubscriptionProperty.isMuted:
-            // TODO(#421) update [MessageListView] if affected
+            // TODO(#1255) update [MessageListView] if affected
             subscription.isMuted                = event.value as bool;
           case SubscriptionProperty.inHomeView:
             subscription.isMuted                = !(event.value as bool);
@@ -354,7 +412,6 @@ class ChannelStoreImpl with ChannelStore {
     if (_warnInvalidVisibilityPolicy(visibilityPolicy)) {
       visibilityPolicy = UserTopicVisibilityPolicy.none;
     }
-    // TODO(#421) update [MessageListView] if affected
     if (visibilityPolicy == UserTopicVisibilityPolicy.none) {
       // This is the "zero value" for this type, which our data structure
       // represents by leaving the topic out entirely.
@@ -365,8 +422,26 @@ class ChannelStoreImpl with ChannelStore {
         topicVisibility.remove(event.streamId);
       }
     } else {
-      final forStream = topicVisibility.putIfAbsent(event.streamId, () => {});
+      final forStream = topicVisibility.putIfAbsent(event.streamId, () => makeTopicKeyedMap());
       forStream[event.topicName] = visibilityPolicy;
     }
   }
 }
+
+/// A [Map] with [TopicName] keys and [V] values.
+///
+/// When one of these is created by [makeTopicKeyedMap],
+/// key equality is done case-insensitively; see there.
+///
+/// This type should only be used for maps created by [makeTopicKeyedMap].
+/// It would be nice to enforce that.
+typedef TopicKeyedMap<V> = Map<TopicName, V>;
+
+/// Make a case-insensitive, case-preserving [TopicName]-keyed [LinkedHashMap].
+///
+/// The equality function is [TopicName.isSameAs],
+/// and the hash code is [String.hashCode] of [TopicName.canonicalize].
+TopicKeyedMap<V> makeTopicKeyedMap<V>() => LinkedHashMap<TopicName, V>(
+  equals: (a, b) => a.isSameAs(b),
+  hashCode: (k) => k.canonicalize().hashCode,
+);

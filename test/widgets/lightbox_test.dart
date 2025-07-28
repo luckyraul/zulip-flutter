@@ -6,9 +6,9 @@ import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:video_player/video_player.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/localizations.dart';
 import 'package:zulip/model/narrow.dart';
@@ -17,6 +17,7 @@ import 'package:zulip/widgets/app.dart';
 import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/lightbox.dart';
 import 'package:zulip/widgets/message_list.dart';
+import 'package:zulip/widgets/user.dart';
 
 import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
@@ -31,16 +32,14 @@ const kTestVideoUrl = "https://a/video.mp4";
 const kTestUnsupportedVideoUrl = "https://a/unsupported.mp4";
 const kTestVideoDuration = Duration(seconds: 10);
 
-class FakeVideoPlayerPlatform extends Fake
-    with MockPlatformInterfaceMixin
-    implements VideoPlayerPlatform {
+class FakeVideoPlayerPlatform extends VideoPlayerPlatform {
   static final FakeVideoPlayerPlatform instance = FakeVideoPlayerPlatform();
 
   static void registerWith() {
     VideoPlayerPlatform.instance = instance;
   }
 
-  static const int _kTextureId = 0xffffffff;
+  static const int _kPlayerId = 0xffffffff;
 
   StreamController<VideoEvent> _streamController = StreamController<VideoEvent>();
   bool _hasError = false;
@@ -103,21 +102,21 @@ class FakeVideoPlayerPlatform extends Fake
   Future<void> init() async {}
 
   @override
-  Future<void> dispose(int textureId) async {
+  Future<void> dispose(int playerId) async {
     if (_hasError) {
       assert(!initialized);
-      assert(textureId == VideoPlayerController.kUninitializedTextureId);
+      assert(playerId == VideoPlayerController.kUninitializedPlayerId);
       return;
     }
 
     assert(initialized);
-    assert(textureId == _kTextureId);
+    assert(playerId == _kPlayerId);
   }
 
   @override
-  Future<int?> create(DataSource dataSource) async  {
+  Future<int?> createWithOptions(VideoCreationOptions options) async  {
     assert(!initialized);
-    if (dataSource.uri == kTestUnsupportedVideoUrl) {
+    if (options.dataSource.uri == kTestUnsupportedVideoUrl) {
       _hasError = true;
       _streamController.addError(
         PlatformException(
@@ -134,24 +133,24 @@ class FakeVideoPlayerPlatform extends Fake
       size: const Size(100, 100),
       rotationCorrection: 0,
     ));
-    return _kTextureId;
+    return _kPlayerId;
   }
 
   @override
-  Stream<VideoEvent> videoEventsFor(int textureId) {
-    assert(textureId == _kTextureId);
+  Stream<VideoEvent> videoEventsFor(int playerId) {
+    assert(playerId == _kPlayerId);
     return _streamController.stream;
   }
 
   @override
-  Future<void> setLooping(int textureId, bool looping) async {
-    assert(textureId == _kTextureId);
+  Future<void> setLooping(int playerId, bool looping) async {
+    assert(playerId == _kPlayerId);
     assert(!looping);
   }
 
   @override
-  Future<void> play(int textureId) async {
-    assert(textureId == _kTextureId);
+  Future<void> play(int playerId) async {
+    assert(playerId == _kPlayerId);
     _stopwatch?.start();
     _streamController.add(VideoEvent(
       eventType: VideoEventType.isPlayingStateUpdate,
@@ -160,8 +159,8 @@ class FakeVideoPlayerPlatform extends Fake
   }
 
   @override
-  Future<void> pause(int textureId) async {
-    assert(textureId == _kTextureId);
+  Future<void> pause(int playerId) async {
+    assert(playerId == _kPlayerId);
     _stopwatch?.stop();
     _streamController.add(VideoEvent(
       eventType: VideoEventType.isPlayingStateUpdate,
@@ -170,33 +169,33 @@ class FakeVideoPlayerPlatform extends Fake
   }
 
   @override
-  Future<void> setVolume(int textureId, double volume) async {
-    assert(textureId == _kTextureId);
+  Future<void> setVolume(int playerId, double volume) async {
+    assert(playerId == _kPlayerId);
   }
 
   @override
-  Future<void> seekTo(int textureId, Duration pos) async {
+  Future<void> seekTo(int playerId, Duration pos) async {
     _callLog.add('seekTo');
-    assert(textureId == _kTextureId);
+    assert(playerId == _kPlayerId);
 
     _lastSetPosition = pos >= kTestVideoDuration ? kTestVideoDuration : pos;
     _stopwatch?.reset();
   }
 
   @override
-  Future<void> setPlaybackSpeed(int textureId, double speed) async {
-    assert(textureId == _kTextureId);
+  Future<void> setPlaybackSpeed(int playerId, double speed) async {
+    assert(playerId == _kPlayerId);
   }
 
   @override
-  Future<Duration> getPosition(int textureId) async {
-    assert(textureId == _kTextureId);
+  Future<Duration> getPosition(int playerId) async {
+    assert(playerId == _kPlayerId);
     return position;
   }
 
   @override
-  Widget buildView(int textureId) {
-    assert(textureId == _kTextureId);
+  Widget buildViewWithOptions(VideoViewOptions options) {
+    assert(options.playerId == _kPlayerId);
     return const SizedBox(width: 100, height: 100);
   }
 }
@@ -204,6 +203,8 @@ class FakeVideoPlayerPlatform extends Fake
 void main() {
   TestZulipBinding.ensureInitialized();
   MessageListPage.debugEnableMarkReadOnScroll = false;
+
+  late PerAccountStore store;
 
   group('LightboxHero', () {
     late PerAccountStore store;
@@ -274,6 +275,7 @@ void main() {
     });
 
     testWidgets('no hero animation occurs between different message list pages for same image', (tester) async {
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/930
       Rect getElementRect(Element element) =>
         tester.getRect(find.byElementPredicate((e) => e == element));
 
@@ -309,7 +311,13 @@ void main() {
       }
 
       debugNetworkImageHttpClientProvider = null;
-    });
+    }, skip: true, // TODO get this no-hero test to work again with new page transitions;
+      //   see https://github.com/flutter/flutter/pull/165832#issuecomment-3111641360 .
+      //   Perhaps specify the old default, of ZoomPageTransitionsBuilder?
+      //   Or make getElementRect work relative to the enclosing page,
+      //   rather than the whole screen, so that the test becomes robust to
+      //   the whole pages moving around.
+    );
   });
 
   group('_ImageLightboxPage', () {
@@ -317,10 +325,16 @@ void main() {
 
     Future<void> setupPage(WidgetTester tester, {
       Message? message,
+      List<User>? users,
       required Uri? thumbnailUrl,
     }) async {
       addTearDown(testBinding.reset);
       await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
+      store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+
+      if (users != null) {
+        await store.addUsers(users);
+      }
 
       // ZulipApp instead of TestZulipApp because we need the navigator to push
       // the lightbox route. The lightbox page works together with the route;
@@ -352,20 +366,41 @@ void main() {
       debugNetworkImageHttpClientProvider = null;
     });
 
-    testWidgets('app bar shows sender name and date', (tester) async {
-      prepareBoringImageHttpClient();
-      final timestamp = DateTime.parse("2024-07-23 23:12:24").millisecondsSinceEpoch ~/ 1000;
-      final message = eg.streamMessage(sender: eg.otherUser, timestamp: timestamp);
-      await setupPage(tester, message: message, thumbnailUrl: null);
-
-      // We're looking for a RichText, in the app bar, with both the
-      // sender's name and the timestamp.
+    void checkAppBarNameAndDate(WidgetTester tester, String expectedName, String expectedDate) {
       final labelTextWidget = tester.widget<RichText>(
         find.descendant(of: find.byType(AppBar).last,
-          matching: find.textContaining(findRichText: true,
-            eg.otherUser.fullName)));
+          matching: find.textContaining(findRichText: true, expectedName)));
       check(labelTextWidget.text.toPlainText())
-        .contains('Jul 23, 2024 23:12:24');
+        .contains(expectedDate);
+    }
+
+    testWidgets('app bar shows sender name and date; updates when name changes', (tester) async {
+      prepareBoringImageHttpClient();
+      final timestamp = DateTime.parse("2024-07-23 23:12:24").millisecondsSinceEpoch ~/ 1000;
+      final sender = eg.user(fullName: 'Old name');
+      final message = eg.streamMessage(sender: sender, timestamp: timestamp);
+      await setupPage(tester, message: message, thumbnailUrl: null, users: [sender]);
+      check(store.getUser(sender.userId)).isNotNull();
+
+      checkAppBarNameAndDate(tester, 'Old name', 'Jul 23, 2024 11:12:24 PM');
+
+      await store.handleEvent(RealmUserUpdateEvent(id: 1,
+        userId: sender.userId, fullName: 'New name'));
+      await tester.pump();
+      checkAppBarNameAndDate(tester, 'New name', 'Jul 23, 2024 11:12:24 PM');
+
+      debugNetworkImageHttpClientProvider = null;
+    });
+
+    testWidgets('app bar shows sender name and date; unknown sender', (tester) async {
+      prepareBoringImageHttpClient();
+      final timestamp = DateTime.parse("2024-07-23 23:12:24").millisecondsSinceEpoch ~/ 1000;
+      final sender = eg.user(fullName: 'Sender name');
+      final message = eg.streamMessage(sender: sender, timestamp: timestamp);
+      await setupPage(tester, message: message, thumbnailUrl: null, users: []);
+      check(store.getUser(sender.userId)).isNull();
+
+      checkAppBarNameAndDate(tester, 'Sender name', 'Jul 23, 2024 11:12:24 PM');
 
       debugNetworkImageHttpClientProvider = null;
     });

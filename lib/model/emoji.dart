@@ -122,8 +122,30 @@ mixin EmojiStore {
   // TODO cut debugServerEmojiData once we can query for lists of emoji;
   //   have tests make those queries end-to-end
   Map<String, List<String>>? get debugServerEmojiData;
+}
 
-  void setServerEmojiData(ServerEmojiData data);
+mixin ProxyEmojiStore on EmojiStore {
+  @protected
+  EmojiStore get emojiStore;
+
+  @override
+  EmojiDisplay emojiDisplayFor({
+    required ReactionType emojiType,
+    required String emojiCode,
+    required String emojiName
+  }) {
+    return emojiStore.emojiDisplayFor(
+      emojiType: emojiType, emojiCode: emojiCode, emojiName: emojiName);
+  }
+
+  @override
+  Iterable<EmojiCandidate> popularEmojiCandidates() => emojiStore.popularEmojiCandidates();
+
+  @override
+  Iterable<EmojiCandidate> allEmojiCandidates() => emojiStore.allEmojiCandidates();
+
+  @override
+  Map<String, List<String>>? get debugServerEmojiData => emojiStore.debugServerEmojiData;
 }
 
 /// The implementation of [EmojiStore] that does the work.
@@ -374,7 +396,6 @@ class EmojiStoreImpl extends PerAccountStoreBase with EmojiStore {
     return _allEmojiCandidates ??= _generateAllCandidates();
   }
 
-  @override
   void setServerEmojiData(ServerEmojiData data) {
     _serverEmojiData = data.codeToNames;
     _popularCandidates = null;

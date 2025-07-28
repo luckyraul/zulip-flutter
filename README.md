@@ -42,7 +42,7 @@ browsing through recent commits and the codebase,
 and the Zulip guide to Git.
 
 To find possible issues to work on, see our [project board][].
-Look for issues up through the "Launch" milestone,
+Look for issues in the earliest milestone,
 and that aren't already assigned.
 
 Follow the Zulip guide to [picking an issue to work on][],
@@ -55,6 +55,7 @@ and describing your progress.
 
 [your first codebase contribution]: https://zulip.readthedocs.io/en/latest/contributing/contributing.html#your-first-codebase-contribution
 [what makes a great Zulip contributor]: https://zulip.readthedocs.io/en/latest/contributing/contributing.html#what-makes-a-great-zulip-contributor
+[project board]: https://github.com/orgs/zulip/projects/5/views/4
 [picking an issue to work on]: https://zulip.readthedocs.io/en/latest/contributing/contributing.html#picking-an-issue-to-work-on
 
 
@@ -108,7 +109,7 @@ Two specific points to expand on:
 [commit-style]: https://zulip.readthedocs.io/en/latest/contributing/commit-discipline.html
 
 
-## Getting started in developing this beta app
+## Getting started in developing
 
 ### Setting up
 

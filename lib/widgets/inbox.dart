@@ -6,9 +6,9 @@ import '../model/narrow.dart';
 import '../model/recent_dm_conversations.dart';
 import '../model/unreads.dart';
 import 'action_sheet.dart';
-import 'home.dart';
 import 'icons.dart';
 import 'message_list.dart';
+import 'page.dart';
 import 'sticky_header.dart';
 import 'store.dart';
 import 'text.dart';
@@ -168,9 +168,7 @@ class _InboxPageState extends State<InboxPageBody> with PerAccountStoreAwareStat
         message: zulipLocalizations.inboxEmptyPlaceholder);
     }
 
-    return SafeArea(
-      // Don't pad the bottom here; we want the list content to do that.
-      bottom: false,
+    return SafeArea( // horizontal insets
       child: StickyHeaderListView.builder(
         itemCount: sections.length,
         itemBuilder: (context, index) {
@@ -395,6 +393,7 @@ class _DmItem extends StatelessWidget {
     final store = PerAccountStoreWidget.of(context);
     final designVariables = DesignVariables.of(context);
 
+    // TODO write a test where a/the recipient is muted
     final title = switch (narrow.otherRecipientIds) { // TODO dedupe with [RecentDmConversationsItem]
       [] => store.selfUser.fullName,
       [var otherUserId] => store.userDisplayName(otherUserId),

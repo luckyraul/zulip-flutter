@@ -42,7 +42,7 @@ void main() {
     await store.addStream(channel);
     await store.addSubscription(eg.subscription(channel));
     for (final userTopic in userTopics) {
-      await store.addUserTopic(
+      await store.setUserTopic(
         channel, userTopic.topicName.apiName, userTopic.visibilityPolicy);
     }
     topics ??= [eg.getStreamTopicsEntry()];
@@ -142,7 +142,7 @@ void main() {
     // Tap "TOPICS" button navigating to the topic-list page…
     connection.prepare(json: GetStreamTopicsResult(
       topics: [eg.getStreamTopicsEntry(name: 'topic A')]).toJson());
-    await tester.tap(find.text('TOPICS'));
+    await tester.tap(find.byIcon(ZulipIcons.topics));
     await tester.pump();
     await tester.pump(Duration.zero);
     check(find.text('topic A')).findsOne();
@@ -154,7 +154,7 @@ void main() {
     // … then back to the topic-list page, expecting to fetch again.
     connection.prepare(json: GetStreamTopicsResult(
       topics: [eg.getStreamTopicsEntry(name: 'topic B')]).toJson());
-    await tester.tap(find.text('TOPICS'));
+    await tester.tap(find.byIcon(ZulipIcons.topics));
     await tester.pump();
     await tester.pump(Duration.zero);
     check(find.text('topic A')).findsNothing();

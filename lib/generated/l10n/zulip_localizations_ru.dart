@@ -444,6 +444,12 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   }
 
   @override
+  String get emptyMessageList => 'Здесь нет сообщений.';
+
+  @override
+  String get emptyMessageListSearch => 'Ничего не найдено.';
+
+  @override
   String get messageListGroupYouWithYourself => 'Сообщения с собой';
 
   @override
@@ -644,6 +650,17 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get yesterday => 'Вчера';
 
   @override
+  String get invisibleMode => 'Режим невидимости';
+
+  @override
+  String get turnOnInvisibleModeErrorTitle =>
+      'Не удалось включить режим невидимости. Повторите попытку позже.';
+
+  @override
+  String get turnOffInvisibleModeErrorTitle =>
+      'Не удалось отключить режим невидимости. Повторите попытку позже.';
+
+  @override
   String get userRoleOwner => 'Владелец';
 
   @override
@@ -660,6 +677,15 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get userRoleUnknown => 'Неизвестно';
+
+  @override
+  String get searchMessagesPageTitle => 'Поиск';
+
+  @override
+  String get searchMessagesHintText => 'Поиск';
+
+  @override
+  String get searchMessagesClearButtonTooltip => 'Очистить';
 
   @override
   String get inboxPageTitle => 'Входящие';
@@ -698,7 +724,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get mainMenuMyProfile => 'Мой профиль';
 
   @override
-  String get topicsButtonLabel => 'ТЕМЫ';
+  String get topicsButtonTooltip => 'Темы';
 
   @override
   String get channelFeedButtonTooltip => 'Лента канала';
@@ -872,10 +898,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get noEarlierMessages => 'Предшествующих сообщений нет';
 
   @override
-  String get mutedSender => 'Отключенный отправитель';
-
-  @override
-  String get revealButtonLabel => 'Показать сообщение отключенного отправителя';
+  String get revealButtonLabel => 'Показать сообщение';
 
   @override
   String get mutedUser => 'Отключенный пользователь';

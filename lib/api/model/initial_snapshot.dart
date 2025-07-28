@@ -56,6 +56,8 @@ class InitialSnapshot {
 
   final Map<String, RealmEmojiItem> realmEmoji;
 
+  final List<UserGroup> realmUserGroups;
+
   final List<RecentDmConversation> recentPrivateConversations;
 
   final List<SavedSnippet>? savedSnippets; // TODO(server-10)
@@ -66,13 +68,17 @@ class InitialSnapshot {
 
   final List<ZulipStream> streams;
 
-  // Servers pre-5.0 don't have `user_settings`, and instead provide whatever
-  // user settings they support at toplevel in the initial snapshot. Since we're
-  // likely to desupport pre-5.0 servers before wide release, we prefer to
-  // ignore the toplevel fields and use `user_settings` where present instead,
-  // even at the expense of functionality with pre-5.0 servers.
-  // TODO(server-5) remove pre-5.0 comment
-  final UserSettings? userSettings; // TODO(server-5)
+  // In register-queue, the name of this field is the singular "user_status",
+  // even though it actually contains user status information for all the users
+  // that the self-user has access to. Therefore, we prefer to use the plural form.
+  //
+  // The API expresses each status as a change from the "zero status" (see
+  // [UserStatus.zero]), with entries omitted for users whose status is the
+  // zero status.
+  @JsonKey(name: 'user_status')
+  final Map<int, UserStatusChange> userStatuses;
+
+  final UserSettings userSettings;
 
   final List<UserTopicItem>? userTopics; // TODO(server-6)
 
@@ -149,11 +155,13 @@ class InitialSnapshot {
     required this.mutedUsers,
     required this.presences,
     required this.realmEmoji,
+    required this.realmUserGroups,
     required this.recentPrivateConversations,
     required this.savedSnippets,
     required this.subscriptions,
     required this.unreadMsgs,
     required this.streams,
+    required this.userStatuses,
     required this.userSettings,
     required this.userTopics,
     required this.realmWildcardMentionPolicy,
@@ -251,19 +259,27 @@ class RecentDmConversation {
 /// in <https://zulip.com/api/register-queue>.
 @JsonSerializable(fieldRename: FieldRename.snake, createFieldMap: true)
 class UserSettings {
-  bool twentyFourHourTime;
+  @JsonKey(
+    fromJson: TwentyFourHourTimeMode.fromApiValue,
+    toJson: TwentyFourHourTimeMode.staticToJson,
+  )
+  TwentyFourHourTimeMode twentyFourHourTime;
+
   bool? displayEmojiReactionUsers; // TODO(server-6)
   Emojiset emojiset;
+  bool presenceEnabled;
 
   // TODO more, as needed. When adding a setting here, please also:
   // (1) add it to the [UserSettingName] enum
   // (2) then re-run the command to refresh the .g.dart files
   // (3) handle the event that signals an update to the setting
+  // (4) add the setting to the [updateSettings] route binding
 
   UserSettings({
     required this.twentyFourHourTime,
     required this.displayEmojiReactionUsers,
     required this.emojiset,
+    required this.presenceEnabled,
   });
 
   factory UserSettings.fromJson(Map<String, dynamic> json) =>

@@ -37,7 +37,7 @@ import '../model/store_checks.dart';
 import '../model/test_store.dart';
 import '../model/typing_status_test.dart';
 import '../stdlib_checks.dart';
-import 'compose_box_checks.dart';
+import 'checks.dart';
 import 'dialog_checks.dart';
 import 'test_app.dart';
 
@@ -761,7 +761,7 @@ void main() {
       await checkStartTyping(tester, narrow);
 
       connection.prepare(json: {});
-      await tester.pump(store.typingNotifier.typingStoppedWaitPeriod);
+      await tester.pump(store.serverTypingStoppedWaitPeriod);
       checkTypingRequest(TypingOp.stop, narrow);
     });
 
@@ -773,7 +773,7 @@ void main() {
       await checkStartTyping(tester, narrow);
 
       connection.prepare(json: {});
-      await tester.pump(store.typingNotifier.typingStoppedWaitPeriod);
+      await tester.pump(store.serverTypingStoppedWaitPeriod);
       checkTypingRequest(TypingOp.stop, narrow);
     });
 
@@ -786,7 +786,7 @@ void main() {
       await checkStartTyping(tester, destinationNarrow);
 
       connection.prepare(json: {});
-      await tester.pump(store.typingNotifier.typingStoppedWaitPeriod);
+      await tester.pump(store.serverTypingStoppedWaitPeriod);
       checkTypingRequest(TypingOp.stop, destinationNarrow);
     });
 
@@ -866,7 +866,7 @@ void main() {
       await checkStartTyping(tester, narrow);
 
       connection.prepare(json: {});
-      await tester.pump(store.typingNotifier.typingStoppedWaitPeriod);
+      await tester.pump(store.serverTypingStoppedWaitPeriod);
       checkTypingRequest(TypingOp.stop, narrow);
 
       connection.prepare(json: {});
@@ -876,7 +876,7 @@ void main() {
 
       // Ensures that a "typing stopped" notice is sent when the test ends.
       connection.prepare(json: {});
-      await tester.pump(store.typingNotifier.typingStoppedWaitPeriod);
+      await tester.pump(store.serverTypingStoppedWaitPeriod);
       checkTypingRequest(TypingOp.stop, narrow);
     });
 
@@ -1702,7 +1702,10 @@ void main() {
 
     Message msgInNarrow(Narrow narrow) {
       final List<Message> messages = [message, dmMessage];
-      return messages.where((m) => narrow.containsMessage(m)).single;
+      return messages.where(
+        // TODO(#1667) will be null in a search narrow; remove `!`.
+        (m) => narrow.containsMessage(m)!
+      ).single;
     }
 
     int msgIdInNarrow(Narrow narrow) => msgInNarrow(narrow).id;

@@ -446,6 +446,12 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   }
 
   @override
+  String get emptyMessageList => 'There are no messages here.';
+
+  @override
+  String get emptyMessageListSearch => 'No search results.';
+
+  @override
   String get messageListGroupYouWithYourself => 'Повідомлення з собою';
 
   @override
@@ -644,6 +650,17 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get yesterday => 'Учора';
 
   @override
+  String get invisibleMode => 'Invisible mode';
+
+  @override
+  String get turnOnInvisibleModeErrorTitle =>
+      'Error turning on invisible mode. Please try again.';
+
+  @override
+  String get turnOffInvisibleModeErrorTitle =>
+      'Error turning off invisible mode. Please try again.';
+
+  @override
   String get userRoleOwner => 'Власник';
 
   @override
@@ -660,6 +677,15 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get userRoleUnknown => 'Невідомо';
+
+  @override
+  String get searchMessagesPageTitle => 'Search';
+
+  @override
+  String get searchMessagesHintText => 'Search';
+
+  @override
+  String get searchMessagesClearButtonTooltip => 'Clear';
 
   @override
   String get inboxPageTitle => 'Вхідні';
@@ -697,7 +723,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get mainMenuMyProfile => 'Мій профіль';
 
   @override
-  String get topicsButtonLabel => 'ТЕМИ';
+  String get topicsButtonTooltip => 'Теми';
 
   @override
   String get channelFeedButtonTooltip => 'Стрічка каналу';
@@ -870,9 +896,6 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get noEarlierMessages => 'Немає попередніх повідомлень';
-
-  @override
-  String get mutedSender => 'Заглушений відправник';
 
   @override
   String get revealButtonLabel =>

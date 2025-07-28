@@ -3,6 +3,170 @@
 ## Unreleased
 
 
+## 30.0.262 (2025-07-24)
+
+This release branch includes some experimental changes
+not yet merged to the main branch.
+
+
+### Highlights for users
+
+* Fix "general chat" to show new messages as normal
+  after opening via a notification. (#1717)
+* Set your status emoji and status message. (#198)
+* Fix deactivated users appearing in "New DM" screen. (#1743)
+* Follow your personal setting for 24-hour or 12-hour time
+  format. (#1015)
+* Translation updates. (PR #1726, PR #1750)
+
+
+### Highlights for developers
+
+* User-visible changes not described above:
+  * Avoid showing potentially wrong result if encountering
+    a KaTeX vlist with unexpected inline style properties.
+    (c4503b492; revision to PR #1698, for #46)
+  * Fix double-application of negative margin on KaTeX vlist items.
+    (64956b8f0; revision to PR #1559, for #46)
+  * Better semantics on settings radio buttons, for a11y. (#1545)
+
+* Store and substore refactors: RealmStore; proxy mixins;
+  move more methods to individual substores. (PR #1736)
+
+* Resolved in main: #1710, #1712, PR #1698, #1717, PR #1559, #46,
+  PR #1719, PR #1726, #197, #1545, PR #1736, #1743, #1015, PR #1750
+
+* Resolved in the experimental branch:
+  * #740 via PR #1700
+  * #198 via PR #1701
+
+
+## 30.0.261 (2025-07-09)
+
+This release branch includes some experimental changes
+not yet merged to the main branch.
+
+
+### Highlights for users
+
+* See who reacted to a message. (#740)
+* Turn invisible mode on and off. (#1578)
+* Less empty space at end of message feed. (PR #1628)
+* After you return to the app, it resumes its connection
+  more quickly. (#979)
+* The message long-press menu shows the message and
+  when it was sent. (#217)
+* (iOS) Fixed white flash on opening app in dark mode. (#1149)
+
+
+### Highlights for developers
+
+* User-visible changes not described above:
+  * Upgraded Flutter and other dependencies. (#1684)
+  * Case-insensitive topics in unreads and other data
+    structures. (#980)
+  * Icon for topic-list button, rather than "TOPICS". (#1532)
+  * Status emoji properly follow system text-scale setting.
+    (revision to PR #1629, for #197)
+  * Status text's font size increased.
+    (revision to PR #1629, for #197)
+  * Fixed scroll behavior of math blocks in RTL locales.
+    (revision to PR #1452, at 5677317bc, for #46)
+  * Fixed vertical alignment within TeX math expressions.
+    (e8e8f4105; revision to PR #1452, for #46)
+  * Adjusted color of icons in action sheets.
+    (included in PR #1631, for #1578)
+  * Removed blank space for absent status emoji.
+    (revision to PR #1629, for #197)
+  * Adjusted choice of "Close" vs "Cancel" in action sheets.
+    (included in PR #1700, for #740)
+  * Translation updates. (PR #1682)
+
+* Workarounds in our CI for a Flutter infra issue with the
+  "main" branch. (PR #1690, PR #1691; flutter/flutter#171833)
+
+* Resolved in main: #296, PR #1684, PR #1628, #980, #1532, #662,
+  #217, #1578, #1149, PR #1629, #979, PR #1682, PR #1452
+
+* Resolved in the experimental branch:
+  * more toward #46 via PR #1698
+  * further toward #46 via PR #1559
+  * #197 via PR #1702
+  * #740 via PR #1700
+
+
+## 30.0.260 (2025-07-03)
+
+This release branch includes some experimental changes
+not yet merged to the main branch.
+
+
+### Highlights for users
+
+* (iOS) Fixed a bug causing duplicate notifications. (#1617)
+* The app offers a search view. (#252)
+* See the status emoji and status messages of other users. (#197)
+* Initial support for showing audio files in messages,
+  an upcoming Zulip feature. (#1665)
+* Translation updates. (PR #1642)
+
+
+### Highlights for developers
+
+* User-visible changes not described above:
+  * More recipient headers in mentions/starred. (#1637)
+  * Tap message in starred/mentions to open conversation. (#1621)
+  * Clearer placeholder text when no messages. (#1555)
+  * Correctly apply font-size to "em" on the same KaTeX span
+    (if that situation is possible). (f003f58ed, in PR #1609)
+
+* Resolved by server-side changes: #1617
+
+* Resolved in main: #1637, #1621, PR #1560 (toward #296), #1555,
+  PR #1609 (toward #46), PR #1601 (toward #46),
+  PR #1600 (toward #46), PR #1658, #1665, #252, PR #1642
+
+* Resolved in the experimental branch:
+  * more toward #46 via PR #1452
+  * further toward #46 via PR #1559
+  * #296 via PR #1561
+  * #197 via PR #1629
+
+
+## 30.0.259 (2025-06-23)
+
+This release branch includes some experimental changes
+not yet merged to the main branch.
+
+
+### Highlights for users
+
+New since last week's release:
+* The app shows others' availability. (#196)
+* When you're using the app, you'll appear to others
+  as online, according to your settings. (#1607)
+* Much broader TeX math support. (PR #1601)
+* More translation updates. (PR #1615)
+
+Welcome to the new Zulip mobile app!  You'll find
+a familiar experience in a faster, sleeker package.
+
+For more information or to send us feedback,
+see the announcement blog post:
+https://blog.zulip.com/flutter-mobile-app-launch
+
+
+### Highlights for developers
+
+* Resolved in main: PR #1598, PR #1599, #196, #1607, PR #1615
+
+* Resolved in the experimental branch:
+  * more toward #46 via PR #1452
+  * further toward #46 via PR #1559
+  * yet further toward #46 via PR #1601 (cherry-picked)
+  * #296 via PR #1561
+
+
 ## 30.0.258 (2025-06-16)
 
 This release branch includes some experimental changes

@@ -37,18 +37,26 @@ import 'store.dart';
 //   messages and refresh [mentions] (see [mentions] dartdoc).
 class Unreads extends PerAccountStoreBase with ChangeNotifier {
   factory Unreads({
-    required UnreadMessagesSnapshot initial,
     required CorePerAccountStore core,
     required ChannelStore channelStore,
+    required UnreadMessagesSnapshot initial,
   }) {
-    final streams = <int, Map<TopicName, QueueList<int>>>{};
+    final streams = <int, TopicKeyedMap<QueueList<int>>>{};
     final dms = <DmNarrow, QueueList<int>>{};
     final mentions = Set.of(initial.mentions);
 
     for (final unreadChannelSnapshot in initial.channels) {
       final streamId = unreadChannelSnapshot.streamId;
       final topic = unreadChannelSnapshot.topic;
-      (streams[streamId] ??= {})[topic] = QueueList.from(unreadChannelSnapshot.unreadMessageIds);
+      final topics = (streams[streamId] ??= makeTopicKeyedMap());
+      topics.update(topic,
+        // Older servers differentiate topics case-sensitively, but shouldn't:
+        //   https://github.com/zulip/zulip/pull/31869
+        // Our topic-keyed map is case-insensitive. When we've seen this
+        // topic before, modulo case, aggregate instead of clobbering.
+        // TODO(server-10) simplify away
+        (value) => setUnion(value, unreadChannelSnapshot.unreadMessageIds),
+        ifAbsent: () => QueueList.from(unreadChannelSnapshot.unreadMessageIds));
     }
 
     for (final unreadDmSnapshot in initial.dms) {
@@ -88,7 +96,10 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
   // int count;
 
   /// Unread stream messages, as: stream ID → topic → message IDs (sorted).
-  final Map<int, Map<TopicName, QueueList<int>>> streams;
+  ///
+  /// The topic-keyed map is case-insensitive and case-preserving;
+  /// it comes from [makeTopicKeyedMap].
+  final Map<int, TopicKeyedMap<QueueList<int>>> streams;
 
   /// Unread DM messages, as: DM narrow → message IDs (sorted).
   final Map<DmNarrow, QueueList<int>> dms;
@@ -197,6 +208,9 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
   // TODO: Implement unreads handling.
   int countInStarredMessagesNarrow() => 0;
 
+  // TODO: Implement unreads handling?
+  int countInKeywordSearchNarrow() => 0;
+
   int countInNarrow(Narrow narrow) {
     switch (narrow) {
       case CombinedFeedNarrow():
@@ -211,6 +225,8 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
         return countInMentionsNarrow();
       case StarredMessagesNarrow():
         return countInStarredMessagesNarrow();
+      case KeywordSearchNarrow():
+        return countInKeywordSearchNarrow();
     }
   }
 
@@ -400,7 +416,7 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
               _slowRemoveAllInDms(messageIdsSet);
             }
           case UpdateMessageFlagsRemoveEvent():
-            final newlyUnreadInStreams = <int, Map<TopicName, QueueList<int>>>{};
+            final newlyUnreadInStreams = <int, TopicKeyedMap<QueueList<int>>>{};
             final newlyUnreadInDms = <DmNarrow, QueueList<int>>{};
             for (final messageId in event.messages) {
               final detail = event.messageDetails![messageId];
@@ -415,7 +431,7 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
               }
               switch (detail.type) {
                 case MessageType.stream:
-                  final topics = (newlyUnreadInStreams[detail.streamId!] ??= {});
+                  final topics = (newlyUnreadInStreams[detail.streamId!] ??= makeTopicKeyedMap());
                   final messageIds = (topics[detail.topic!] ??= QueueList());
                   messageIds.add(messageId);
                 case MessageType.direct:
@@ -441,22 +457,20 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
     notifyListeners();
   }
 
-  /// To be called on success of a mark-all-as-read task in the modern protocol.
+  /// To be called on success of a mark-all-as-read task.
   ///
   /// When the user successfully marks all messages as read,
   /// there can't possibly be ancient unreads we don't know about.
   /// So this updates [oldUnreadsMissing] to false and calls [notifyListeners].
   ///
-  /// When we use POST /messages/flags/narrow (FL 155+) for mark-all-as-read,
-  /// we don't expect to get a mark-as-read event with `all: true`,
+  /// We don't expect to get a mark-as-read event with `all: true`,
   /// even on completion of the last batch of unreads.
-  /// If we did get an event with `all: true` (as we do in the legacy mark-all-
+  /// If we did get an event with `all: true` (as we did in a legacy mark-all-
   /// as-read protocol), this would be handled naturally, in
   /// [handleUpdateMessageFlagsEvent].
   ///
   /// Discussion:
   ///   <https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20Mark-as-read/near/1680275>
-  // TODO(server-6) Delete mentions of legacy protocol.
   void handleAllMessagesReadSuccess() {
     oldUnreadsMissing = false;
 
@@ -485,14 +499,15 @@ class Unreads extends PerAccountStoreBase with ChangeNotifier {
   }
 
   void _addLastInStreamTopic(int messageId, int streamId, TopicName topic) {
-    ((streams[streamId] ??= {})[topic] ??= QueueList()).addLast(messageId);
+    ((streams[streamId] ??= makeTopicKeyedMap())[topic] ??= QueueList())
+      .addLast(messageId);
   }
 
   // [messageIds] must be sorted ascending and without duplicates.
   void _addAllInStreamTopic(QueueList<int> messageIds, int streamId, TopicName topic) {
     assert(messageIds.isNotEmpty);
     assert(isSortedWithoutDuplicates(messageIds));
-    final topics = streams[streamId] ??= {};
+    final topics = streams[streamId] ??= makeTopicKeyedMap();
     topics.update(topic,
       ifAbsent: () => messageIds,
       // setUnion dedupes existing and incoming unread IDs,

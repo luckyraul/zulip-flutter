@@ -4,15 +4,15 @@ import '../generated/l10n/zulip_localizations.dart';
 import '../model/narrow.dart';
 import '../model/recent_dm_conversations.dart';
 import '../model/unreads.dart';
-import 'content.dart';
-import 'home.dart';
 import 'icons.dart';
 import 'message_list.dart';
 import 'new_dm_sheet.dart';
+import 'page.dart';
 import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
 import 'unread_count_badge.dart';
+import 'user.dart';
 
 class RecentDmConversationsPageBody extends StatefulWidget {
   const RecentDmConversationsPageBody({super.key});
@@ -52,6 +52,7 @@ class _RecentDmConversationsPageBodyState extends State<RecentDmConversationsPag
 
   @override
   Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
     final zulipLocalizations = ZulipLocalizations.of(context);
     final sorted = model!.sorted;
 
@@ -63,14 +64,18 @@ class _RecentDmConversationsPageBodyState extends State<RecentDmConversationsPag
           PageBodyEmptyContentPlaceholder(
             message: zulipLocalizations.recentDmConversationsEmptyPlaceholder)
         else
-          SafeArea(
-            // Don't pad the bottom here; we want the list content to do that.
-            bottom: false,
+          SafeArea( // horizontal insets
             child: ListView.builder(
               padding: EdgeInsets.only(bottom: 90),
               itemCount: sorted.length,
               itemBuilder: (context, index) {
                 final narrow = sorted[index];
+                if (store.shouldMuteDmConversation(narrow)) {
+                  // Filter out conversations where everyone is muted.
+                  // TODO should we offer a "spam folder"-style summary screen
+                  //   for these conversations we're filtering out?
+                  return SizedBox.shrink();
+                }
                 return RecentDmConversationsItem(
                   narrow: narrow,
                   unreadCount: unreadsModel!.countInDmNarrow(narrow));
@@ -99,29 +104,32 @@ class RecentDmConversationsItem extends StatelessWidget {
     final store = PerAccountStoreWidget.of(context);
     final designVariables = DesignVariables.of(context);
 
-    final String title;
+    final InlineSpan title;
     final Widget avatar;
     int? userIdForPresence;
     switch (narrow.otherRecipientIds) { // TODO dedupe with DM items in [InboxPage]
       case []:
-        title = store.selfUser.fullName;
+        title = TextSpan(text: store.selfUser.fullName, children: [
+          UserStatusEmoji.asWidgetSpan(userId: store.selfUserId,
+            fontSize: 17, textScaler: MediaQuery.textScalerOf(context)),
+        ]);
         avatar = AvatarImage(userId: store.selfUserId, size: _avatarSize);
       case [var otherUserId]:
-        // TODO(#296) actually don't show this row if the user is muted?
-        //   (should we offer a "spam folder" style summary screen of recent
-        //   1:1 DM conversations from muted users?)
-        title = store.userDisplayName(otherUserId);
+        title = TextSpan(text: store.userDisplayName(otherUserId), children: [
+          UserStatusEmoji.asWidgetSpan(userId: otherUserId,
+            fontSize: 17, textScaler: MediaQuery.textScalerOf(context)),
+        ]);
         avatar = AvatarImage(userId: otherUserId, size: _avatarSize);
         userIdForPresence = otherUserId;
       default:
-        // TODO(i18n): List formatting, like you can do in JavaScript:
-        //   new Intl.ListFormat('ja').format(['Chris', 'Greg', 'Alya'])
-        //   // 'Chris、Greg、Alya'
-        title = narrow.otherRecipientIds.map(store.userDisplayName)
-          .join(', ');
-        avatar = ColoredBox(color: designVariables.groupDmConversationIconBg,
+        title = TextSpan(
+          // TODO(i18n): List formatting, like you can do in JavaScript:
+          //   new Intl.ListFormat('ja').format(['Chris', 'Greg', 'Alya'])
+          //   // 'Chris、Greg、Alya'
+          text: narrow.otherRecipientIds.map(store.userDisplayName).join(', '));
+        avatar = ColoredBox(color: designVariables.avatarPlaceholderBg,
           child: Center(
-            child: Icon(color: designVariables.groupDmConversationIcon,
+            child: Icon(color: designVariables.avatarPlaceholderIcon,
               ZulipIcons.group_dm)));
     }
 
@@ -146,7 +154,7 @@ class RecentDmConversationsItem extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
+              child: Text.rich(
                 style: TextStyle(
                   fontSize: 17,
                   height: (20 / 17),

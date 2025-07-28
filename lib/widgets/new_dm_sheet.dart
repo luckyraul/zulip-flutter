@@ -5,13 +5,13 @@ import '../model/autocomplete.dart';
 import '../model/narrow.dart';
 import '../model/store.dart';
 import 'color.dart';
-import 'content.dart';
 import 'icons.dart';
 import 'message_list.dart';
 import 'page.dart';
 import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
+import 'user.dart';
 
 void showNewDmSheet(BuildContext context) {
   final pageContext = PageRoot.contextOf(context);
@@ -68,7 +68,9 @@ class _NewDmPickerState extends State<NewDmPicker> with PerAccountStoreAwareStat
   }
 
   void _initSortedUsers(PerAccountStore store) {
-    sortedUsers = List<User>.from(store.allUsers)
+    final users = store.allUsers
+      .where((user) => user.isActive && !store.isUserMuted(user.userId));
+    sortedUsers = List<User>.from(users)
       ..sort((a, b) => MentionAutocompleteView.compareByDms(a, b, store: store));
     _updateFilteredUsers(store);
   }
@@ -314,6 +316,8 @@ class _SelectedUserChip extends StatelessWidget {
                   fontSize: 16,
                   height: 16 / 16,
                   color: designVariables.labelMenuButton)))),
+          UserStatusEmoji(userId: userId, size: 16,
+            padding: EdgeInsetsDirectional.only(end: 4)),
         ])));
   }
 }
@@ -412,7 +416,11 @@ class _NewDmUserListItem extends StatelessWidget {
             Avatar(userId: userId, size: 32, borderRadius: 3),
             SizedBox(width: 8),
             Expanded(
-              child: Text(store.userDisplayName(userId),
+              child: Text.rich(
+                TextSpan(text: store.userDisplayName(userId), children: [
+                  UserStatusEmoji.asWidgetSpan(userId: userId, fontSize: 17,
+                    textScaler: MediaQuery.textScalerOf(context)),
+                ]),
                 style: TextStyle(
                   fontSize: 17,
                   height: 19 / 17,

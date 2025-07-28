@@ -450,6 +450,12 @@ class ZulipLocalizationsDe extends ZulipLocalizations {
   }
 
   @override
+  String get emptyMessageList => 'There are no messages here.';
+
+  @override
+  String get emptyMessageListSearch => 'No search results.';
+
+  @override
   String get messageListGroupYouWithYourself => 'Nachrichten mit dir selbst';
 
   @override
@@ -651,6 +657,17 @@ class ZulipLocalizationsDe extends ZulipLocalizations {
   String get yesterday => 'Gestern';
 
   @override
+  String get invisibleMode => 'Invisible mode';
+
+  @override
+  String get turnOnInvisibleModeErrorTitle =>
+      'Error turning on invisible mode. Please try again.';
+
+  @override
+  String get turnOffInvisibleModeErrorTitle =>
+      'Error turning off invisible mode. Please try again.';
+
+  @override
   String get userRoleOwner => 'Besitzer';
 
   @override
@@ -667,6 +684,15 @@ class ZulipLocalizationsDe extends ZulipLocalizations {
 
   @override
   String get userRoleUnknown => 'Unbekannt';
+
+  @override
+  String get searchMessagesPageTitle => 'Search';
+
+  @override
+  String get searchMessagesHintText => 'Search';
+
+  @override
+  String get searchMessagesClearButtonTooltip => 'Clear';
 
   @override
   String get inboxPageTitle => 'Eingang';
@@ -704,7 +730,7 @@ class ZulipLocalizationsDe extends ZulipLocalizations {
   String get mainMenuMyProfile => 'Mein Profil';
 
   @override
-  String get topicsButtonLabel => 'THEMEN';
+  String get topicsButtonTooltip => 'Themen';
 
   @override
   String get channelFeedButtonTooltip => 'Kanal-Feed';
@@ -880,9 +906,6 @@ class ZulipLocalizationsDe extends ZulipLocalizations {
 
   @override
   String get noEarlierMessages => 'Keine früheren Nachrichten';
-
-  @override
-  String get mutedSender => 'Stummgeschalteter Absender';
 
   @override
   String get revealButtonLabel =>

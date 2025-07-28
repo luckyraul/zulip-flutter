@@ -24,10 +24,10 @@ class MyWidgetWithMixin extends StatefulWidget {
   const MyWidgetWithMixin({super.key});
 
   @override
-  State<MyWidgetWithMixin> createState() => MyWidgetWithMixinState();
+  State<MyWidgetWithMixin> createState() => _MyWidgetWithMixinState();
 }
 
-class MyWidgetWithMixinState extends State<MyWidgetWithMixin> with PerAccountStoreAwareStateMixin<MyWidgetWithMixin> {
+class _MyWidgetWithMixinState extends State<MyWidgetWithMixin> with PerAccountStoreAwareStateMixin<MyWidgetWithMixin> {
   int anyDepChangeCounter = 0;
   int storeChangeCounter = 0;
 
@@ -50,7 +50,7 @@ class MyWidgetWithMixinState extends State<MyWidgetWithMixin> with PerAccountSto
   }
 }
 
-extension MyWidgetWithMixinStateChecks on Subject<MyWidgetWithMixinState> {
+extension _MyWidgetWithMixinStateChecks on Subject<_MyWidgetWithMixinState> {
   Subject<int> get anyDepChangeCounter => has((w) => w.anyDepChangeCounter, 'anyDepChangeCounter');
   Subject<int> get storeChangeCounter => has((w) => w.storeChangeCounter, 'storeChangeCounter');
 }
@@ -70,12 +70,12 @@ void main() {
             return const SizedBox.shrink();
           })));
     // First, shows a loading page instead of child.
-    check(find.byType(CircularProgressIndicator)).findsOne();
+    check(find.byType(BlankLoadingPlaceholder)).findsOne();
     check(globalStore).isNull();
 
     await tester.pump();
     // Then after loading, mounts child instead, with provided store.
-    check(find.byType(CircularProgressIndicator)).findsNothing();
+    check(find.byType(BlankLoadingPlaceholder)).findsNothing();
     check(globalStore).identicalTo(testBinding.globalStore);
 
     await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
@@ -98,14 +98,15 @@ void main() {
     await tester.pump();
     // Even after the store must have loaded,
     // still shows loading page while blockingFuture is pending.
-    check(find.byType(CircularProgressIndicator)).findsOne();
+    check(find.byType(BlankLoadingPlaceholder)).findsOne();
     check(find.text('done')).findsNothing();
 
     // Once blockingFuture completes…
     completer.complete();
     await tester.pump();
+    await tester.pump(); // TODO why does GlobalStoreWidget need this extra frame?
     // … mounts child instead of the loading page.
-    check(find.byType(CircularProgressIndicator)).findsNothing();
+    check(find.byType(BlankLoadingPlaceholder)).findsNothing();
     check(find.text('done')).findsOne();
   });
 
@@ -123,14 +124,15 @@ void main() {
     await tester.pump();
     // Even after the store must have loaded,
     // still shows loading page while blockingFuture is pending.
-    check(find.byType(CircularProgressIndicator)).findsOne();
+    check(find.byType(BlankLoadingPlaceholder)).findsOne();
     check(find.text('done')).findsNothing();
 
     // Once blockingFuture completes, even with an error…
     completer.completeError(Exception('oops'));
     await tester.pump();
+    await tester.pump(); // TODO why does GlobalStoreWidget need this extra frame?
     // … mounts child instead of the loading page.
-    check(find.byType(CircularProgressIndicator)).findsNothing();
+    check(find.byType(BlankLoadingPlaceholder)).findsNothing();
     check(find.text('done')).findsOne();
   });
 
@@ -332,7 +334,7 @@ void main() {
   });
 
   testWidgets('PerAccountStoreAwareStateMixin', (tester) async {
-    final widgetWithMixinKey = GlobalKey<MyWidgetWithMixinState>();
+    final widgetWithMixinKey = GlobalKey<_MyWidgetWithMixinState>();
     final accountId = eg.selfAccount.id;
 
     await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());

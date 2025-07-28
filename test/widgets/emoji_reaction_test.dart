@@ -13,7 +13,6 @@ import 'package:legacy_checks/legacy_checks.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/api/route/realm.dart';
-import 'package:zulip/model/emoji.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/content.dart';
@@ -29,6 +28,7 @@ import '../model/emoji_test.dart';
 import '../model/test_store.dart';
 import '../stdlib_checks.dart';
 import '../test_images.dart';
+import 'checks.dart';
 import 'content_test.dart';
 import 'dialog_checks.dart';
 import 'test_app.dart';
@@ -228,6 +228,27 @@ void main() {
         }
       }
     }
+
+    testWidgets('show "Muted user" label for muted reactors', (tester) async {
+      final user1 = eg.user(userId: 1, fullName: 'User 1');
+      final user2 = eg.user(userId: 2, fullName: 'User 2');
+
+      await prepare();
+      await store.addUsers([user1, user2]);
+      await store.setMutedUsers([user1.userId]);
+      await setupChipsInBox(tester,
+        reactions: [
+          Reaction.fromJson({'emoji_name': '+1', 'emoji_code': '1f44d', 'reaction_type': 'unicode_emoji', 'user_id': user1.userId}),
+          Reaction.fromJson({'emoji_name': '+1', 'emoji_code': '1f44d', 'reaction_type': 'unicode_emoji', 'user_id': user2.userId}),
+        ]);
+
+      final reactionChipFinder = find.byType(ReactionChip);
+      check(reactionChipFinder).findsOne();
+      check(find.descendant(
+        of: reactionChipFinder,
+        matching: find.text('Muted user, User 2')
+      )).findsOne();
+    });
   });
 
   testWidgets('Smoke test for light/dark/lerped', (tester) async {
@@ -309,7 +330,8 @@ void main() {
       required Narrow narrow,
     }) async {
       addTearDown(testBinding.reset);
-      assert(narrow.containsMessage(message));
+      // TODO(#1667) will be null in a search narrow; remove `!`.
+      assert(narrow.containsMessage(message)!);
 
       final httpClient = FakeImageHttpClient();
       debugNetworkImageHttpClientProvider = () => httpClient;
@@ -559,8 +581,4 @@ void main() {
       });
     });
   });
-}
-
-extension EmojiPickerListItemChecks on Subject<EmojiPickerListEntry> {
-  Subject<EmojiCandidate> get emoji => has((x) => x.emoji, 'emoji');
 }

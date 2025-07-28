@@ -12,6 +12,7 @@ import '../api/route/messages.dart';
 import '../log.dart';
 import 'binding.dart';
 import 'message_list.dart';
+import 'realm.dart';
 import 'store.dart';
 
 const _apiSendMessage = sendMessage; // Bit ugly; for alternatives, see: https://chat.zulip.org/#narrow/stream/243-mobile-team/topic/flutter.3A.20PerAccountStore.20methods/near/1545809
@@ -45,18 +46,6 @@ mixin MessageStore {
   /// or [OutboxMessageState.waitPeriodExpired].
   OutboxMessage takeOutboxMessage(int localMessageId);
 
-  /// Reconcile a batch of just-fetched messages with the store,
-  /// mutating the list.
-  ///
-  /// This is called after a [getMessages] request to report the result
-  /// to the store.
-  ///
-  /// The list's length will not change, but some entries may be replaced
-  /// by a different [Message] object with the same [Message.id].
-  /// All [Message] objects in the resulting list will be present in
-  /// [this.messages].
-  void reconcileMessages(List<Message> messages);
-
   /// Whether the current edit request for the given message, if any, has failed.
   ///
   /// Will be null if there is no current edit request.
@@ -85,6 +74,53 @@ mixin MessageStore {
   ({String originalRawContent, String newContent}) takeFailedMessageEdit(int messageId);
 }
 
+mixin ProxyMessageStore on MessageStore {
+  @protected
+  MessageStore get messageStore;
+
+  @override
+  Map<int, Message> get messages => messageStore.messages;
+  @override
+  Map<int, OutboxMessage> get outboxMessages => messageStore.outboxMessages;
+  @override
+  void registerMessageList(MessageListView view) =>
+    messageStore.registerMessageList(view);
+  @override
+  void unregisterMessageList(MessageListView view) =>
+    messageStore.unregisterMessageList(view);
+  @override
+  void markReadFromScroll(Iterable<int> messageIds) =>
+    messageStore.markReadFromScroll(messageIds);
+  @override
+  Future<void> sendMessage({required MessageDestination destination, required String content}) {
+    return messageStore.sendMessage(destination: destination, content: content);
+  }
+  @override
+  OutboxMessage takeOutboxMessage(int localMessageId) =>
+    messageStore.takeOutboxMessage(localMessageId);
+
+  @override
+  bool? getEditMessageErrorStatus(int messageId) {
+    return messageStore.getEditMessageErrorStatus(messageId);
+  }
+  @override
+  void editMessage({
+    required int messageId,
+    required String originalRawContent,
+    required String newContent,
+  }) {
+    return messageStore.editMessage(messageId: messageId,
+      originalRawContent: originalRawContent, newContent: newContent);
+  }
+  @override
+  ({String originalRawContent, String newContent}) takeFailedMessageEdit(int messageId) {
+    return messageStore.takeFailedMessageEdit(messageId);
+  }
+
+  @override
+  Set<MessageListView> get debugMessageListViews => messageStore.debugMessageListViews;
+}
+
 class _EditMessageRequestStatus {
   _EditMessageRequestStatus({
     required this.hasError,
@@ -97,24 +133,11 @@ class _EditMessageRequestStatus {
   final String newContent;
 }
 
-class MessageStoreImpl extends PerAccountStoreBase with MessageStore, _OutboxMessageStore {
-  MessageStoreImpl({required super.core, required String? realmEmptyTopicDisplayName})
-    : _realmEmptyTopicDisplayName = realmEmptyTopicDisplayName,
-      // There are no messages in InitialSnapshot, so we don't have
+class MessageStoreImpl extends HasRealmStore with MessageStore, _OutboxMessageStore {
+  MessageStoreImpl({required super.realm})
+    : // There are no messages in InitialSnapshot, so we don't have
       // a use case for initializing MessageStore with nonempty [messages].
       messages = {};
-
-  /// The display name to use for empty topics.
-  ///
-  /// This should only be accessed when FL >= 334, since topics cannot
-  /// be empty otherwise.
-  // TODO(server-10) simplify this
-  String get realmEmptyTopicDisplayName {
-    assert(zulipFeatureLevel >= 334);
-    assert(_realmEmptyTopicDisplayName != null); // TODO(log)
-    return _realmEmptyTopicDisplayName ?? 'general chat';
-  }
-  final String? _realmEmptyTopicDisplayName; // TODO(#668): update this realm setting
 
   @override
   final Map<int, Message> messages;
@@ -253,14 +276,9 @@ class MessageStoreImpl extends PerAccountStoreBase with MessageStore, _OutboxMes
         content: content,
         readBySender: true);
     }
-    return _outboxSendMessage(
-      destination: destination, content: content,
-      // TODO move [TopicName.processLikeServer] to a substore, eliminating this
-      //   see https://github.com/zulip/zulip-flutter/pull/1472#discussion_r2099069276
-      realmEmptyTopicDisplayName: _realmEmptyTopicDisplayName);
+    return _outboxSendMessage(destination: destination, content: content);
   }
 
-  @override
   void reconcileMessages(List<Message> messages) {
     assert(!_disposed);
     // What to do when some of the just-fetched messages are already known?
@@ -280,13 +298,19 @@ class MessageStoreImpl extends PerAccountStoreBase with MessageStore, _OutboxMes
     // those events' changes.  So we always stick with the version we have.
     for (int i = 0; i < messages.length; i++) {
       final message = messages[i];
-      messages[i] = this.messages.putIfAbsent(message.id, () => message);
+      messages[i] = this.messages.putIfAbsent(message.id, () {
+        message.matchContent = null;
+        message.matchTopic = null;
+        return message;
+      });
     }
   }
 
   @override
-  bool? getEditMessageErrorStatus(int messageId) =>
-    _editMessageRequests[messageId]?.hasError;
+  bool? getEditMessageErrorStatus(int messageId) {
+    assert(!_disposed);
+    return _editMessageRequests[messageId]?.hasError;
+  }
 
   final Map<int, _EditMessageRequestStatus> _editMessageRequests = {};
 
@@ -348,6 +372,12 @@ class MessageStoreImpl extends PerAccountStoreBase with MessageStore, _OutboxMes
   void handleUserTopicEvent(UserTopicEvent event) {
     for (final view in _messageListViews) {
       view.handleUserTopicEvent(event);
+    }
+  }
+
+  void handleMutedUsersEvent(MutedUsersEvent event) {
+    for (final view in _messageListViews) {
+      view.handleMutedUsersEvent(event);
     }
   }
 
@@ -765,7 +795,7 @@ class DmOutboxMessage extends OutboxMessage<DmConversation> {
 }
 
 /// Manages the outbox messages portion of [MessageStore].
-mixin _OutboxMessageStore on PerAccountStoreBase {
+mixin _OutboxMessageStore on HasRealmStore {
   late final UnmodifiableMapView<int, OutboxMessage> outboxMessages =
     UnmodifiableMapView(_outboxMessages);
   final Map<int, OutboxMessage> _outboxMessages = {};
@@ -841,7 +871,6 @@ mixin _OutboxMessageStore on PerAccountStoreBase {
   Future<void> _outboxSendMessage({
     required MessageDestination destination,
     required String content,
-    required String? realmEmptyTopicDisplayName,
   }) async {
     assert(!_disposed);
     final localMessageId = _nextLocalMessageId++;
@@ -851,8 +880,7 @@ mixin _OutboxMessageStore on PerAccountStoreBase {
       StreamDestination(:final streamId, :final topic) =>
         StreamConversation(
           streamId,
-          _processTopicLikeServer(
-            topic, realmEmptyTopicDisplayName: realmEmptyTopicDisplayName),
+          _processTopicLikeServer(topic),
           displayRecipient: null),
       DmDestination(:final userIds) => DmConversation(allRecipientIds: userIds),
     };
@@ -911,25 +939,22 @@ mixin _OutboxMessageStore on PerAccountStoreBase {
     }
   }
 
-  TopicName _processTopicLikeServer(TopicName topic, {
-    required String? realmEmptyTopicDisplayName,
-  }) {
-    return topic.processLikeServer(
-      // Processing this just once on creating the outbox message
-      // allows an uncommon bug, because either of these values can change.
-      // During the outbox message's life, a topic processed from
-      // "(no topic)" could become stale/wrong when zulipFeatureLevel
-      // changes; a topic processed from "general chat" could become
-      // stale/wrong when realmEmptyTopicDisplayName changes.
-      //
-      // Shrug. The same effect is caused by an unavoidable race:
-      // an admin could change the name of "general chat"
-      // (i.e. the value of realmEmptyTopicDisplayName)
-      // concurrently with the user making the send request,
-      // so that the setting in effect by the time the request arrives
-      // is different from the setting the client last heard about.
-      zulipFeatureLevel: zulipFeatureLevel,
-      realmEmptyTopicDisplayName: realmEmptyTopicDisplayName);
+  TopicName _processTopicLikeServer(TopicName topic) {
+    // Processing this just once on creating the outbox message
+    // allows an uncommon bug, because either of the values
+    // [zulipFeatureLevel] or [realmEmptyTopicDisplayName] can change.
+    // During the outbox message's life, a topic processed from
+    // "(no topic)" could become stale/wrong when zulipFeatureLevel
+    // changes; a topic processed from "general chat" could become
+    // stale/wrong when realmEmptyTopicDisplayName changes.
+    //
+    // Shrug. The same effect is caused by an unavoidable race:
+    // an admin could change the name of "general chat"
+    // (i.e. the value of realmEmptyTopicDisplayName)
+    // concurrently with the user making the send request,
+    // so that the setting in effect by the time the request arrives
+    // is different from the setting the client last heard about.
+    return processTopicLikeServer(topic);
   }
 
   void _handleOutboxDebounce(int localMessageId) {

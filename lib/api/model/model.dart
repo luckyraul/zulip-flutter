@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../../basic.dart';
 import '../../model/algorithms.dart';
 import 'events.dart';
 import 'initial_snapshot.dart';
@@ -158,6 +159,119 @@ class RealmEmojiItem {
   Map<String, dynamic> toJson() => _$RealmEmojiItemToJson(this);
 }
 
+/// A user's status, with [text] and [emoji] parts.
+///
+/// If a part is null, that part is empty/unset.
+/// For a [UserStatus] with all parts empty, see [zero].
+class UserStatus {
+  /// The text part (e.g. 'Working remotely'), or null if unset.
+  ///
+  /// This won't be the empty string.
+  final String? text;
+
+  /// The emoji part, or null if unset.
+  final StatusEmoji? emoji;
+
+  const UserStatus({required this.text, required this.emoji}) : assert(text != '');
+
+  static const UserStatus zero = UserStatus(text: null, emoji: null);
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! UserStatus) return false;
+    return (text, emoji) == (other.text, other.emoji);
+  }
+
+  @override
+  int get hashCode => Object.hash(text, emoji);
+}
+
+/// A user's status emoji, as in [UserStatus.emoji].
+class StatusEmoji {
+  final String emojiName;
+  final String emojiCode;
+  final ReactionType reactionType;
+
+  const StatusEmoji({
+    required this.emojiName,
+    required this.emojiCode,
+    required this.reactionType,
+  }) : assert(emojiName != ''), assert(emojiCode != '');
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! StatusEmoji) return false;
+    return (emojiName, emojiCode, reactionType) ==
+      (other.emojiName, other.emojiCode, other.reactionType);
+  }
+
+  @override
+  int get hashCode => Object.hash(emojiName, emojiCode, reactionType);
+}
+
+/// A change to part or all of a user's status.
+///
+/// The absence of one of these means there is no change.
+class UserStatusChange {
+  // final Option<bool> away; // deprecated in server-6 (FL-148); ignore
+  final Option<String?> text;
+  final Option<StatusEmoji?> emoji;
+
+  const UserStatusChange({required this.text, required this.emoji});
+
+  UserStatus apply(UserStatus old) {
+    return UserStatus(text: text.or(old.text), emoji: emoji.or(old.emoji));
+  }
+
+  factory UserStatusChange.fromJson(Map<String, dynamic> json) {
+    return UserStatusChange(
+      text: _textFromJson(json), emoji: _emojiFromJson(json));
+  }
+
+  static Option<String?> _textFromJson(Map<String, dynamic> json) {
+    return switch (json['status_text'] as String?) {
+      null => OptionNone(),
+      '' => OptionSome(null),
+      final apiValue => OptionSome(apiValue),
+    };
+  }
+
+  static Option<StatusEmoji?> _emojiFromJson(Map<String, dynamic> json) {
+    final emojiName = json['emoji_name'] as String?;
+    final emojiCode = json['emoji_code'] as String?;
+    final reactionType = json['reaction_type'] as String?;
+
+    if (emojiName == null || emojiCode == null || reactionType == null) {
+      return OptionNone();
+    } else if (emojiName == '' || emojiCode == '' || reactionType == '') {
+      // Sometimes `reaction_type` is 'unicode_emoji' when the emoji is cleared.
+      // This is an accident, to be handled by looking at `emoji_code` instead:
+      //   https://chat.zulip.org/#narrow/channel/378-api-design/topic/user.20status/near/2203132
+      return OptionSome(null);
+    } else {
+      return OptionSome(StatusEmoji(
+        emojiName: emojiName,
+        emojiCode: emojiCode,
+        reactionType: ReactionType.fromApiValue(reactionType)));
+    }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (text case OptionSome<String?>(:var value))
+        'status_text': value ?? '',
+      if (emoji case OptionSome<StatusEmoji?>(:var value))
+        ...value == null
+          ? {'emoji_name': '', 'emoji_code': '', 'reaction_type': ''}
+          : {
+              'emoji_name': value.emojiName,
+              'emoji_code': value.emojiCode,
+              'reaction_type': value.reactionType,
+            },
+    };
+  }
+}
+
 /// The name of a user setting that has a property in [UserSettings].
 ///
 /// In Zulip event-handling code (for [UserSettingsUpdateEvent]),
@@ -167,7 +281,9 @@ class RealmEmojiItem {
 enum UserSettingName {
   twentyFourHourTime,
   displayEmojiReactionUsers,
-  emojiset;
+  emojiset,
+  presenceEnabled,
+  ;
 
   /// Get a [UserSettingName] from a raw, snake-case string we recognize, else null.
   ///
@@ -178,6 +294,37 @@ enum UserSettingName {
   // _$…EnumMap is thanks to `alwaysCreate: true` and `fieldRename: FieldRename.snake`
   static final _byRawString = _$UserSettingNameEnumMap
     .map((key, value) => MapEntry(value, key));
+
+  String toJson() => _$UserSettingNameEnumMap[this]!;
+}
+
+/// A value from [UserSettings.twentyFourHourTime].
+enum TwentyFourHourTimeMode {
+  twelveHour(apiValue: false),
+  twentyFourHour(apiValue: true),
+
+  /// The locale's default format (12-hour for en_US, 24-hour for fr_FR, etc.).
+  // TODO(#1727) actually follow this
+  // Not sent by current servers, but planned when most client installs accept it:
+  //   https://chat.zulip.org/#narrow/channel/378-api-design/topic/.60user_settings.2Etwenty_four_hour_time.60/near/2220696
+  // TODO(server-future) Write down what server N starts sending null;
+  //   adjust the comment; leave a TODO(server-N) to delete the comment
+  localeDefault(apiValue: null),
+  ;
+
+  const TwentyFourHourTimeMode({required this.apiValue});
+
+  final bool? apiValue;
+
+  static bool? staticToJson(TwentyFourHourTimeMode instance) => instance.apiValue;
+
+  bool? toJson() => TwentyFourHourTimeMode.staticToJson(this);
+
+  static TwentyFourHourTimeMode fromApiValue(bool? value) => switch (value) {
+    false => twelveHour,
+    true => twentyFourHour,
+    null => localeDefault,
+  };
 }
 
 /// As in [UserSettings.emojiset].
@@ -197,6 +344,44 @@ enum Emojiset {
   // _$…EnumMap is thanks to `alwaysCreate: true` and `fieldRename: FieldRename.kebab`
   static final _byRawString = _$EmojisetEnumMap
     .map((key, value) => MapEntry(value, key));
+
+  String toJson() => _$EmojisetEnumMap[this]!;
+}
+
+/// As in [InitialSnapshot.realmUserGroups] or [UserGroupAddEvent].
+@JsonSerializable(fieldRename: FieldRename.snake)
+class UserGroup {
+  final int id;
+
+  // TODO(#1687) to maintain members, also act on user deactivation: https://github.com/zulip/zulip-flutter/issues/662#issuecomment-2405845356
+  // List<int> members; // TODO(#1687) track group members
+  // List<int> directSubgroupIds; // TODO(#1687) track group members
+
+  String name;
+  String description;
+
+  // final int? dateCreated; // not using; ignore
+  // final int? creatorId; // not using; ignore
+
+  final bool isSystemGroup;
+
+  // TODO(server-10): [deactivated] new in FL 290; previously no groups were deactivated
+  @JsonKey(defaultValue: false)
+  bool deactivated;
+
+  // TODO(#814): GroupSettingValue canAddMembersGroup, etc.; add to update event too
+
+  UserGroup({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.isSystemGroup,
+    required this.deactivated,
+  });
+
+  factory UserGroup.fromJson(Map<String, dynamic> json) => _$UserGroupFromJson(json);
+
+  Map<String, dynamic> toJson() => _$UserGroupToJson(this);
 }
 
 /// As in [InitialSnapshot.realmUsers], [InitialSnapshot.realmNonActiveUsers], and [InitialSnapshot.crossRealmBots].
@@ -681,53 +866,6 @@ extension type const TopicName(String _value) {
   /// using [canonicalize].
   bool isSameAs(TopicName other) => canonicalize() == other.canonicalize();
 
-  /// Process this topic to match how it would appear on a message object from
-  /// the server.
-  ///
-  /// This returns the [TopicName] the server would be predicted to include
-  /// in a message object resulting from sending to this [TopicName]
-  /// in a [sendMessage] request.
-  ///
-  /// This [TopicName] is required to have no leading or trailing whitespace.
-  ///
-  /// For a client that supports empty topics, when FL>=334, the server converts
-  /// `store.realmEmptyTopicDisplayName` to an empty string; when FL>=370,
-  /// the server converts "(no topic)" to an empty string as well.
-  ///
-  /// See API docs:
-  ///   https://zulip.com/api/send-message#parameter-topic
-  TopicName processLikeServer({
-    required int zulipFeatureLevel,
-    required String? realmEmptyTopicDisplayName,
-  }) {
-    assert(_value.trim() == _value);
-    // TODO(server-10) simplify this away
-    if (zulipFeatureLevel < 334) {
-      // From the API docs:
-      // > Before Zulip 10.0 (feature level 334), empty string was not a valid
-      // > topic name for channel messages.
-      assert(_value.isNotEmpty);
-      return this;
-    }
-
-    // TODO(server-10) simplify this away
-    if (zulipFeatureLevel < 370 && _value == kNoTopicTopic) {
-      // From the API docs:
-      // > Before Zulip 10.0 (feature level 370), "(no topic)" was not
-      // > interpreted as an empty string.
-      return TopicName(kNoTopicTopic);
-    }
-
-    if (_value == kNoTopicTopic || _value == realmEmptyTopicDisplayName) {
-      // From the API docs:
-      // > When "(no topic)" or the value of realm_empty_topic_display_name
-      // > found in the POST /register response is used for [topic],
-      // > it is interpreted as an empty string.
-      return TopicName('');
-    }
-    return TopicName(_value);
-  }
-
   TopicName.fromJson(this._value);
 
   String toJson() => apiName;
@@ -865,9 +1003,9 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
   // final string type; // handled by runtime type of object
   @JsonKey(fromJson: _flagsFromJson)
   List<MessageFlag> flags; // Unrecognized flags won't roundtrip through {to,from}Json.
-  final String? matchContent;
+  String? matchContent;
   @JsonKey(name: 'match_subject')
-  final String? matchTopic;
+  String? matchTopic;
 
   static MessageEditState _messageEditStateFromJson(Object? json) {
     // This is a no-op so that [MessageEditState._readFromMessage]

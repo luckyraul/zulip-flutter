@@ -81,12 +81,18 @@ void main() {
     Narrow narrow = const CombinedFeedNarrow(),
     Anchor anchor = AnchorCode.newest,
     ZulipStream? stream,
+    List<User>? users,
+    List<int>? mutedUserIds,
   }) async {
     stream ??= eg.stream(streamId: eg.defaultStreamMessageStreamId);
     subscription = eg.subscription(stream);
     store = eg.store();
     await store.addStream(stream);
     await store.addSubscription(subscription);
+    await store.addUsers([...?users, eg.selfUser]);
+    if (mutedUserIds != null) {
+      await store.setMutedUsers(mutedUserIds);
+    }
     connection = store.connection as FakeApiConnection;
     notifiedCount = 0;
     model = MessageListView.init(store: store, narrow: narrow, anchor: anchor)
@@ -353,7 +359,7 @@ void main() {
       final stream = eg.stream();
       final otherStream = eg.stream();
       await prepare(narrow: ChannelNarrow(stream.streamId));
-      await store.addUserTopic(stream, 'muted', UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, 'muted', UserTopicVisibilityPolicy.muted);
       await prepareOutboxMessagesTo([
         StreamDestination(stream.streamId, eg.t('topic')),
         StreamDestination(stream.streamId, eg.t('muted')),
@@ -1118,7 +1124,7 @@ void main() {
         eg.streamMessage(id: 2, stream: stream, topic: topic),
       ];
       await prepareMessages(foundOldest: true, messages: messages);
-      await store.addUserTopic(stream, 'muted', UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, 'muted', UserTopicVisibilityPolicy.muted);
       await prepareOutboxMessagesTo([
         StreamDestination(stream.streamId, eg.t(topic)),
         StreamDestination(stream.streamId, eg.t('muted')),
@@ -1161,6 +1167,144 @@ void main() {
       await fetchFuture;
       checkNotifiedOnce();
       checkHasMessageIds([1]);
+    }));
+  });
+
+  group('MutedUsersEvent', () {
+    final user1 = eg.user(userId: 1);
+    final user2 = eg.user(userId: 2);
+    final user3 = eg.user(userId: 3);
+    final users = [user1, user2, user3];
+
+    test('CombinedFeedNarrow', () async {
+      await prepare(narrow: CombinedFeedNarrow(), users: users);
+      await prepareMessages(foundOldest: true, messages: [
+        eg.dmMessage(id: 1, from: eg.selfUser, to: [user1]),
+        eg.dmMessage(id: 2, from: eg.selfUser, to: [user1, user2]),
+        eg.dmMessage(id: 3, from: eg.selfUser, to: [user2, user3]),
+        eg.dmMessage(id: 4, from: eg.selfUser, to: []),
+        eg.streamMessage(id: 5),
+      ]);
+      checkHasMessageIds([1, 2, 3, 4, 5]);
+
+      await store.setMutedUsers([user1.userId]);
+      checkNotifiedOnce();
+      checkHasMessageIds([2, 3, 4, 5]);
+
+      await store.setMutedUsers([user1.userId, user2.userId]);
+      checkNotifiedOnce();
+      checkHasMessageIds([3, 4, 5]);
+    });
+
+    test('MentionsNarrow', () async {
+      await prepare(narrow: MentionsNarrow(), users: users);
+      await prepareMessages(foundOldest: true, messages: [
+        eg.dmMessage(id: 1, from: eg.selfUser, to: [user1],
+          flags: [MessageFlag.mentioned]),
+        eg.dmMessage(id: 2, from: eg.selfUser, to: [user2],
+          flags: [MessageFlag.mentioned]),
+        eg.streamMessage(id: 3, flags: [MessageFlag.mentioned]),
+      ]);
+      checkHasMessageIds([1, 2, 3]);
+
+      await store.setMutedUsers([user1.userId]);
+      checkNotifiedOnce();
+      checkHasMessageIds([2, 3]);
+    });
+
+    test('StarredMessagesNarrow', () async {
+      await prepare(narrow: StarredMessagesNarrow(), users: users);
+      await prepareMessages(foundOldest: true, messages: [
+        eg.dmMessage(id: 1, from: eg.selfUser, to: [user1],
+          flags: [MessageFlag.starred]),
+        eg.dmMessage(id: 2, from: eg.selfUser, to: [user2],
+          flags: [MessageFlag.starred]),
+        eg.streamMessage(id: 3, flags: [MessageFlag.starred]),
+      ]);
+      checkHasMessageIds([1, 2, 3]);
+
+      await store.setMutedUsers([user1.userId]);
+      checkNotifiedOnce();
+      checkHasMessageIds([2, 3]);
+    });
+
+    test('ChannelNarrow -> do nothing', () async {
+      await prepare(narrow: ChannelNarrow(eg.defaultStreamMessageStreamId), users: users);
+      await prepareMessages(foundOldest: true, messages: [
+        eg.streamMessage(id: 1),
+      ]);
+      checkHasMessageIds([1]);
+
+      await store.setMutedUsers([user1.userId]);
+      checkNotNotified();
+      checkHasMessageIds([1]);
+    });
+
+    test('TopicNarrow -> do nothing', () async {
+      await prepare(narrow: TopicNarrow(eg.defaultStreamMessageStreamId,
+        TopicName('topic')), users: users);
+      await prepareMessages(foundOldest: true, messages: [
+        eg.streamMessage(id: 1, topic: 'topic'),
+      ]);
+      checkHasMessageIds([1]);
+
+      await store.setMutedUsers([user1.userId]);
+      checkNotNotified();
+      checkHasMessageIds([1]);
+    });
+
+    test('DmNarrow -> do nothing', () async {
+      await prepare(
+        narrow: DmNarrow.withUser(user1.userId, selfUserId: eg.selfUser.userId),
+        users: users);
+      await prepareMessages(foundOldest: true, messages: [
+        eg.dmMessage(id: 1, from: eg.selfUser, to: [user1]),
+      ]);
+      checkHasMessageIds([1]);
+
+      await store.setMutedUsers([user1.userId]);
+      checkNotNotified();
+      checkHasMessageIds([1]);
+    });
+
+    test('unmute a user -> refetch from scratch', () => awaitFakeAsync((async) async {
+      await prepare(narrow: CombinedFeedNarrow(), users: users,
+        mutedUserIds: [user1.userId]);
+      final messages = <Message>[
+        eg.dmMessage(id: 1, from: eg.selfUser, to: [user1]),
+        eg.streamMessage(id: 2),
+      ];
+      await prepareMessages(foundOldest: true, messages: messages);
+      checkHasMessageIds([2]);
+
+      connection.prepare(
+        json: newestResult(foundOldest: true, messages: messages).toJson());
+      await store.setMutedUsers([]);
+      checkNotifiedOnce();
+      check(model).fetched.isFalse();
+      checkHasMessageIds([]);
+
+      async.elapse(Duration.zero);
+      checkNotifiedOnce();
+      checkHasMessageIds([1, 2]);
+    }));
+
+    test('unmute a user before initial fetch completes -> do nothing', () => awaitFakeAsync((async) async {
+      await prepare(narrow: CombinedFeedNarrow(), users: users,
+        mutedUserIds: [user1.userId]);
+      final messages = <Message>[
+        eg.dmMessage(id: 1, from: eg.selfUser, to: [user1]),
+        eg.streamMessage(id: 2),
+      ];
+      connection.prepare(
+        json: newestResult(foundOldest: true, messages: messages).toJson());
+      final fetchFuture = model.fetchInitial();
+      await store.setMutedUsers([]);
+      checkNotNotified();
+
+      await fetchFuture;
+      checkNotifiedOnce();
+      checkHasMessageIds([1, 2]);
     }));
   });
 
@@ -1622,7 +1766,13 @@ void main() {
           newStreamId: otherStream.streamId,
           propagateMode: propagateMode,
         ));
-        checkNotifiedOnce();
+        switch (propagateMode) {
+          case PropagateMode.changeOne:
+            checkNotifiedOnce();
+          case PropagateMode.changeLater:
+          case PropagateMode.changeAll:
+            checkNotified(count: 2);
+        }
         async.elapse(const Duration(seconds: 1));
       });
 
@@ -2068,9 +2218,9 @@ void main() {
       await prepare(narrow: const CombinedFeedNarrow());
       await store.addStreams([stream1, stream2]);
       await store.addSubscription(eg.subscription(stream1));
-      await store.addUserTopic(stream1, 'B', UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream1, 'B', UserTopicVisibilityPolicy.muted);
       await store.addSubscription(eg.subscription(stream2, isMuted: true));
-      await store.addUserTopic(stream2, 'C', UserTopicVisibilityPolicy.unmuted);
+      await store.setUserTopic(stream2, 'C', UserTopicVisibilityPolicy.unmuted);
 
       // Check filtering on fetchInitial…
       await prepareMessages(foundOldest: false, messages: [
@@ -2128,8 +2278,8 @@ void main() {
       await prepare(narrow: ChannelNarrow(stream.streamId));
       await store.addStream(stream);
       await store.addSubscription(eg.subscription(stream, isMuted: true));
-      await store.addUserTopic(stream, 'A', UserTopicVisibilityPolicy.unmuted);
-      await store.addUserTopic(stream, 'C', UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, 'A', UserTopicVisibilityPolicy.unmuted);
+      await store.setUserTopic(stream, 'C', UserTopicVisibilityPolicy.muted);
 
       // Check filtering on fetchInitial…
       await prepareMessages(foundOldest: false, messages: [
@@ -2173,7 +2323,7 @@ void main() {
       await prepare(narrow: ChannelNarrow(stream.streamId));
       await store.addStream(stream);
       await store.addSubscription(eg.subscription(stream));
-      await store.addUserTopic(stream, 'muted', UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, 'muted', UserTopicVisibilityPolicy.muted);
       await prepareMessages(foundOldest: true, messages: []);
 
       // Check filtering on sent messages…
@@ -2206,7 +2356,7 @@ void main() {
       await prepare(narrow: eg.topicNarrow(stream.streamId, 'A'));
       await store.addStream(stream);
       await store.addSubscription(eg.subscription(stream, isMuted: true));
-      await store.addUserTopic(stream, 'A', UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, 'A', UserTopicVisibilityPolicy.muted);
 
       // Check filtering on fetchInitial…
       await prepareMessages(foundOldest: false, messages: [
@@ -2236,7 +2386,7 @@ void main() {
       const mutedTopic = 'muted';
       await prepare(narrow: const MentionsNarrow());
       await store.addStream(stream);
-      await store.addUserTopic(stream, mutedTopic, UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, mutedTopic, UserTopicVisibilityPolicy.muted);
       await store.addSubscription(eg.subscription(stream, isMuted: true));
 
       List<Message> getMessages(int startingId) => [
@@ -2274,7 +2424,7 @@ void main() {
       const mutedTopic = 'muted';
       await prepare(narrow: const StarredMessagesNarrow());
       await store.addStream(stream);
-      await store.addUserTopic(stream, mutedTopic, UserTopicVisibilityPolicy.muted);
+      await store.setUserTopic(stream, mutedTopic, UserTopicVisibilityPolicy.muted);
       await store.addSubscription(eg.subscription(stream, isMuted: true));
 
       List<Message> getMessages(int startingId) => [
@@ -2627,7 +2777,7 @@ void main() {
     }));
   });
 
-  test('recipient headers are maintained consistently', () => awaitFakeAsync((async) async {
+  test('recipient headers are maintained consistently (Combined feed)', () => awaitFakeAsync((async) async {
     // TODO test date separators are maintained consistently too
     // This tests the code that maintains the invariant that recipient headers
     // are present just where they're required.
@@ -2648,7 +2798,7 @@ void main() {
       eg.dmMessage(id: id, from: eg.selfUser, to: [], timestamp: timestamp);
 
     // First, test fetchInitial, where some headers are needed and others not.
-    await prepare();
+    await prepare(narrow: CombinedFeedNarrow());
     connection.prepare(json: newestResult(
       foundOldest: false,
       messages: [streamMessage(10), streamMessage(11), dmMessage(12)],
@@ -2741,6 +2891,53 @@ void main() {
       dmMessage(17), localMessageId: outboxMessageIds.last));
     checkNotifiedOnce();
   }));
+
+  group('one message per block?', () {
+    final channelId = 1;
+    final topic = 'some topic';
+    void doTest({required Narrow narrow, required bool expected}) {
+      test('$narrow: ${expected ? 'yes' : 'no'}', () => awaitFakeAsync((async) async {
+        final sender = eg.user();
+        final channel = eg.stream(streamId: channelId);
+        final message1 = eg.streamMessage(
+          sender: sender,
+          stream: channel,
+          topic: topic,
+          flags: [MessageFlag.starred, MessageFlag.mentioned],
+        );
+        final message2 = eg.streamMessage(
+          sender: sender,
+          stream: channel,
+          topic: topic,
+          flags: [MessageFlag.starred, MessageFlag.mentioned],
+        );
+
+        await prepare(
+          narrow: narrow,
+          stream: channel,
+        );
+        connection.prepare(json: newestResult(
+          foundOldest: false,
+          messages: [message1, message2],
+        ).toJson());
+        await model.fetchInitial();
+        checkNotifiedOnce();
+
+        check(model).items.deepEquals(<Condition<Object?>>[
+          (it) => it.isA<MessageListRecipientHeaderItem>(),
+          (it) => it.isA<MessageListMessageItem>(),
+          if (expected) (it) => it.isA<MessageListRecipientHeaderItem>(),
+          (it) => it.isA<MessageListMessageItem>(),
+        ]);
+      }));
+    }
+
+    doTest(narrow: CombinedFeedNarrow(),                expected: false);
+    doTest(narrow: ChannelNarrow(channelId),            expected: false);
+    doTest(narrow: TopicNarrow(channelId, eg.t(topic)), expected: false);
+    doTest(narrow: StarredMessagesNarrow(),             expected: true);
+    doTest(narrow: MentionsNarrow(),                    expected: true);
+  });
 
   test('showSender is maintained correctly', () => awaitFakeAsync((async) async {
     // TODO(#150): This will get more complicated with message moves.
@@ -2954,21 +3151,38 @@ void checkInvariants(MessageListView model) {
   final allMessages = [...model.messages, ...model.outboxMessages];
 
   for (final message in allMessages) {
-    check(model.narrow.containsMessage(message)).isTrue();
+    check(model.narrow.containsMessage(message)).anyOf(<Condition<bool?>>[
+      (it) => it.isNull(),
+      (it) => it.isNotNull().isTrue(),
+    ]);
 
-    if (message is! MessageBase<StreamConversation>) continue;
-    final conversation = message.conversation;
-    switch (model.narrow) {
-      case CombinedFeedNarrow():
-        check(model.store.isTopicVisible(conversation.streamId, conversation.topic))
-          .isTrue();
-      case ChannelNarrow():
-        check(model.store.isTopicVisibleInStream(conversation.streamId, conversation.topic))
-          .isTrue();
-      case TopicNarrow():
-      case DmNarrow():
-      case MentionsNarrow():
-      case StarredMessagesNarrow():
+    if (message is MessageBase<StreamConversation>) {
+      final conversation = message.conversation;
+      switch (model.narrow) {
+        case CombinedFeedNarrow():
+          check(model.store.isTopicVisible(conversation.streamId, conversation.topic))
+            .isTrue();
+        case ChannelNarrow():
+          check(model.store.isTopicVisibleInStream(conversation.streamId, conversation.topic))
+            .isTrue();
+        case TopicNarrow():
+        case DmNarrow():
+        case MentionsNarrow():
+        case StarredMessagesNarrow():
+        case KeywordSearchNarrow():
+      }
+    } else if (message is DmMessage) {
+      final narrow = DmNarrow.ofMessage(message, selfUserId: model.store.selfUserId);
+      switch (model.narrow) {
+        case CombinedFeedNarrow():
+        case MentionsNarrow():
+        case StarredMessagesNarrow():
+        case KeywordSearchNarrow():
+          check(model.store.shouldMuteDmConversation(narrow)).isFalse();
+        case ChannelNarrow():
+        case TopicNarrow():
+        case DmNarrow():
+      }
     }
   }
 
@@ -3011,6 +3225,7 @@ void checkInvariants(MessageListView model) {
   for (int j = 0; j < allMessages.length; j++) {
     bool forcedShowSender = false;
     if (j == 0
+        || model.oneMessagePerBlock
         || !haveSameRecipient(allMessages[j-1], allMessages[j])) {
       check(model.items[i++]).isA<MessageListRecipientHeaderItem>()
         .message.identicalTo(allMessages[j]);

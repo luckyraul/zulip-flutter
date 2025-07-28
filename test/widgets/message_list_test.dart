@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:checks/checks.dart';
+import 'package:clock/clock.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -14,6 +15,7 @@ import 'package:zulip/api/model/model.dart';
 import 'package:zulip/api/model/narrow.dart';
 import 'package:zulip/api/route/channels.dart';
 import 'package:zulip/api/route/messages.dart';
+import 'package:zulip/basic.dart';
 import 'package:zulip/model/actions.dart';
 import 'package:zulip/model/localizations.dart';
 import 'package:zulip/model/message.dart';
@@ -33,6 +35,7 @@ import 'package:zulip/widgets/store.dart';
 import 'package:zulip/widgets/channel_colors.dart';
 import 'package:zulip/widgets/theme.dart';
 import 'package:zulip/widgets/topic_list.dart';
+import 'package:zulip/widgets/user.dart';
 
 import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
@@ -43,11 +46,8 @@ import '../flutter_checks.dart';
 import '../stdlib_checks.dart';
 import '../test_images.dart';
 import '../test_navigation.dart';
-import 'compose_box_checks.dart';
-import 'content_checks.dart';
+import 'checks.dart';
 import 'dialog_checks.dart';
-import 'message_list_checks.dart';
-import 'page_checks.dart';
 import 'test_app.dart';
 
 void main() {
@@ -65,6 +65,7 @@ void main() {
     GetMessagesResult? fetchResult,
     List<ZulipStream>? streams,
     List<User>? users,
+    List<int>? mutedUserIds,
     List<Subscription>? subscriptions,
     UnreadMessagesSnapshot? unreadMsgs,
     int? zulipFeatureLevel,
@@ -87,6 +88,9 @@ void main() {
     // prepare message list data
     await store.addUser(eg.selfUser);
     await store.addUsers(users ?? []);
+    if (mutedUserIds != null) {
+      await store.setMutedUsers(mutedUserIds);
+    }
     if (fetchResult != null) {
       assert(foundOldest && messageCount == null && messages == null);
     } else {
@@ -125,6 +129,9 @@ void main() {
     return findScrollView(tester).controller;
   }
 
+  final contentInputFinder = find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.controller is ComposeContentController);
+
   group('MessageListPage', () {
     testWidgets('ancestorOf finds page state from message', (tester) async {
       await setupMessageListPage(tester,
@@ -149,6 +156,20 @@ void main() {
         messages: [eg.streamMessage(stream: stream, content: "<p>a message</p>")]);
       final state = MessageListPage.ancestorOf(tester.element(find.text("a message")));
       check(state.narrow).equals(ChannelNarrow(stream.streamId));
+    });
+
+    testWidgets('narrow gets normalized from "general chat"', (tester) async {
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/1717
+      final stream = eg.stream();
+      // Open the page on a topic with the literal name "general chat".
+      final topic = eg.defaultRealmEmptyTopicDisplayName;
+      final topicNarrow = eg.topicNarrow(stream.streamId, topic);
+      await setupMessageListPage(tester, narrow: topicNarrow,
+        streams: [stream],
+        messages: [eg.streamMessage(stream: stream, topic: topic, content: "<p>a message</p>")]);
+      final state = MessageListPage.ancestorOf(tester.element(find.text("a message")));
+      // The page's narrow has been updated; the topic is "", not "general chat".
+      check(state.narrow).equals(eg.topicNarrow(stream.streamId, ''));
     });
 
     testWidgets('composeBoxState finds compose box', (tester) async {
@@ -281,7 +302,7 @@ void main() {
       connection.prepare(json: GetStreamTopicsResult(topics: [
         eg.getStreamTopicsEntry(name: 'topic foo'),
       ]).toJson());
-      await tester.tap(find.text('TOPICS'));
+      await tester.tap(find.byIcon(ZulipIcons.topics));
       await tester.pump(); // tap the button
       await tester.pump(Duration.zero); // wait for request
       check(find.descendant(
@@ -316,13 +337,68 @@ void main() {
       connection.prepare(json: GetStreamTopicsResult(topics: [
         eg.getStreamTopicsEntry(name: 'topic foo'),
       ]).toJson());
-      await tester.tap(find.text('TOPICS'));
+      await tester.tap(find.byIcon(ZulipIcons.topics));
       await tester.pump(); // tap the button
       await tester.pump(Duration.zero); // wait for request
       check(find.descendant(
         of: find.byType(TopicListPage),
         matching: find.text('channel foo')),
       ).findsOne();
+    });
+
+    testWidgets('shows "Muted user" label for muted users in DM narrow', (tester) async {
+      final user1 = eg.user(userId: 1, fullName: 'User 1');
+      final user2 = eg.user(userId: 2, fullName: 'User 2');
+      final user3 = eg.user(userId: 3, fullName: 'User 3');
+      final mutedUsers = [1, 3];
+
+      await setupMessageListPage(tester,
+        narrow: DmNarrow.withOtherUsers([1, 2, 3], selfUserId: 10),
+        users: [user1, user2, user3],
+        mutedUserIds: mutedUsers,
+        messageCount: 1,
+      );
+
+      check(find.text('DMs with Muted user, User 2, Muted user')).findsOne();
+    });
+  });
+
+  group('no-messages placeholder', () {
+    final findPlaceholder = find.byType(PageBodyEmptyContentPlaceholder);
+
+    Finder findTextInPlaceholder(String text) =>
+      find.descendant(of: findPlaceholder, matching: find.textContaining(text));
+
+    testWidgets('Combined feed', (tester) async {
+      await setupMessageListPage(tester, narrow: CombinedFeedNarrow(), messages: []);
+      check(findTextInPlaceholder('There are no messages here.')).findsOne();
+    });
+
+    testWidgets('Search, empty keyword', (tester) async {
+      await setupMessageListPage(tester, narrow: KeywordSearchNarrow(''), messages: []);
+      check(findTextInPlaceholder('No search results.')).findsOne();
+    });
+
+    testWidgets('Search, non-empty keyword', (tester) async {
+      await setupMessageListPage(tester, narrow: KeywordSearchNarrow('hello'), messages: []);
+      check(findTextInPlaceholder('No search results.')).findsOne();
+    });
+
+    testWidgets('when `messages` empty but `outboxMessages` not empty, show outboxes, not placeholder', (tester) async {
+      final channel = eg.stream();
+      await setupMessageListPage(tester,
+        narrow: TopicNarrow(channel.streamId, eg.t('topic')),
+        streams: [channel],
+        messages: []);
+      check(findPlaceholder).findsOne();
+
+      connection.prepare(json: SendMessageResult(id: 1).toJson());
+      await tester.enterText(contentInputFinder, 'asdfjkl;');
+      await tester.tap(find.byIcon(ZulipIcons.send));
+      await tester.pump(kLocalEchoDebounceDuration);
+
+      check(findPlaceholder).findsNothing();
+      check(find.text('asdfjkl;')).findsOne();
     });
   });
 
@@ -828,6 +904,30 @@ void main() {
         eg.typingEvent(narrow, TypingOp.start, 1000),
         expected: '(unknown user) is typing…',
       );
+      // Wait for the pending timers to end.
+      await tester.pump(const Duration(seconds: 15));
+    });
+
+    testWidgets('muted user typing', (tester) async {
+      await setupMessageListPage(tester,
+        narrow: topicNarrow, users: users, messages: [streamMessage]);
+
+      await checkTyping(tester,
+        eg.typingEvent(topicNarrow, TypingOp.start, eg.otherUser.userId),
+        expected: 'Other User is typing…');
+
+      await checkTyping(tester,
+        eg.typingEvent(topicNarrow, TypingOp.start, eg.thirdUser.userId),
+        expected: 'Other User and Third User are typing…');
+
+      await store.setMutedUsers([eg.otherUser.userId]);
+      await tester.pump();
+
+      await checkTyping(tester,
+        eg.typingEvent(topicNarrow, TypingOp.start, eg.thirdUser.userId),
+        expected: 'Third User is typing…', // no "Other User"
+      );
+
       // Wait for the pending timers to end.
       await tester.pump(const Duration(seconds: 15));
     });
@@ -1342,6 +1442,33 @@ void main() {
         tester.widget(find.text('new stream name'));
       });
 
+      testWidgets('navigates to ChannelNarrow on tapping channel in CombinedFeedNarrow', (tester) async {
+        final pushedRoutes = <Route<void>>[];
+        final navObserver = TestNavigatorObserver()
+          ..onPushed = (route, prevRoute) => pushedRoutes.add(route);
+        final channel = eg.stream();
+        final subscription = eg.subscription(channel);
+        final message = eg.streamMessage(stream: channel, topic: 'topic name');
+        await setupMessageListPage(tester,
+          narrow: CombinedFeedNarrow(),
+          subscriptions: [subscription],
+          messages: [message],
+          navObservers: [navObserver]);
+
+        assert(pushedRoutes.length == 1);
+        pushedRoutes.clear();
+
+        connection.prepare(json: eg.newestGetMessagesResult(
+          foundOldest: true, messages: [message]).toJson());
+        await tester.tap(find.descendant(
+          of: find.byType(StreamMessageRecipientHeader),
+          matching: find.text(channel.name)));
+        await tester.pump();
+        check(pushedRoutes).single.isA<WidgetRoute>().page.isA<MessageListPage>()
+          .initNarrow.equals(ChannelNarrow(channel.streamId));
+        await tester.pumpAndSettle();
+      });
+
       testWidgets('navigates to TopicNarrow on tapping topic in ChannelNarrow', (tester) async {
         final pushedRoutes = <Route<void>>[];
         final navObserver = TestNavigatorObserver()
@@ -1423,6 +1550,21 @@ void main() {
           "${zulipLocalizations.unknownUserName}, ${eg.thirdUser.fullName}")));
       });
 
+      testWidgets('show "Muted user" label for muted users', (tester) async {
+        final user1 = eg.user(userId: 1, fullName: 'User 1');
+        final user2 = eg.user(userId: 2, fullName: 'User 2');
+        final user3 = eg.user(userId: 3, fullName: 'User 3');
+        final mutedUsers = [1, 3];
+
+        await setupMessageListPage(tester,
+          users: [user1, user2, user3],
+          mutedUserIds: mutedUsers,
+          messages: [eg.dmMessage(from: eg.selfUser, to: [user1, user2, user3])]
+        );
+
+        check(find.text('You and Muted user, Muted user, User 2')).findsOne();
+      });
+
       testWidgets('icon color matches text color', (tester) async {
         final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
         await setupMessageListPage(tester, messages: [
@@ -1496,26 +1638,80 @@ void main() {
     });
   });
 
-  group('formatHeaderDate', () {
-    final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
-    final now = DateTime.parse("2023-01-10 12:00");
-    final testCases = [
-      ("2023-01-10 12:00", zulipLocalizations.today),
-      ("2023-01-10 00:00", zulipLocalizations.today),
-      ("2023-01-10 23:59", zulipLocalizations.today),
-      ("2023-01-09 23:59", zulipLocalizations.yesterday),
-      ("2023-01-09 00:00", zulipLocalizations.yesterday),
-      ("2023-01-08 00:00", "Jan 8"),
-      ("2022-12-31 00:00", "Dec 31, 2022"),
-      // Future times
-      ("2023-01-10 19:00", zulipLocalizations.today),
-      ("2023-01-11 00:00", "Jan 11, 2023"),
-    ];
-    for (final (dateTime, expected) in testCases) {
-      test('$dateTime returns $expected', () {
-        check(formatHeaderDate(zulipLocalizations, DateTime.parse(dateTime), now: now))
-          .equals(expected);
-      });
+  group('MessageTimestampStyle', () {
+    void doTests(
+      MessageTimestampStyle style,
+      List<(
+        String timestampStr,
+        String? expectedTwelveHour,
+        String? expectedTwentyFourHour,
+      )> cases, {
+      DateTime? now,
+    }) {
+      now ??= DateTime.parse("2023-01-10 12:00");
+      for (final (timestampStr, expectedTwelveHour, expectedTwentyFourHour) in cases) {
+        for (final mode in TwentyFourHourTimeMode.values) {
+          final expected = switch (mode) {
+            TwentyFourHourTimeMode.twelveHour => expectedTwelveHour,
+            TwentyFourHourTimeMode.twentyFourHour => expectedTwentyFourHour,
+            // This expectation will hold as long as we're always using the
+            // default locale, en_US, which uses the twelve-hour format.
+            // TODO(#1727) test with other locales
+            TwentyFourHourTimeMode.localeDefault => expectedTwelveHour,
+          };
+
+          test('${style.name} in ${mode.name}: $timestampStr returns $expected', () {
+            addTearDown(testBinding.reset);
+            final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+
+            withClock(Clock.fixed(now!), () {
+              final timestamp = DateTime.parse(timestampStr)
+                .millisecondsSinceEpoch ~/ 1000;
+              final result = style.format(
+                timestamp,
+                now: testBinding.utcNow().toLocal(),
+                twentyFourHourTimeMode: mode,
+                zulipLocalizations: zulipLocalizations);
+              check(result).equals(expected);
+            });
+          });
+        }
+      }
+    }
+
+    for (final style in MessageTimestampStyle.values) {
+      switch (style) {
+        case MessageTimestampStyle.none:
+          doTests(style, [('2023-01-10 12:00', null, null)]);
+        case MessageTimestampStyle.dateOnlyRelative:
+          final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+          doTests(style,
+            now: DateTime.parse("2023-01-10 12:00"),
+            [
+              ("2023-01-10 12:00", zulipLocalizations.today,     zulipLocalizations.today),
+              ("2023-01-10 00:00", zulipLocalizations.today,     zulipLocalizations.today),
+              ("2023-01-10 23:59", zulipLocalizations.today,     zulipLocalizations.today),
+              ("2023-01-09 23:59", zulipLocalizations.yesterday, zulipLocalizations.yesterday),
+              ("2023-01-09 00:00", zulipLocalizations.yesterday, zulipLocalizations.yesterday),
+              ("2023-01-08 00:00", "Jan 8", "Jan 8"),
+              ("2022-12-31 00:00", "Dec 31, 2022", "Dec 31, 2022"),
+              // Future times
+              ("2023-01-10 19:00", zulipLocalizations.today, zulipLocalizations.today),
+              ("2023-01-11 00:00", "Jan 11, 2023", "Jan 11, 2023"),
+            ]);
+        case MessageTimestampStyle.timeOnly:
+          doTests(style, [('2023-01-10 12:00', '12:00 PM', '12:00')]);
+        case MessageTimestampStyle.lightbox:
+          doTests(style,
+            [('2023-01-10 12:00',
+              'Jan 10, 2023 12:00:00 PM',
+              'Jan 10, 2023 12:00:00')]);
+        case MessageTimestampStyle.full:
+          doTests(style,
+            [('2023-01-10 12:00',
+              'Jan 10, 2023 12:00 PM',
+              'Jan 10, 2023 12:00')]);
+      }
     }
   });
 
@@ -1565,15 +1761,18 @@ void main() {
         }
       }
 
+      final user = eg.user();
+
       Future<void> handleNewAvatarEventAndPump(WidgetTester tester, String avatarUrl) async {
-        await store.handleEvent(RealmUserUpdateEvent(id: 1, userId: eg.selfUser.userId, avatarUrl: avatarUrl));
+        await store.handleEvent(RealmUserUpdateEvent(id: 1, userId: user.userId, avatarUrl: avatarUrl));
         await tester.pump();
       }
 
       prepareBoringImageHttpClient();
 
-      await setupMessageListPage(tester, messageCount: 10);
-      checkResultForSender(eg.selfUser.avatarUrl);
+      await setupMessageListPage(tester, users: [user],
+        messages: [eg.streamMessage(sender: user)]);
+      checkResultForSender(user.avatarUrl);
 
       await handleNewAvatarEventAndPump(tester, '/foo.png');
       checkResultForSender('/foo.png');
@@ -1626,6 +1825,215 @@ void main() {
 
       debugNetworkImageHttpClientProvider = null;
     });
+
+    group('User status', () {
+      void checkFindsStatusEmoji(WidgetTester tester, Finder emojiFinder) {
+        final statusEmojiFinder = find.ancestor(of: emojiFinder,
+          matching: find.byType(UserStatusEmoji));
+        check(statusEmojiFinder).findsOne();
+        check(tester.widget<UserStatusEmoji>(statusEmojiFinder)
+          .neverAnimate).isTrue();
+        check(find.ancestor(of: statusEmojiFinder,
+          matching: find.byType(SenderRow))).findsOne();
+      }
+
+      testWidgets('emoji (unicode) & text are set -> emoji is displayed, text is not', (tester) async {
+        final user = eg.user();
+        await setupMessageListPage(tester,
+          users: [user], messages: [eg.streamMessage(sender: user)]);
+        await store.changeUserStatus(user.userId, UserStatusChange(
+          text: OptionSome('Busy'),
+          emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
+            emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
+        await tester.pump();
+
+        checkFindsStatusEmoji(tester, find.text('\u{1f6e0}'));
+        check(find.textContaining('Busy')).findsNothing();
+      });
+
+      testWidgets('emoji (image) & text are set -> emoji is displayed, text is not', (tester) async {
+        prepareBoringImageHttpClient();
+
+        final user = eg.user();
+        await setupMessageListPage(tester,
+          users: [user], messages: [eg.streamMessage(sender: user)]);
+        await store.changeUserStatus(user.userId, UserStatusChange(
+          text: OptionSome('Coding'),
+          emoji: OptionSome(StatusEmoji(emojiName: 'zulip',
+            emojiCode: 'zulip', reactionType: ReactionType.zulipExtraEmoji))));
+        await tester.pump();
+
+        checkFindsStatusEmoji(tester, find.byType(Image));
+        check(find.textContaining('Coding')).findsNothing();
+
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      testWidgets('longer user name -> emoji stays visible', (tester) async {
+        final user = eg.user(fullName: 'User with a very very very long name to check if emoji is still visible');
+        await setupMessageListPage(tester,
+          users: [user], messages: [eg.streamMessage(sender: user)]);
+        await store.changeUserStatus(user.userId, UserStatusChange(
+          text: OptionNone(),
+          emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
+            emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
+        await tester.pump();
+
+        checkFindsStatusEmoji(tester, find.text('\u{1f6e0}'));
+      });
+
+      testWidgets('emoji is not set, text is set -> text is not displayed', (tester) async {
+        final user = eg.user();
+        await setupMessageListPage(tester,
+          users: [user], messages: [eg.streamMessage(sender: user)]);
+        await store.changeUserStatus(user.userId, UserStatusChange(
+          text: OptionSome('Busy'), emoji: OptionNone()));
+        await tester.pump();
+
+        check(find.textContaining('Busy')).findsNothing();
+      });
+    });
+
+    group('Muted sender', () {
+      void checkMessage(Message message, {required bool expectIsMuted}) {
+        final mutedLabel = 'Muted user';
+        final mutedLabelFinder = find.widgetWithText(MessageWithPossibleSender,
+          mutedLabel);
+
+        final avatarFinder = find.byWidgetPredicate(
+          (widget) => widget is Avatar && widget.userId == message.senderId);
+        final mutedAvatarFinder = find.descendant(
+          of: avatarFinder,
+          matching: find.byIcon(ZulipIcons.person));
+        final nonmutedAvatarFinder = find.descendant(
+          of: avatarFinder,
+          matching: find.byType(RealmContentNetworkImage));
+
+        final senderName = store.senderDisplayName(message, replaceIfMuted: false);
+        assert(senderName != mutedLabel);
+        final senderNameFinder = find.widgetWithText(MessageWithPossibleSender,
+          senderName);
+
+        final contentFinder = find.descendant(
+          of: find.byType(MessageContent),
+          matching: find.text('A message', findRichText: true));
+
+        check(mutedLabelFinder.evaluate().length).equals(expectIsMuted ? 1 : 0);
+        check(senderNameFinder.evaluate().length).equals(expectIsMuted ? 0 : 1);
+        check(mutedAvatarFinder.evaluate().length).equals(expectIsMuted ? 1 : 0);
+        check(nonmutedAvatarFinder.evaluate().length).equals(expectIsMuted ? 0 : 1);
+        check(contentFinder.evaluate().length).equals(expectIsMuted ? 0 : 1);
+      }
+
+      final user = eg.user(userId: 1, fullName: 'User', avatarUrl: '/foo.png');
+      final message = eg.streamMessage(sender: user,
+        content: '<p>A message</p>', reactions: [eg.unicodeEmojiReaction]);
+
+      testWidgets('muted appearance', (tester) async {
+        prepareBoringImageHttpClient();
+        await setupMessageListPage(tester,
+          users: [user], mutedUserIds: [user.userId], messages: [message]);
+        checkMessage(message, expectIsMuted: true);
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      testWidgets('not-muted appearance', (tester) async {
+        prepareBoringImageHttpClient();
+        await setupMessageListPage(tester,
+          users: [user], mutedUserIds: [], messages: [message]);
+        checkMessage(message, expectIsMuted: false);
+        debugNetworkImageHttpClientProvider = null;
+      });
+
+      testWidgets('"Reveal message" button', (tester) async {
+        prepareBoringImageHttpClient();
+
+        await setupMessageListPage(tester,
+          users: [user], mutedUserIds: [user.userId], messages: [message]);
+        checkMessage(message, expectIsMuted: true);
+        await tester.tap(find.text('Reveal message'));
+        await tester.pump();
+        checkMessage(message, expectIsMuted: false);
+
+        debugNetworkImageHttpClientProvider = null;
+      });
+    });
+
+    group('Opens conversation on tap?', () {
+      // (copied from test/widgets/content_test.dart)
+      Future<void> tapText(WidgetTester tester, Finder textFinder) async {
+        final height = tester.getSize(textFinder).height;
+        final target = tester.getTopLeft(textFinder)
+          .translate(height/4, height/2); // aim for middle of first letter
+        await tester.tapAt(target);
+      }
+
+      final subscription = eg.subscription(eg.stream(streamId: eg.defaultStreamMessageStreamId));
+      final topic = 'some topic';
+
+      void doTest(Narrow narrow, {
+        required bool expected,
+        required Message Function() mkMessage,
+      }) {
+        testWidgets('${expected ? 'yes' : 'no'}, if in $narrow', (tester) async {
+          final message = mkMessage();
+
+          Route<dynamic>? lastPushedRoute;
+          final navObserver = TestNavigatorObserver()
+            ..onPushed = ((route, prevRoute) => lastPushedRoute = route);
+
+          await setupMessageListPage(
+            tester,
+            narrow: narrow,
+            messages: [message],
+            subscriptions: [subscription],
+            navObservers: [navObserver]
+          );
+          lastPushedRoute = null;
+
+          // Tapping interactive content still works.
+          await store.handleEvent(eg.updateMessageEditEvent(message,
+            renderedContent: '<p><a href="https://example/">link</a></p>'));
+          await tester.pump();
+          await tapText(tester, find.text('link'));
+          await tester.pump(Duration.zero);
+          check(lastPushedRoute).isNull();
+          final launchUrlCalls = testBinding.takeLaunchUrlCalls();
+          check(launchUrlCalls.single.url).equals(Uri.parse('https://example/'));
+
+          // Tapping non-interactive content opens the conversation (if expected).
+          await store.handleEvent(eg.updateMessageEditEvent(message,
+            renderedContent: '<p>plain content</p>'));
+          await tester.pump();
+          await tapText(tester, find.text('plain content'));
+          if (expected) {
+            final expectedNarrow = SendableNarrow.ofMessage(message, selfUserId: store.selfUserId);
+
+            check(lastPushedRoute).isNotNull().isA<MaterialAccountWidgetRoute>()
+              .page.isA<MessageListPage>()
+                ..initNarrow.equals(expectedNarrow)
+                ..initAnchorMessageId.equals(message.id);
+          } else {
+            check(lastPushedRoute).isNull();
+          }
+
+          // TODO test tapping whitespace in message
+        });
+      }
+
+      doTest(expected: false, CombinedFeedNarrow(),
+        mkMessage: () => eg.streamMessage());
+      doTest(expected: false, ChannelNarrow(subscription.streamId),
+        mkMessage: () => eg.streamMessage(stream: subscription));
+      doTest(expected: false, TopicNarrow(subscription.streamId, eg.t(topic)),
+        mkMessage: () => eg.streamMessage(stream: subscription));
+      doTest(expected: false, DmNarrow.withUsers([], selfUserId: eg.selfUser.userId),
+        mkMessage: () => eg.streamMessage(stream: subscription, topic: topic));
+      doTest(expected: true, StarredMessagesNarrow(),
+        mkMessage: () => eg.streamMessage(flags: [MessageFlag.starred]));
+      doTest(expected: true, MentionsNarrow(),
+        mkMessage: () => eg.streamMessage(flags: [MessageFlag.mentioned]));
+    });
   });
 
   group('OutboxMessageWithPossibleSender', () {
@@ -1633,9 +2041,6 @@ void main() {
     final topic = 'topic';
     final topicNarrow = eg.topicNarrow(stream.streamId, topic);
     const content = 'outbox message content';
-
-    final contentInputFinder = find.byWidgetPredicate(
-      (widget) => widget is TextField && widget.controller is ComposeContentController);
 
     Finder outboxMessageFinder = find.widgetWithText(
       OutboxMessageWithPossibleSender, content, skipOffstage: true);

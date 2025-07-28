@@ -1031,9 +1031,9 @@
   "@editAlreadyInProgressTitle": {
     "description": "Error title when a message edit cannot be saved because there is another edit already in progress."
   },
-  "topicsButtonLabel": "ТЕМИ",
-  "@topicsButtonLabel": {
-    "description": "Label for message list button leading to topic-list page. (Use ALL CAPS for cased alphabets: Latin, Greek, Cyrillic, etc.)"
+  "topicsButtonTooltip": "Теми",
+  "@topicsButtonTooltip": {
+    "description": "Tooltip for button to navigate to topic-list page."
   },
   "actionSheetOptionHideMutedMessage": "Сховати заглушене повідомлення",
   "@actionSheetOptionHideMutedMessage": {
@@ -1070,10 +1070,6 @@
   "errorNotificationOpenAccountNotFound": "Обліковий запис, звʼязаний з цим сповіщенням, не знайдений.",
   "@errorNotificationOpenAccountNotFound": {
     "description": "Error message when the account associated with the notification could not be found"
-  },
-  "mutedSender": "Заглушений відправник",
-  "@mutedSender": {
-    "description": "Name for a muted user to display in message list."
   },
   "actionSheetOptionEditMessage": "Редагувати повідомлення",
   "@actionSheetOptionEditMessage": {

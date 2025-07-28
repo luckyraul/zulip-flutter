@@ -7,12 +7,15 @@ import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zulip/api/core.dart';
+import 'package:zulip/api/model/initial_snapshot.dart';
+import 'package:zulip/api/model/model.dart';
 import 'package:zulip/model/content.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/settings.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/icons.dart';
+import 'package:zulip/widgets/katex.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/store.dart';
@@ -24,12 +27,10 @@ import '../model/binding.dart';
 import '../model/content_test.dart';
 import '../model/store_checks.dart';
 import '../model/test_store.dart';
-import '../stdlib_checks.dart';
 import '../test_images.dart';
 import '../test_navigation.dart';
+import 'checks.dart';
 import 'dialog_checks.dart';
-import 'message_list_checks.dart';
-import 'page_checks.dart';
 import 'test_app.dart';
 
 /// Simulate a nested "inner" span's style by merging all ancestor-span
@@ -106,6 +107,44 @@ TextStyle? mergedStyleOf(WidgetTester tester, Pattern spanPattern, {
 /// and reports the target's font size.
 typedef TargetFontSizeFinder = double Function(InlineSpan rootSpan);
 
+Widget plainContent(String html) {
+  return Builder(builder: (context) =>
+    DefaultTextStyle(
+      style: ContentTheme.of(context).textStylePlainParagraph,
+      child: BlockContentList(nodes: parseContent(html).nodes)));
+}
+
+// TODO(#488) For content that we need to show outside a per-message context
+//   or a context without a full PerAccountStore, make sure to include tests
+//   that don't provide such context.
+Future<void> prepareContent(WidgetTester tester, Widget child, {
+  List<NavigatorObserver> navObservers = const [],
+  bool wrapWithPerAccountStoreWidget = false,
+  InitialSnapshot? initialSnapshot,
+}) async {
+  if (wrapWithPerAccountStoreWidget) {
+    initialSnapshot ??= eg.initialSnapshot();
+    await testBinding.globalStore.add(eg.selfAccount, initialSnapshot);
+  } else {
+    assert(initialSnapshot == null);
+  }
+
+  addTearDown(testBinding.reset);
+
+  prepareBoringImageHttpClient();
+
+  await tester.pumpWidget(TestZulipApp(
+    accountId: wrapWithPerAccountStoreWidget ? eg.selfAccount.id : null,
+    navigatorObservers: navObservers,
+    child: child));
+  await tester.pump(); // global store
+  if (wrapWithPerAccountStoreWidget) {
+    await tester.pump();
+  }
+
+  debugNetworkImageHttpClientProvider = null;
+}
+
 void main() {
   // For testing a new content feature:
   //
@@ -120,43 +159,9 @@ void main() {
 
   TestZulipBinding.ensureInitialized();
 
-  Widget plainContent(String html) {
-    return Builder(builder: (context) =>
-      DefaultTextStyle(
-        style: ContentTheme.of(context).textStylePlainParagraph,
-        child: BlockContentList(nodes: parseContent(html).nodes)));
-  }
-
   Widget messageContent(String html) {
     return MessageContent(message: eg.streamMessage(content: html),
        content: parseContent(html));
-  }
-
-  // TODO(#488) For content that we need to show outside a per-message context
-  //   or a context without a full PerAccountStore, make sure to include tests
-  //   that don't provide such context.
-  Future<void> prepareContent(WidgetTester tester, Widget child, {
-    List<NavigatorObserver> navObservers = const [],
-    bool wrapWithPerAccountStoreWidget = false,
-  }) async {
-    if (wrapWithPerAccountStoreWidget) {
-      await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
-    }
-
-    addTearDown(testBinding.reset);
-
-    prepareBoringImageHttpClient();
-
-    await tester.pumpWidget(TestZulipApp(
-      accountId: wrapWithPerAccountStoreWidget ? eg.selfAccount.id : null,
-      navigatorObservers: navObservers,
-      child: child));
-    await tester.pump(); // global store
-    if (wrapWithPerAccountStoreWidget) {
-      await tester.pump();
-    }
-
-    debugNetworkImageHttpClientProvider = null;
   }
 
   /// Test that the given content example renders without throwing an exception.
@@ -555,9 +560,17 @@ void main() {
   });
 
   group('MathBlock', () {
+    // See also katex_test.dart for detailed tests of
+    // how we render the inside of a math block.
+    // These tests check how it relates to the enclosing Zulip message.
+
     testContentSmoke(ContentExample.mathBlock);
 
-    testWidgets('displays KaTeX source; experimental flag default', (tester) async {
+    testWidgets('displays KaTeX source; experimental flag disabled', (tester) async {
+      addTearDown(testBinding.reset);
+      final globalSettings = testBinding.globalStore.settings;
+      await globalSettings.setBool(BoolGlobalSetting.renderKatex, false);
+
       await prepareContent(tester, plainContent(ContentExample.mathBlock.html));
       tester.widget(find.text(r'\lambda', findRichText: true));
     });
@@ -570,95 +583,6 @@ void main() {
 
       await prepareContent(tester, plainContent(ContentExample.mathBlock.html));
       tester.widget(find.text('λ', findRichText: true));
-    });
-
-    void checkKatexText(
-      WidgetTester tester,
-      String text, {
-      required String fontFamily,
-      required double fontSize,
-      required double fontHeight,
-    }) {
-      check(mergedStyleOf(tester, text)).isNotNull()
-        ..fontFamily.equals(fontFamily)
-        ..fontSize.equals(fontSize);
-      check(tester.getSize(find.text(text)))
-        .height.isCloseTo(fontSize * fontHeight, 0.5);
-    }
-
-    testWidgets('displays KaTeX content with different sizing', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
-      check(globalSettings).getBool(BoolGlobalSetting.renderKatex).isTrue();
-
-      final content = ContentExample.mathBlockKatexSizing;
-      await prepareContent(tester, plainContent(content.html));
-
-      final mathBlockNode = content.expectedNodes.single as MathBlockNode;
-      final baseNode = mathBlockNode.nodes!.single;
-      final nodes = baseNode.nodes!.skip(1); // Skip .strut node.
-      for (final katexNode in nodes) {
-        final fontSize = katexNode.styles.fontSizeEm! * kBaseKatexTextStyle.fontSize!;
-        checkKatexText(tester, katexNode.text!,
-          fontFamily: 'KaTeX_Main',
-          fontSize: fontSize,
-          fontHeight: kBaseKatexTextStyle.height!);
-      }
-    });
-
-    testWidgets('displays KaTeX content with nested sizing', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
-      check(globalSettings).getBool(BoolGlobalSetting.renderKatex).isTrue();
-
-      final content = ContentExample.mathBlockKatexNestedSizing;
-      await prepareContent(tester, plainContent(content.html));
-
-      var fontSize = 0.5 * kBaseKatexTextStyle.fontSize!;
-      checkKatexText(tester, '1',
-        fontFamily: 'KaTeX_Main',
-        fontSize: fontSize,
-        fontHeight: kBaseKatexTextStyle.height!);
-
-      fontSize = 4.976 * fontSize;
-      checkKatexText(tester, '2',
-        fontFamily: 'KaTeX_Main',
-        fontSize: fontSize,
-        fontHeight: kBaseKatexTextStyle.height!);
-    });
-
-    testWidgets('displays KaTeX content with different delimiter sizing', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
-      check(globalSettings).getBool(BoolGlobalSetting.renderKatex).isTrue();
-
-      final content = ContentExample.mathBlockKatexDelimSizing;
-      await prepareContent(tester, plainContent(content.html));
-
-      final mathBlockNode = content.expectedNodes.single as MathBlockNode;
-      final baseNode = mathBlockNode.nodes!.single;
-      var nodes = baseNode.nodes!.skip(1); // Skip .strut node.
-
-      final fontSize = kBaseKatexTextStyle.fontSize!;
-
-      final firstNode = nodes.first;
-      checkKatexText(tester, firstNode.text!,
-        fontFamily: 'KaTeX_Main',
-        fontSize: fontSize,
-        fontHeight: kBaseKatexTextStyle.height!);
-      nodes = nodes.skip(1);
-
-      for (var katexNode in nodes) {
-        katexNode = katexNode.nodes!.single; // Skip empty .mord parent.
-        final fontFamily = katexNode.styles.fontFamily!;
-        checkKatexText(tester, katexNode.text!,
-          fontFamily: fontFamily,
-          fontSize: fontSize,
-          fontHeight: kBaseKatexTextStyle.height!);
-      }
     });
   });
 
@@ -680,10 +604,12 @@ void main() {
   Future<void> checkFontSizeRatio(WidgetTester tester, {
     required String targetHtml,
     required TargetFontSizeFinder targetFontSizeFinder,
+    bool wrapWithPerAccountStoreWidget = false,
   }) async {
-    await prepareContent(tester, plainContent(
-      '<h1>header-plain $targetHtml</h1>\n'
-      '<p>paragraph-plain $targetHtml</p>'));
+    await prepareContent(tester, wrapWithPerAccountStoreWidget: wrapWithPerAccountStoreWidget,
+      plainContent(
+        '<h1>header-plain $targetHtml</h1>\n'
+        '<p>paragraph-plain $targetHtml</p>'));
 
     final headerRootSpan = tester.renderObject<RenderParagraph>(find.textContaining('header')).text;
     final headerPlainStyle = mergedStyleOfSubstring(headerRootSpan, 'header-plain ');
@@ -1067,9 +993,56 @@ void main() {
   });
 
   group('inline math', () {
+    // See also katex_test.dart for detailed tests of
+    // how we render the inside of a math span.
+    // These tests check how it relates to the enclosing Zulip message.
+
     testContentSmoke(ContentExample.mathInline);
 
     testWidgets('maintains font-size ratio with surrounding text', (tester) async {
+      addTearDown(testBinding.reset);
+      final globalSettings = testBinding.globalStore.settings;
+      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
+      check(globalSettings.getBool(BoolGlobalSetting.renderKatex)).isTrue();
+
+      const html = '<span class="katex">'
+        '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow>'
+          '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
+        '<span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span></span></span></span>';
+      await checkFontSizeRatio(tester,
+        targetHtml: html,
+        targetFontSizeFinder: (rootSpan) {
+          late final double result;
+          rootSpan.visitChildren((span) {
+            if (span case WidgetSpan(child: KatexWidget() && var widget)) {
+              result = mergedStyleOf(tester,
+                findAncestor: find.byWidget(widget), r'λ')!.fontSize!;
+              return false;
+            }
+            return true;
+          });
+          return result;
+        });
+    });
+
+    testWidgets('maintains font-size ratio with surrounding text, when showing TeX source', (tester) async {
+      const html = '<span class="katex">'
+        '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow>'
+          '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
+        '<span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span></span></span></span>';
+      await checkFontSizeRatio(tester,
+        targetHtml: html,
+        targetFontSizeFinder: mkTargetFontSizeFinderFromPattern(r'λ'));
+    }, skip: true // TODO(#46): adapt this test
+                  //   (it needs a more complex targetFontSizeFinder;
+                  //    see other uses in this file for examples.)
+    );
+
+    testWidgets('maintains font-size ratio with surrounding text, when showing TeX source', (tester) async {
+      addTearDown(testBinding.reset);
+      final globalSettings = testBinding.globalStore.settings;
+      await globalSettings.setBool(BoolGlobalSetting.renderKatex, false);
+
       const html = '<span class="katex">'
         '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow>'
           '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
@@ -1079,7 +1052,11 @@ void main() {
         targetFontSizeFinder: mkTargetFontSizeFinderFromPattern(r'\lambda'));
     });
 
-    testWidgets('displays KaTeX source; experimental flag default', (tester) async {
+    testWidgets('displays KaTeX source; experimental flag disabled', (tester) async {
+      addTearDown(testBinding.reset);
+      final globalSettings = testBinding.globalStore.settings;
+      await globalSettings.setBool(BoolGlobalSetting.renderKatex, false);
+
       await prepareContent(tester, plainContent(ContentExample.mathInline.html));
       tester.widget(find.text(r'\lambda', findRichText: true));
     });
@@ -1102,16 +1079,52 @@ void main() {
     // the timezone of the environment running these tests. Accept here a wide
     // range of times. See comments in "show dates" test in
     // `test/widgets/message_list_test.dart`.
-    final renderedTextRegexp = RegExp(r'^(Tue, Jan 30|Wed, Jan 31), 2024, \d+:\d\d [AP]M$');
+    final renderedTextRegexp = RegExp(r'^(Tue, Jan 30|Wed, Jan 31), 2024, \d+:\d\d(?: [AP]M)?$');
+    final renderedTextRegexpTwelveHour = RegExp(r'^(Tue, Jan 30|Wed, Jan 31), 2024, \d+:\d\d [AP]M$');
+    final renderedTextRegexpTwentyFourHour = RegExp(r'^(Tue, Jan 30|Wed, Jan 31), 2024, \d+:\d\d$');
+
+    Future<void> prepare(
+      WidgetTester tester,
+      [TwentyFourHourTimeMode twentyFourHourTimeMode = TwentyFourHourTimeMode.localeDefault]
+    ) async {
+      final initialSnapshot = eg.initialSnapshot()
+        ..userSettings.twentyFourHourTime = twentyFourHourTimeMode;
+      await prepareContent(tester,
+        // We use the self-account's time-format setting.
+        wrapWithPerAccountStoreWidget: true,
+        initialSnapshot: initialSnapshot,
+        plainContent('<p>$timeSpanHtml</p>'));
+    }
 
     testWidgets('smoke', (tester) async {
-      await prepareContent(tester, plainContent('<p>$timeSpanHtml</p>'));
+      await prepare(tester);
       tester.widget(find.textContaining(renderedTextRegexp));
+    });
+
+    testWidgets('TwentyFourHourTimeMode.twelveHour', (tester) async {
+      await prepare(tester, TwentyFourHourTimeMode.twelveHour);
+      check(find.textContaining(renderedTextRegexpTwelveHour)).findsOne();
+    });
+
+    testWidgets('TwentyFourHourTimeMode.twentyFourHour', (tester) async {
+      await prepare(tester, TwentyFourHourTimeMode.twentyFourHour);
+      check(find.textContaining(renderedTextRegexpTwentyFourHour)).findsOne();
+    });
+
+    testWidgets('TwentyFourHourTimeMode.localeDefault', (tester) async {
+      await prepare(tester, TwentyFourHourTimeMode.localeDefault);
+      // This expectation holds as long as we're always formatting in en_US,
+      // the default locale, which uses the twelve-hour format.
+      // TODO(#1727) follow the actual locale; test with different locales
+      check(find.textContaining(renderedTextRegexpTwelveHour)).findsOne();
     });
 
     void testIconAndTextSameColor(String description, String html) {
       testWidgets('clock icon and text are the same color: $description', (tester) async {
-        await prepareContent(tester, plainContent(html));
+        await prepareContent(tester,
+          // We use the self-account's time-format setting.
+          wrapWithPerAccountStoreWidget: true,
+          plainContent(html));
 
         final icon = tester.widget<Icon>(
           find.descendant(of: find.byType(GlobalTime),
@@ -1131,6 +1144,8 @@ void main() {
     group('maintains font-size ratio with surrounding text', () {
       Future<void> doCheck(WidgetTester tester, double Function(GlobalTime widget) sizeFromWidget) async {
         await checkFontSizeRatio(tester,
+          // We use the self-account's time-format setting.
+          wrapWithPerAccountStoreWidget: true,
           targetHtml: '<time datetime="2024-01-30T17:33:00Z">2024-01-30T17:33:00Z</time>',
           targetFontSizeFinder: (rootSpan) {
             late final double result;
@@ -1161,6 +1176,26 @@ void main() {
         });
       });
     });
+  });
+
+  group('InlineAudio', () {
+    Future<void> prepare(WidgetTester tester, String html) async {
+      await prepareContent(tester, plainContent(html),
+        // We try to resolve relative links on the self-account's realm.
+        wrapWithPerAccountStoreWidget: true);
+    }
+
+    testWidgets('tapping on audio link opens it in browser', (tester) async {
+      final url = eg.realmUrl.resolve('/user_uploads/2/f2/a_WnijOXIeRnI6OSxo9F6gZM/crab-rave.mp3');
+      await prepare(tester, ContentExample.audioInline.html);
+
+      await tapText(tester, find.text('crab-rave.mp3'));
+
+      final expectedLaunchMode = defaultTargetPlatform == TargetPlatform.iOS ?
+        LaunchMode.externalApplication : LaunchMode.inAppBrowserView;
+      check(testBinding.takeLaunchUrlCalls())
+        .single.equals((url: url, mode: expectedLaunchMode));
+    }, variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
   });
 
   group('MessageImageEmoji', () {
@@ -1291,69 +1326,6 @@ void main() {
       await tester.pumpWidget(
         RealmContentNetworkImage(Uri.parse('https://zulip.invalid/path/to/image.png'), filterQuality: FilterQuality.medium));
       check(tester.takeException()).isA<AssertionError>();
-    });
-  });
-
-  group('AvatarImage', () {
-    late PerAccountStore store;
-
-    Future<Uri?> actualUrl(WidgetTester tester, String avatarUrl, [double? size]) async {
-      addTearDown(testBinding.reset);
-      await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
-      store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
-      final user = eg.user(avatarUrl: avatarUrl);
-      await store.addUser(user);
-
-      prepareBoringImageHttpClient();
-      await tester.pumpWidget(GlobalStoreWidget(
-        child: PerAccountStoreWidget(accountId: eg.selfAccount.id,
-          child: AvatarImage(userId: user.userId, size: size ?? 30))));
-      await tester.pump();
-      await tester.pump();
-      tester.widget(find.byType(AvatarImage));
-      final widgets = tester.widgetList<RealmContentNetworkImage>(
-        find.byType(RealmContentNetworkImage));
-      return widgets.firstOrNull?.src;
-    }
-
-    testWidgets('smoke with absolute URL', (tester) async {
-      const avatarUrl = 'https://example/avatar.png';
-      check(await actualUrl(tester, avatarUrl)).isNotNull()
-        .asString.equals(avatarUrl);
-      debugNetworkImageHttpClientProvider = null;
-    });
-
-    testWidgets('smoke with relative URL', (tester) async {
-      const avatarUrl = '/avatar.png';
-      check(await actualUrl(tester, avatarUrl))
-        .equals(store.tryResolveUrl(avatarUrl)!);
-      debugNetworkImageHttpClientProvider = null;
-    });
-
-   testWidgets('absolute URL, larger size', (tester) async {
-      tester.view.devicePixelRatio = 2.5;
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      const avatarUrl = 'https://example/avatar.png';
-      check(await actualUrl(tester, avatarUrl, 50)).isNotNull()
-        .asString.equals(avatarUrl.replaceAll('.png', '-medium.png'));
-      debugNetworkImageHttpClientProvider = null;
-    });
-
-    testWidgets('relative URL, larger size', (tester) async {
-      tester.view.devicePixelRatio = 2.5;
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      const avatarUrl = '/avatar.png';
-      check(await actualUrl(tester, avatarUrl, 50))
-        .equals(store.tryResolveUrl('/avatar-medium.png')!);
-      debugNetworkImageHttpClientProvider = null;
-    });
-
-    testWidgets('smoke with invalid URL', (tester) async {
-      const avatarUrl = '::not a URL::';
-      check(await actualUrl(tester, avatarUrl)).isNull();
-      debugNetworkImageHttpClientProvider = null;
     });
   });
 

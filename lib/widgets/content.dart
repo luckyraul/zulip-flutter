@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -11,17 +10,14 @@ import 'package:intl/intl.dart' as intl;
 import '../api/core.dart';
 import '../api/model/model.dart';
 import '../generated/l10n/zulip_localizations.dart';
-import '../model/avatar_url.dart';
-import '../model/binding.dart';
 import '../model/content.dart';
 import '../model/internal_link.dart';
-import '../model/katex.dart';
-import '../model/presence.dart';
 import 'actions.dart';
 import 'code_block.dart';
 import 'dialog.dart';
 import 'icons.dart';
 import 'inset_shadow.dart';
+import 'katex.dart';
 import 'lightbox.dart';
 import 'message_list.dart';
 import 'poll.dart';
@@ -820,130 +816,14 @@ class MathBlock extends StatelessWidget {
           children: [TextSpan(text: node.texSource)])));
     }
 
-    return _Katex(inline: false, nodes: nodes);
-  }
-}
-
-// Base text style from .katex class in katex.scss :
-//   https://github.com/KaTeX/KaTeX/blob/613c3da8/src/styles/katex.scss#L13-L15
-const kBaseKatexTextStyle = TextStyle(
-  fontSize: kBaseFontSize * 1.21,
-  fontFamily: 'KaTeX_Main',
-  height: 1.2);
-
-class _Katex extends StatelessWidget {
-  const _Katex({
-    required this.inline,
-    required this.nodes,
-  });
-
-  final bool inline;
-  final List<KatexNode> nodes;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget widget = _KatexNodeList(nodes: nodes);
-
-    if (!inline) {
-      widget = Center(
+    return Center(
+      child: Directionality(
+        textDirection: TextDirection.ltr,
         child: SingleChildScrollViewWithScrollbar(
           scrollDirection: Axis.horizontal,
-          child: widget));
-    }
-
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: DefaultTextStyle(
-        style: kBaseKatexTextStyle.copyWith(
-          color: ContentTheme.of(context).textStylePlainParagraph.color),
-        child: widget));
-  }
-}
-
-class _KatexNodeList extends StatelessWidget {
-  const _KatexNodeList({required this.nodes});
-
-  final List<KatexNode> nodes;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(TextSpan(
-      children: List.unmodifiable(nodes.map((e) {
-        return WidgetSpan(
-          alignment: PlaceholderAlignment.baseline,
-          baseline: TextBaseline.alphabetic,
-          child: _KatexSpan(e));
-      }))));
-  }
-}
-
-class _KatexSpan extends StatelessWidget {
-  const _KatexSpan(this.node);
-
-  final KatexNode node;
-
-  @override
-  Widget build(BuildContext context) {
-    final em = DefaultTextStyle.of(context).style.fontSize!;
-
-    Widget widget = const SizedBox.shrink();
-    if (node.text != null) {
-      widget = Text(node.text!);
-    } else if (node.nodes != null && node.nodes!.isNotEmpty) {
-      widget = _KatexNodeList(nodes: node.nodes!);
-    }
-
-    final styles = node.styles;
-
-    final fontFamily = styles.fontFamily;
-    final fontSize = switch (styles.fontSizeEm) {
-      double fontSizeEm => fontSizeEm * em,
-      null => null,
-    };
-    final fontWeight = switch (styles.fontWeight) {
-      KatexSpanFontWeight.bold => FontWeight.bold,
-      null => null,
-    };
-    var fontStyle = switch (styles.fontStyle) {
-      KatexSpanFontStyle.normal => FontStyle.normal,
-      KatexSpanFontStyle.italic => FontStyle.italic,
-      null => null,
-    };
-
-    TextStyle? textStyle;
-    if (fontFamily != null ||
-        fontSize != null ||
-        fontWeight != null ||
-        fontStyle != null) {
-      // TODO(upstream) remove this workaround when upstream fixes the broken
-      //   rendering of KaTeX_Math font with italic font style on Android:
-      //     https://github.com/flutter/flutter/issues/167474
-      if (defaultTargetPlatform == TargetPlatform.android &&
-          fontFamily == 'KaTeX_Math') {
-        fontStyle = FontStyle.normal;
-      }
-
-      textStyle = TextStyle(
-        fontFamily: fontFamily,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        fontStyle: fontStyle,
-      );
-    }
-    final textAlign = switch (styles.textAlign) {
-      KatexSpanTextAlign.left => TextAlign.left,
-      KatexSpanTextAlign.center => TextAlign.center,
-      KatexSpanTextAlign.right => TextAlign.right,
-      null => null,
-    };
-
-    if (textStyle != null || textAlign != null) {
-      widget = DefaultTextStyle.merge(
-        style: textStyle,
-        textAlign: textAlign,
-        child: widget);
-    }
-    return widget;
+          child: KatexWidget(
+            textStyle: ContentTheme.of(context).textStylePlainParagraph,
+            nodes: nodes))));
   }
 }
 
@@ -1265,7 +1145,7 @@ class _InlineContentBuilder {
           : WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
               baseline: TextBaseline.alphabetic,
-              child: _Katex(inline: true, nodes: nodes));
+              child: KatexWidget(textStyle: widget.style, nodes: nodes));
 
       case GlobalTimeNode():
         return WidgetSpan(alignment: PlaceholderAlignment.middle,
@@ -1424,13 +1304,26 @@ class GlobalTime extends StatelessWidget {
   final GlobalTimeNode node;
   final TextStyle ambientTextStyle;
 
-  static final _dateFormat = intl.DateFormat('EEE, MMM d, y, h:mm a'); // TODO(i18n): localize date
+  static final _format12 =
+    intl.DateFormat('EEE, MMM d, y').addPattern('h:mm aa', ', ');
+  static final _format24 =
+    intl.DateFormat('EEE, MMM d, y').addPattern('Hm', ', ');
+  static final _formatLocaleDefault =
+    intl.DateFormat('EEE, MMM d, y').addPattern('jm', ', ');
 
   @override
   Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
+    final twentyFourHourTimeMode = store.userSettings.twentyFourHourTime;
     // Design taken from css for `.rendered_markdown & time` in web,
     //   see zulip:web/styles/rendered_markdown.css .
-    final text = _dateFormat.format(node.datetime.toLocal());
+    // TODO(i18n): localize; see plan with ffi in #45
+    final format = switch (twentyFourHourTimeMode) {
+      TwentyFourHourTimeMode.twelveHour => _format12,
+      TwentyFourHourTimeMode.twentyFourHour => _format24,
+      TwentyFourHourTimeMode.localeDefault => _formatLocaleDefault,
+    };
+    final text = format.format(node.datetime.toLocal());
     final contentTheme = ContentTheme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -1654,248 +1547,6 @@ class RealmContentNetworkImage extends StatelessWidget {
       cacheWidth: cacheWidth,
       cacheHeight: cacheHeight,
     );
-  }
-}
-
-/// A rounded square with size [size] showing a user's avatar.
-class Avatar extends StatelessWidget {
-  const Avatar({
-    super.key,
-    required this.userId,
-    required this.size,
-    required this.borderRadius,
-    this.backgroundColor,
-    this.showPresence = true,
-  });
-
-  final int userId;
-  final double size;
-  final double borderRadius;
-  final Color? backgroundColor;
-  final bool showPresence;
-
-  @override
-  Widget build(BuildContext context) {
-    // (The backgroundColor is only meaningful if presence will be shown;
-    // see [PresenceCircle.backgroundColor].)
-    assert(backgroundColor == null || showPresence);
-    return AvatarShape(
-      size: size,
-      borderRadius: borderRadius,
-      backgroundColor: backgroundColor,
-      userIdForPresence: showPresence ? userId : null,
-      child: AvatarImage(userId: userId, size: size));
-  }
-}
-
-/// The appropriate avatar image for a user ID.
-///
-/// If the user isn't found, gives a [SizedBox.shrink].
-///
-/// Wrap this with [AvatarShape].
-class AvatarImage extends StatelessWidget {
-  const AvatarImage({
-    super.key,
-    required this.userId,
-    required this.size,
-  });
-
-  final int userId;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final store = PerAccountStoreWidget.of(context);
-    final user = store.getUser(userId);
-
-    if (user == null) { // TODO(log)
-      return const SizedBox.shrink();
-    }
-
-    final resolvedUrl = switch (user.avatarUrl) {
-      null          => null, // TODO(#255): handle computing gravatars
-      var avatarUrl => store.tryResolveUrl(avatarUrl),
-    };
-
-    if (resolvedUrl == null) {
-      return const SizedBox.shrink();
-    }
-
-    final avatarUrl = AvatarUrl.fromUserData(resolvedUrl: resolvedUrl);
-    final physicalSize = (MediaQuery.devicePixelRatioOf(context) * size).ceil();
-
-    return RealmContentNetworkImage(
-      avatarUrl.get(physicalSize),
-      filterQuality: FilterQuality.medium,
-      fit: BoxFit.cover,
-    );
-  }
-}
-
-/// A rounded square shape, to wrap an [AvatarImage] or similar.
-///
-/// If [userIdForPresence] is provided, this will paint a [PresenceCircle]
-/// on the shape.
-class AvatarShape extends StatelessWidget {
-  const AvatarShape({
-    super.key,
-    required this.size,
-    required this.borderRadius,
-    this.backgroundColor,
-    this.userIdForPresence,
-    required this.child,
-  });
-
-  final double size;
-  final double borderRadius;
-  final Color? backgroundColor;
-  final int? userIdForPresence;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    // (The backgroundColor is only meaningful if presence will be shown;
-    // see [PresenceCircle.backgroundColor].)
-    assert(backgroundColor == null || userIdForPresence != null);
-
-    Widget result = SizedBox.square(
-      dimension: size,
-      child: ClipRRect(
-        borderRadius: BorderRadius.all(Radius.circular(borderRadius)),
-        clipBehavior: Clip.antiAlias,
-        child: child));
-
-    if (userIdForPresence != null) {
-      final presenceCircleSize = size / 4; // TODO(design) is this right?
-      result = Stack(children: [
-        result,
-        Positioned.directional(textDirection: Directionality.of(context),
-          end: 0,
-          bottom: 0,
-          child: PresenceCircle(
-            userId: userIdForPresence!,
-            size: presenceCircleSize,
-            backgroundColor: backgroundColor)),
-      ]);
-    }
-
-    return result;
-  }
-}
-
-/// The green or orange-gradient circle representing [PresenceStatus].
-///
-/// [backgroundColor] must not be [Colors.transparent].
-/// It exists to match the background on which the avatar image is painted.
-/// If [backgroundColor] is not passed, [DesignVariables.mainBackground] is used.
-///
-/// By default, nothing paints for a user in the "offline" status
-/// (i.e. a user without a [PresenceStatus]).
-/// Pass true for [explicitOffline] to paint a gray circle.
-class PresenceCircle extends StatefulWidget {
-  const PresenceCircle({
-    super.key,
-    required this.userId,
-    required this.size,
-    this.backgroundColor,
-    this.explicitOffline = false,
-  });
-
-  final int userId;
-  final double size;
-  final Color? backgroundColor;
-  final bool explicitOffline;
-
-  /// Creates a [WidgetSpan] with a [PresenceCircle], for use in rich text
-  /// before a user's name.
-  ///
-  /// The [PresenceCircle] will have `explicitOffline: true`.
-  static InlineSpan asWidgetSpan({
-    required int userId,
-    required double fontSize,
-    required TextScaler textScaler,
-    Color? backgroundColor,
-  }) {
-    final size = textScaler.scale(fontSize) / 2;
-    return WidgetSpan(
-      alignment: PlaceholderAlignment.middle,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(end: 4),
-        child: PresenceCircle(
-          userId: userId,
-          size: size,
-          backgroundColor: backgroundColor,
-          explicitOffline: true)));
-  }
-
-  @override
-  State<PresenceCircle> createState() => _PresenceCircleState();
-}
-
-class _PresenceCircleState extends State<PresenceCircle> with PerAccountStoreAwareStateMixin {
-  Presence? model;
-
-  @override
-  void onNewStore() {
-    model?.removeListener(_modelChanged);
-    model = PerAccountStoreWidget.of(context).presence
-      ..addListener(_modelChanged);
-  }
-
-  @override
-  void dispose() {
-    model!.removeListener(_modelChanged);
-    super.dispose();
-  }
-
-  void _modelChanged() {
-    setState(() {
-      // The actual state lives in [model].
-      // This method was called because that just changed.
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final status = model!.presenceStatusForUser(
-      widget.userId, utcNow: ZulipBinding.instance.utcNow());
-    final designVariables = DesignVariables.of(context);
-    final effectiveBackgroundColor = widget.backgroundColor ?? designVariables.mainBackground;
-    assert(effectiveBackgroundColor != Colors.transparent);
-
-    Color? color;
-    LinearGradient? gradient;
-    switch (status) {
-      case null:
-        if (widget.explicitOffline) {
-          // TODO(a11y) this should be an open circle, like on web,
-          //   to differentiate by shape (vs. the "active" status which is also
-          //   a solid circle)
-          color = designVariables.statusAway;
-        } else {
-          return SizedBox.square(dimension: widget.size);
-        }
-      case PresenceStatus.active:
-        color = designVariables.statusOnline;
-      case PresenceStatus.idle:
-        gradient = LinearGradient(
-          begin: AlignmentDirectional.centerStart,
-          end: AlignmentDirectional.centerEnd,
-          colors: [designVariables.statusIdle, effectiveBackgroundColor],
-          stops: [0.05, 1.00],
-        );
-    }
-
-    return SizedBox.square(dimension: widget.size,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: effectiveBackgroundColor,
-            width: 2,
-            strokeAlign: BorderSide.strokeAlignOutside),
-          color: color,
-          gradient: gradient,
-          shape: BoxShape.circle)));
   }
 }
 

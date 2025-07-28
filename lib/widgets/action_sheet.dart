@@ -13,12 +13,15 @@ import '../api/route/channels.dart';
 import '../api/route/messages.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../model/binding.dart';
+import '../model/content.dart';
 import '../model/emoji.dart';
 import '../model/internal_link.dart';
 import '../model/narrow.dart';
 import 'actions.dart';
+import 'button.dart';
 import 'color.dart';
 import 'compose_box.dart';
+import 'content.dart';
 import 'dialog.dart';
 import 'emoji.dart';
 import 'emoji_reaction.dart';
@@ -32,11 +35,15 @@ import 'theme.dart';
 import 'topic_list.dart';
 
 void _showActionSheet(
-  BuildContext context, {
+  BuildContext pageContext, {
+  Widget? header,
   required List<Widget> optionButtons,
 }) {
+  // Could omit this if we need _showActionSheet outside a per-account context.
+  final accountId = PerAccountStoreWidget.accountIdOf(pageContext);
+
   showModalBottomSheet<void>(
-    context: context,
+    context: pageContext,
     // Clip.hardEdge looks bad; Clip.antiAliasWithSaveLayer looks pixel-perfect
     // on my iPhone 13 Pro but is marked as "much slower":
     //   https://api.flutter.dev/flutter/dart-ui/Clip.html
@@ -44,27 +51,49 @@ void _showActionSheet(
     useSafeArea: true,
     isScrollControlled: true,
     builder: (BuildContext _) {
-      return Semantics(
-        role: SemanticsRole.menu,
-        child: SafeArea(
-          minimum: const EdgeInsets.only(bottom: 16),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      final designVariables = DesignVariables.of(pageContext);
+      return PerAccountStoreWidget(
+        accountId: accountId,
+        child: Semantics(
+          role: SemanticsRole.menu,
+          child: SafeArea(
+            minimum: const EdgeInsets.only(bottom: 16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // TODO(#217): show message text
-                Flexible(child: InsetShadowBox(
-                  top: 8, bottom: 8,
-                  color: DesignVariables.of(context).bgContextMenu,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(top: 16, bottom: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(7),
-                      child: Column(spacing: 1,
-                        children: optionButtons))))),
-                const ActionSheetCancelButton(),
+                if (header != null)
+                  Flexible(
+                    // TODO(upstream) Enforce a flex ratio (e.g. 1:3)
+                    //   only when the header height plus the buttons' height
+                    //   exceeds available space. Otherwise let one or the other
+                    //   grow to fill available space even if it breaks the ratio.
+                    //   Needs support for separate properties like `flex-grow`
+                    //   and `flex-shrink`.
+                    flex: 1,
+                    child: InsetShadowBox(
+                      top: 8, bottom: 8,
+                      color: designVariables.bgContextMenu,
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: header)))
+                else
+                  SizedBox(height: 8),
+                Flexible(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(child: InsetShadowBox(
+                          top: 8, bottom: 8,
+                          color: designVariables.bgContextMenu,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: MenuButtonsShape(buttons: optionButtons)))),
+                        const ActionSheetCancelButton(),
+                      ]))),
               ]))));
     });
 }
@@ -122,22 +151,12 @@ abstract class ActionSheetMenuItemButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final designVariables = DesignVariables.of(context);
     final zulipLocalizations = ZulipLocalizations.of(context);
-    return MenuItemButton(
-      trailingIcon: Icon(icon, color: designVariables.contextMenuItemText),
-      style: MenuItemButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        foregroundColor: designVariables.contextMenuItemText,
-        splashFactory: NoSplash.splashFactory,
-      ).copyWith(backgroundColor: WidgetStateColor.resolveWith((states) =>
-          designVariables.contextMenuItemBg.withFadedAlpha(
-            states.contains(WidgetState.pressed) ? 0.20 : 0.12))),
+    return ZulipMenuItemButton(
+      icon: icon,
+      label: label(zulipLocalizations),
       onPressed: () => _handlePressed(context),
-      child: Text(label(zulipLocalizations),
-        style: const TextStyle(fontSize: 20, height: 24 / 20)
-          .merge(weightVariableTextStyle(context, wght: 600)),
-      ));
+    );
   }
 }
 
@@ -589,6 +608,8 @@ void showMessageActionSheet({required BuildContext context, required Message mes
   final markAsUnreadSupported = store.zulipFeatureLevel >= 155; // TODO(server-6)
   final showMarkAsUnreadButton = markAsUnreadSupported && isMessageRead;
 
+  final isSenderMuted = store.isUserMuted(message.senderId);
+
   final optionButtons = [
     if (popularEmojiLoaded)
       ReactionButtons(message: message, pageContext: pageContext),
@@ -597,6 +618,9 @@ void showMessageActionSheet({required BuildContext context, required Message mes
       QuoteAndReplyButton(message: message, pageContext: pageContext),
     if (showMarkAsUnreadButton)
       MarkAsUnreadButton(message: message, pageContext: pageContext),
+    if (isSenderMuted)
+      // The message must have been revealed in order to open this action sheet.
+      UnrevealMutedMessageButton(message: message, pageContext: pageContext),
     CopyMessageTextButton(message: message, pageContext: pageContext),
     CopyMessageLinkButton(message: message, pageContext: pageContext),
     ShareButton(message: message, pageContext: pageContext),
@@ -604,7 +628,42 @@ void showMessageActionSheet({required BuildContext context, required Message mes
       EditButton(message: message, pageContext: pageContext),
   ];
 
-  _showActionSheet(pageContext, optionButtons: optionButtons);
+  _showActionSheet(pageContext,
+    optionButtons: optionButtons,
+    header: _MessageActionSheetHeader(message: message));
+}
+
+class _MessageActionSheetHeader extends StatelessWidget {
+  const _MessageActionSheetHeader({required this.message});
+
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    // TODO this seems to lose the hero animation when opening an image;
+    //   investigate.
+    // TODO should we close the sheet before opening a narrow link?
+    //   On popping the pushed narrow route, the sheet is still open.
+
+    return Container(
+      // TODO(#647) use different color for highlighted messages
+      // TODO(#681) use different color for DM messages
+      color: designVariables.bgMessageRegular,
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        spacing: 4,
+        children: [
+          SenderRow(message: message,
+            timestampStyle: MessageTimestampStyle.full),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            // TODO(#10) offer text selection; the Figma asks for it here:
+            //   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=3483-30210&m=dev
+            child: MessageContent(message: message, content: parseMessageContent(message))),
+        ]));
+  }
 }
 
 abstract class MessageActionSheetMenuItemButton extends ActionSheetMenuItemButton {
@@ -715,7 +774,6 @@ class ReactionButtons extends StatelessWidget {
           : null,
         child: UnicodeEmojiWidget(
           emojiDisplay: emoji.emojiDisplay as UnicodeEmojiDisplay,
-          notoColorEmojiTextSize: 20.1,
           size: 24))));
   }
 
@@ -901,6 +959,30 @@ class MarkAsUnreadButton extends MessageActionSheetMenuItemButton {
       message, messageListPage.narrow));
     // TODO should we alert the user about this change somehow? A snackbar?
     messageListPage.markReadOnScroll = false;
+  }
+}
+
+class UnrevealMutedMessageButton extends MessageActionSheetMenuItemButton {
+  UnrevealMutedMessageButton({
+    super.key,
+    required super.message,
+    required super.pageContext,
+  });
+
+  @override
+  IconData get icon => ZulipIcons.eye_off;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return zulipLocalizations.actionSheetOptionHideMutedMessage;
+  }
+
+  @override
+  void onPressed() {
+    // The message should have been revealed in order to reach this action sheet.
+    assert(MessageListPage.maybeRevealedMutedMessagesOf(pageContext)!
+      .isMutedMessageRevealed(message.id));
+    findMessageListPage().unrevealMutedMessage(message.id);
   }
 }
 

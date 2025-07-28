@@ -5,9 +5,9 @@ import '../generated/l10n/zulip_localizations.dart';
 import '../model/narrow.dart';
 import '../model/unreads.dart';
 import 'action_sheet.dart';
-import 'home.dart';
 import 'icons.dart';
 import 'message_list.dart';
+import 'page.dart';
 import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
@@ -101,9 +101,7 @@ class _SubscriptionListPageBodyState extends State<SubscriptionListPageBody> wit
         message: zulipLocalizations.channelsEmptyPlaceholder);
     }
 
-    return SafeArea(
-      // Don't pad the bottom here; we want the list content to do that.
-      bottom: false,
+    return SafeArea( // horizontal insets
       child: CustomScrollView(
         slivers: [
           if (pinned.isNotEmpty) ...[
@@ -116,9 +114,6 @@ class _SubscriptionListPageBodyState extends State<SubscriptionListPageBody> wit
           ],
 
           // TODO(#188): add button leading to "All Streams" page with ability to subscribe
-
-          // This ensures last item in scrollable can settle in an unobstructed area.
-          const SliverSafeArea(sliver: SliverToBoxAdapter(child: SizedBox.shrink())),
         ]));
   }
 }
