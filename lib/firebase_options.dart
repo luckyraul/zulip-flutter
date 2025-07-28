@@ -15,7 +15,7 @@ import 'package:firebase_core/firebase_core.dart';
 const kFirebaseOptionsAndroid = FirebaseOptions(
   // This `appId` and `messagingSenderId` are the same as in zulip-mobile;
   // see zulip-mobile:android/app/src/main/res/values/firebase.xml .
-  appId: '1:${_ZulipFirebaseOptions.projectNumber}:android:6ae61ae43a7c3410',
+  appId: _ZulipFirebaseOptions.appId,
   messagingSenderId: _ZulipFirebaseOptions.projectNumber,
   projectId: _ZulipFirebaseOptions.projectId,
   apiKey: _ZulipFirebaseOptions.firebaseApiKey,
@@ -36,31 +36,15 @@ const kFirebaseOptionsAndroid = FirebaseOptions(
 ///
 /// TODO: Cut out Firebase for APNs and use a thinner platform-API binding.
 const kFirebaseOptionsIos = FirebaseOptions(
-  appId: '1:${_ZulipFirebaseOptions.projectNumber}:ios:9cad34899ca57ba6',
+  appId: _ZulipFirebaseOptions.appId,
   messagingSenderId: _ZulipFirebaseOptions.projectNumber,
   projectId: _ZulipFirebaseOptions.projectId,
   apiKey: _ZulipFirebaseOptions.firebaseApiKey,
 );
 
 abstract class _ZulipFirebaseOptions {
-  static const projectNumber = '835904834568';
-
-  // Despite its value, this name applies across Android and iOS.
-  static const projectId = 'zulip-android';
-
-  // Despite the name, this Google Cloud "API key" is a very different kind
-  // of thing from a Zulip "API key".  In particular, it's designed to be
-  // included in published builds of client applications, and therefore
-  // fundamentally public.  See docs:
-  //   https://cloud.google.com/docs/authentication/api-keys
-  //
-  // This key was created fresh for this use in zulip-flutter.
-  // It's easy to create additional keys associated with the same `appId`
-  // and other details above, and to enable or disable individual keys.
-  // See the Google Cloud console:
-  //   https://console.cloud.google.com/apis/credentials
-  //
-  // TODO: Perhaps use a different key in published builds; still fundamentally
-  //   public, but would avoid accidental reuse in dev or modified builds.
-  static const firebaseApiKey = 'AIzaSyC6kw5sqCYjxQl2Lbd_8MDmc1lu2EG0pY4';
+  static const appId = 'APP_ID';
+  static const projectNumber = 'SENDERID';
+  static const projectId = 'zulip-mygento';
+  static const firebaseApiKey = 'APIKEY';
 }

@@ -18,58 +18,48 @@ jobs:
       with:
         java-version: 17
         distribution: 'oracle'
-    # - name: Set up Flutter
-    #   uses: subosito/flutter-action@v2
-    #   with:
-    #     channel: any
-    #     flutter-version-file: pubspec.yaml
-    - name: Clone Flutter SDK
-      # We can't do a depth-1 clone, because we need the most recent tag
-      # so that Flutter knows its version and sees the constraint in our
-      # pubspec is satisfied.  It's uncommon for flutter/flutter to go
-      # more than 100 commits between tags.  Fetch 1000 for good measure.
+    - name: Clone Flutter SDK (full)
       run: |
-        git clone --depth=1000 -b main https://github.com/flutter/flutter ~/flutter
-        TZ=UTC git --git-dir ~/flutter/.git log -1 --format='%h | %ci | %s' --date=iso8601-local
+        git clone https://github.com/flutter/flutter.git ~/flutter
         echo ~/flutter/bin >> "$GITHUB_PATH"
-
-        # The Flutter tool assumes the tip of tree is "origin/master"
-        # (or "upstream/master"):
-        #   https://github.com/flutter/flutter/issues/160626
-        # TODO(upstream): make workaround unneeded
+        # Flutter expects origin/master to exist, even on main branch
         git --git-dir ~/flutter/.git update-ref refs/remotes/origin/master origin/main
     - run: flutter --version
     - name: Download Flutter SDK artifacts (flutter precache)
       run: flutter precache --universal
     - name: Download our dependencies (flutter pub get)
       run: flutter pub get
+    - name: Use Credentials
+      run: |
+        echo "${signingKeyPath}" > android/release-keystore.properties
+        echo "${signingKey}" | base64 --decode > android/release.keystore
+        sed -i "s/APPID/${fcmAppId}/g" lib/firebase_options.dart
+        sed -i "s/SENDERID/${fcmSender}/g" lib/firebase_options.dart
+        sed -i "s/APIKEY/${fcmApiKey}/g" lib/firebase_options.dart
+      env:
+          signingKeyPath: ${{ secrets.JKS_KEYPATH }}
+          signingKey: ${{ secrets.JKS_KEYSTORE }}
+          fcmSender: ${{ secrets.FCM_SENDER }}
+          fcmAppId: ${{ secrets.FCM_APP_ID }}
+          fcmApiKey: ${{ secrets.FCM_API_KEY }}
     - name: Build APK
       run: flutter build apk --release
+    - name: Upload result
+      uses: actions/upload-artifact@v4
+      with:
+        name: zulip-flutter-release-v${{ github.run_number }}.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
   mac:
     runs-on: macos-15
     strategy:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      # - name: Set up Flutter
-      #   uses: subosito/flutter-action@v2
-      #   with:
-      #     channel: any
-      #     flutter-version-file: pubspec.yaml
-      - name: Clone Flutter SDK
-        # We can't do a depth-1 clone, because we need the most recent tag
-        # so that Flutter knows its version and sees the constraint in our
-        # pubspec is satisfied.  It's uncommon for flutter/flutter to go
-        # more than 100 commits between tags.  Fetch 1000 for good measure.
+      - name: Clone Flutter SDK (full)
         run: |
-          git clone --depth=1000 -b main https://github.com/flutter/flutter ~/flutter
-          TZ=UTC git --git-dir ~/flutter/.git log -1 --format='%h | %ci | %s' --date=iso8601-local
+          git clone https://github.com/flutter/flutter.git ~/flutter
           echo ~/flutter/bin >> "$GITHUB_PATH"
-
-          # The Flutter tool assumes the tip of tree is "origin/master"
-          # (or "upstream/master"):
-          #   https://github.com/flutter/flutter/issues/160626
-          # TODO(upstream): make workaround unneeded
+          # Flutter expects origin/master to exist, even on main branch
           git --git-dir ~/flutter/.git update-ref refs/remotes/origin/master origin/main
       - name: Download Flutter SDK artifacts (flutter precache)
         run: flutter precache --universal
