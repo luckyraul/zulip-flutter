@@ -2,7 +2,7 @@
 // See also: https://pub.dev/packages/pigeon
 @file:Suppress("UNCHECKED_CAST", "ArrayInDataClass")
 
-package com.zulip.flutter
+package com.mygento.zulip
 
 import android.util.Log
 import io.flutter.plugin.common.BasicMessageChannel
@@ -43,7 +43,7 @@ private object AndroidIntentsPigeonUtils {
     }
     return a == b
   }
-      
+
 }
 
 /** Generated class from Pigeon that represents data sent in messages. */
@@ -84,7 +84,7 @@ data class IntentSharedFile (
  * Generated class from Pigeon that represents data sent in messages.
  * This class should not be extended by any user class outside of the generated file.
  */
-sealed class AndroidIntentEvent 
+sealed class AndroidIntentEvent
 /** Generated class from Pigeon that represents data sent in messages. */
 data class AndroidIntentSendEvent (
   val action: String,
@@ -187,7 +187,7 @@ class PigeonEventSink<T>(private val sink: EventChannel.EventSink) {
     sink.endOfStream()
   }
 }
-      
+
 abstract class AndroidIntentEventsStreamHandler : AndroidIntentsPigeonEventChannelWrapper<AndroidIntentEvent> {
   companion object {
     fun register(messenger: BinaryMessenger, streamHandler: AndroidIntentEventsStreamHandler, instanceName: String = "") {
@@ -200,4 +200,4 @@ abstract class AndroidIntentEventsStreamHandler : AndroidIntentsPigeonEventChann
     }
   }
 }
-      
+
