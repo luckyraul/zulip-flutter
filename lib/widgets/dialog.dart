@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../generated/l10n/zulip_localizations.dart';
@@ -7,18 +9,69 @@ import 'app.dart';
 import 'content.dart';
 import 'store.dart';
 
-Widget _dialogActionText(String text) {
-  return Text(
-    text,
+/// A platform-appropriate action for [AlertDialog.adaptive]'s [actions] param.
+///
+/// [isDefaultAction] and [isDestructiveAction] are ignored on Android
+/// because Material Design doesn't specify corresponding styles.
+Widget _adaptiveAction({
+  required VoidCallback onPressed,
+  required bool isDefaultAction,
+  bool isDestructiveAction = false,
+  required String text,
+}) {
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+    case TargetPlatform.fuchsia:
+    case TargetPlatform.linux:
+    case TargetPlatform.windows:
+      return TextButton(
+        onPressed: onPressed,
+        child: Text(
+          text,
+          // As suggested by
+          //   https://api.flutter.dev/flutter/material/AlertDialog/actions.html :
+          // > It is recommended to set the Text.textAlign to TextAlign.end
+          // > for the Text within the TextButton, so that buttons whose
+          // > labels wrap to an extra line align with the overall
+          // > OverflowBar's alignment within the dialog.
+          textAlign: TextAlign.end));
 
-    // As suggested by
-    //   https://api.flutter.dev/flutter/material/AlertDialog/actions.html :
-    // > It is recommended to set the Text.textAlign to TextAlign.end
-    // > for the Text within the TextButton, so that buttons whose
-    // > labels wrap to an extra line align with the overall
-    // > OverflowBar's alignment within the dialog.
-    textAlign: TextAlign.end,
-  );
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return CupertinoDialogAction(
+        onPressed: onPressed,
+        isDefaultAction: isDefaultAction,
+        isDestructiveAction: isDestructiveAction,
+        child: Text(text));
+  }
+}
+
+/// Platform-appropriate content for [AlertDialog.adaptive]'s [content] param.
+Widget? _adaptiveContent(Widget? content) {
+  if (content == null) return null;
+
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.android:
+    case TargetPlatform.fuchsia:
+    case TargetPlatform.linux:
+    case TargetPlatform.windows:
+      // [AlertDialog] does not create a [SingleChildScrollView];
+      // callers are asked to do that themselves, to handle long content.
+      return SingleChildScrollView(child: content);
+
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      // A [SingleChildScrollView] (wrapping both title and content) is already
+      // created by [CupertinoAlertDialog].
+      return DefaultTextStyle.merge(
+        // The "alert description" is start-aligned in one example in Apple's
+        // HIG document:
+        //   https://developer.apple.com/design/human-interface-guidelines/alerts#Anatomy
+        // (Confusingly, in 2025-10, it's center-aligned in the graphic at the
+        // *top* of that page; shrug.)
+        textAlign: TextAlign.start,
+        child: content);
+  }
 }
 
 /// Tracks the status of a dialog, in being still open or already closed.
@@ -71,17 +124,19 @@ DialogStatus<void> showErrorDialog({
   final zulipLocalizations = ZulipLocalizations.of(context);
   final future = showDialog<void>(
     context: context,
-    builder: (BuildContext context) => AlertDialog(
+    builder: (BuildContext context) => AlertDialog.adaptive(
       title: Text(title),
-      content: message != null ? SingleChildScrollView(child: Text(message)) : null,
+      content: message != null ? _adaptiveContent(Text(message)) : null,
       actions: [
         if (learnMoreButtonUrl != null)
-          TextButton(
+          _adaptiveAction(
             onPressed: () => PlatformActions.launchUrl(context, learnMoreButtonUrl),
-            child: _dialogActionText(zulipLocalizations.errorDialogLearnMore)),
-        TextButton(
+            isDefaultAction: false,
+            text: zulipLocalizations.errorDialogLearnMore),
+        _adaptiveAction(
           onPressed: () => Navigator.pop(context),
-          child: _dialogActionText(zulipLocalizations.errorDialogContinue)),
+          isDefaultAction: true,
+          text: zulipLocalizations.errorDialogContinue),
       ]));
   return DialogStatus(future);
 }
@@ -97,22 +152,26 @@ DialogStatus<void> showErrorDialog({
 DialogStatus<bool> showSuggestedActionDialog({
   required BuildContext context,
   required String title,
-  required String message,
+  String? message,
   required String? actionButtonText,
+  bool destructiveActionButton = false,
 }) {
   final zulipLocalizations = ZulipLocalizations.of(context);
   final future = showDialog<bool>(
     context: context,
-    builder: (BuildContext context) => AlertDialog(
+    builder: (BuildContext context) => AlertDialog.adaptive(
       title: Text(title),
-      content: SingleChildScrollView(child: Text(message)),
+      content: message != null ? _adaptiveContent(Text(message)) : null,
       actions: [
-        TextButton(
+        _adaptiveAction(
           onPressed: () => Navigator.pop<bool>(context, null),
-          child: _dialogActionText(zulipLocalizations.dialogCancel)),
-        TextButton(
+          isDefaultAction: false,
+          text: zulipLocalizations.dialogCancel),
+        _adaptiveAction(
           onPressed: () => Navigator.pop<bool>(context, true),
-          child: _dialogActionText(actionButtonText ?? zulipLocalizations.dialogContinue)),
+          isDefaultAction: true,
+          isDestructiveAction: destructiveActionButton,
+          text: actionButtonText ?? zulipLocalizations.dialogContinue),
       ]));
   return DialogStatus(future);
 }
@@ -164,10 +223,10 @@ class UpgradeWelcomeDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zulipLocalizations = ZulipLocalizations.of(context);
-    return AlertDialog(
+    return AlertDialog.adaptive(
       title: Text(zulipLocalizations.upgradeWelcomeDialogTitle),
-      content: SingleChildScrollView(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      content: _adaptiveContent(
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(zulipLocalizations.upgradeWelcomeDialogMessage),
           GestureDetector(
             onTap: () => PlatformActions.launchUrl(context,
@@ -177,8 +236,10 @@ class UpgradeWelcomeDialog extends StatelessWidget {
               zulipLocalizations.upgradeWelcomeDialogLinkText)),
         ])),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context),
-          child: Text(zulipLocalizations.upgradeWelcomeDialogDismiss)),
+        _adaptiveAction(
+          onPressed: () => Navigator.pop(context),
+          isDefaultAction: true,
+          text: zulipLocalizations.upgradeWelcomeDialogDismiss)
       ]);
   }
 }

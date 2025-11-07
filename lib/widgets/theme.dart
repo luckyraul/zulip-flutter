@@ -59,6 +59,13 @@ ThemeData zulipThemeData(BuildContext context) {
     brightness: brightness,
     typography: zulipTypography(context),
     extensions: themeExtensions,
+
+    // Use "standard" visual density (the default for mobile platforms)
+    // on all platforms.  That helps the desktop builds of the app be faithful
+    // previews of how the app behaves on mobile -- which is the only purpose
+    // we use the desktop builds for.
+    visualDensity: VisualDensity.standard,
+
     iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(
       foregroundColor: designVariables.icon,
     )),
@@ -131,6 +138,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     background: const Color(0xffffffff),
     bannerBgIntDanger: const Color(0xfff2e4e4),
     bannerBgIntInfo: const Color(0xffddecf6),
+    bannerBgIntWarning: const Color(0xfffaf5dc),
     bannerTextIntInfo: const Color(0xff06037c),
     bgBotBar: const Color(0xfff6f6f6),
     bgContextMenu: const Color(0xfff2f2f2),
@@ -143,21 +151,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     borderMenuButtonSelected: Colors.black.withValues(alpha: 0.2),
     btnBgAttHighIntInfoActive: const Color(0xff1e41d3),
     btnBgAttHighIntInfoNormal: const Color(0xff3c6bff),
+    btnBgAttHighIntWarningActive: const Color(0xffeba002),
+    btnBgAttHighIntWarningNormal: const Color(0xfffebe3d),
     btnBgAttMediumIntInfoActive: const Color(0xff3c6bff).withValues(alpha: 0.22),
     btnBgAttMediumIntInfoNormal: const Color(0xff3c6bff).withValues(alpha: 0.12),
+    btnBgAttMediumIntWarningActive: const Color(0xffeba001).withValues(alpha: 0.28),
+    btnBgAttMediumIntWarningNormal: const Color(0xffeba002).withValues(alpha: 0.18),
     btnLabelAttHigh: const Color(0xffffffff),
+    btnLabelAttHighIntWarning: const Color(0xff000000).withValues(alpha: 0.88),
     btnLabelAttLowIntDanger: const Color(0xffc0070a),
     btnLabelAttLowIntInfo: const Color(0xff2347c6),
     btnLabelAttMediumIntDanger: const Color(0xffac0508),
     btnLabelAttMediumIntInfo: const Color(0xff1027a6),
+    btnLabelAttMediumIntWarning: const Color(0xff764607),
     btnShadowAttMed: const Color(0xff000000).withValues(alpha: 0.20),
     composeBoxBg: const Color(0xffffffff),
     contextMenuCancelText: const Color(0xff222222),
     contextMenuItemBg: const Color(0xff6159e1),
+    contextMenuItemBgDanger: const Color(0xffc0070a), // TODO(#831) red/550
     contextMenuItemIcon: const Color(0xff4f42c9),
+    contextMenuItemIconDanger: const Color(0xffac0508), // TODO(#831) red/600
     contextMenuItemLabel: const Color(0xff242631),
     contextMenuItemMeta: const Color(0xff626573),
     contextMenuItemText: const Color(0xff381da7),
+    contextMenuItemTextDanger: const Color(0xffac0508), // TODO(#831) red/600
     editorButtonPressedBg: Colors.black.withValues(alpha: 0.06),
     fabBg: const Color(0xff6e69f3),
     fabBgPressed: const Color(0xff6159e1),
@@ -167,10 +184,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     foreground: const Color(0xff000000),
     icon: const Color(0xff6159e1),
     iconSelected: const Color(0xff222222),
-    labelCounterUnread: const Color(0xff222222),
+    labelCounterUnread: const Color(0xff1a1a1a),
     labelEdited: const HSLColor.fromAHSL(0.35, 0, 0, 0).toColor(),
     labelMenuButton: const Color(0xff222222),
     labelSearchPrompt: const Color(0xff000000).withValues(alpha: 0.5),
+    labelTime: const Color(0x00000000).withValues(alpha: 0.49),
+    link: const Color(0xff066bd0), // from "Zulip Web UI kit"
     listMenuItemBg: const Color(0xffcbcdd6),
     listMenuItemIcon: const Color(0xff9194a3),
     listMenuItemText: const Color(0xff2d303c),
@@ -220,6 +239,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     background: const Color(0xff000000),
     bannerBgIntDanger: const Color(0xff461616),
     bannerBgIntInfo: const Color(0xff00253d),
+    bannerBgIntWarning: const Color(0xff332b00),
     bannerTextIntInfo: const Color(0xffcbdbfd),
     bgBotBar: const Color(0xff222222),
     bgContextMenu: const Color(0xff262626),
@@ -232,21 +252,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     borderMenuButtonSelected: Colors.white.withValues(alpha: 0.1),
     btnBgAttHighIntInfoActive: const Color(0xff1e41d3),
     btnBgAttHighIntInfoNormal: const Color(0xff1e41d3),
+    btnBgAttHighIntWarningActive: const Color(0xffdb920d),
+    btnBgAttHighIntWarningNormal: const Color(0xffdb920d),
     btnBgAttMediumIntInfoActive: const Color(0xff97b6fe).withValues(alpha: 0.12),
     btnBgAttMediumIntInfoNormal: const Color(0xff97b6fe).withValues(alpha: 0.12),
+    btnBgAttMediumIntWarningActive: const Color(0xffdb920d).withValues(alpha: 0.12),
+    btnBgAttMediumIntWarningNormal: const Color(0xffdb920d).withValues(alpha: 0.12),
     btnLabelAttHigh: const Color(0xffffffff).withValues(alpha: 0.85),
+    btnLabelAttHighIntWarning: const Color(0xff000000).withValues(alpha: 0.90),
     btnLabelAttLowIntDanger: const Color(0xffff8b7c),
     btnLabelAttLowIntInfo: const Color(0xff84a8fd),
     btnLabelAttMediumIntDanger: const Color(0xffff8b7c),
     btnLabelAttMediumIntInfo: const Color(0xff97b6fe),
+    btnLabelAttMediumIntWarning: const Color(0xfff8b325),
     btnShadowAttMed: const Color(0xffffffff).withValues(alpha: 0.21),
     composeBoxBg: const Color(0xff0f0f0f),
     contextMenuCancelText: const Color(0xffffffff).withValues(alpha: 0.75),
     contextMenuItemBg: const Color(0xff7977fe),
+    contextMenuItemBgDanger: const Color(0xffe1392e), // TODO(#831) red/450
     contextMenuItemIcon: const Color(0xff9398fd),
+    contextMenuItemIconDanger: const Color(0xfffd7465), // TODO(#831) red/300
     contextMenuItemLabel: const Color(0xffdfe1e8),
     contextMenuItemMeta: const Color(0xff9194a3),
     contextMenuItemText: const Color(0xff9398fd),
+    contextMenuItemTextDanger: const Color(0xfffd7465), // TODO(#831) red/300
     editorButtonPressedBg: Colors.white.withValues(alpha: 0.06),
     fabBg: const Color(0xff4f42c9),
     fabBgPressed: const Color(0xff4331b8),
@@ -256,10 +285,12 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     foreground: const Color(0xffffffff),
     icon: const Color(0xff7977fe),
     iconSelected: Colors.white.withValues(alpha: 0.8),
-    labelCounterUnread: const Color(0xffffffff).withValues(alpha: 0.7),
+    labelCounterUnread: const Color(0xffffffff).withValues(alpha: 0.95),
     labelEdited: const HSLColor.fromAHSL(0.35, 0, 0, 1).toColor(),
     labelMenuButton: const Color(0xffffffff).withValues(alpha: 0.85),
     labelSearchPrompt: const Color(0xffffffff).withValues(alpha: 0.5),
+    labelTime: const Color(0xffffffff).withValues(alpha: 0.50),
+    link: const Color(0xff00aaff), // from "Zulip Web UI kit"
     listMenuItemBg: const Color(0xff2d303c),
     listMenuItemIcon: const Color(0xff767988),
     listMenuItemText: const Color(0xffcbcdd6),
@@ -318,6 +349,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.background,
     required this.bannerBgIntDanger,
     required this.bannerBgIntInfo,
+    required this.bannerBgIntWarning,
     required this.bannerTextIntInfo,
     required this.bgBotBar,
     required this.bgContextMenu,
@@ -330,21 +362,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.borderMenuButtonSelected,
     required this.btnBgAttHighIntInfoActive,
     required this.btnBgAttHighIntInfoNormal,
+    required this.btnBgAttHighIntWarningActive,
+    required this.btnBgAttHighIntWarningNormal,
     required this.btnBgAttMediumIntInfoActive,
     required this.btnBgAttMediumIntInfoNormal,
+    required this.btnBgAttMediumIntWarningActive,
+    required this.btnBgAttMediumIntWarningNormal,
     required this.btnLabelAttHigh,
+    required this.btnLabelAttHighIntWarning,
     required this.btnLabelAttLowIntDanger,
     required this.btnLabelAttLowIntInfo,
     required this.btnLabelAttMediumIntDanger,
     required this.btnLabelAttMediumIntInfo,
+    required this.btnLabelAttMediumIntWarning,
     required this.btnShadowAttMed,
     required this.composeBoxBg,
     required this.contextMenuCancelText,
     required this.contextMenuItemBg,
+    required this.contextMenuItemBgDanger,
     required this.contextMenuItemIcon,
+    required this.contextMenuItemIconDanger,
     required this.contextMenuItemLabel,
     required this.contextMenuItemMeta,
     required this.contextMenuItemText,
+    required this.contextMenuItemTextDanger,
     required this.editorButtonPressedBg,
     required this.foreground,
     required this.fabBg,
@@ -358,6 +399,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.labelEdited,
     required this.labelMenuButton,
     required this.labelSearchPrompt,
+    required this.labelTime,
+    required this.link,
     required this.listMenuItemBg,
     required this.listMenuItemIcon,
     required this.listMenuItemText,
@@ -407,6 +450,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color background;
   final Color bannerBgIntDanger;
   final Color bannerBgIntInfo;
+  final Color bannerBgIntWarning;
   final Color bannerTextIntInfo;
   final Color bgBotBar;
   final Color bgContextMenu;
@@ -419,21 +463,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color borderMenuButtonSelected;
   final Color btnBgAttHighIntInfoActive;
   final Color btnBgAttHighIntInfoNormal;
+  final Color btnBgAttHighIntWarningActive;
+  final Color btnBgAttHighIntWarningNormal;
   final Color btnBgAttMediumIntInfoActive;
   final Color btnBgAttMediumIntInfoNormal;
+  final Color btnBgAttMediumIntWarningActive;
+  final Color btnBgAttMediumIntWarningNormal;
   final Color btnLabelAttHigh;
+  final Color btnLabelAttHighIntWarning;
   final Color btnLabelAttLowIntDanger;
   final Color btnLabelAttLowIntInfo;
   final Color btnLabelAttMediumIntDanger;
   final Color btnLabelAttMediumIntInfo;
+  final Color btnLabelAttMediumIntWarning;
   final Color btnShadowAttMed;
   final Color composeBoxBg;
   final Color contextMenuCancelText;
   final Color contextMenuItemBg;
+  final Color contextMenuItemBgDanger;
   final Color contextMenuItemIcon;
+  final Color contextMenuItemIconDanger;
   final Color contextMenuItemLabel;
   final Color contextMenuItemMeta;
   final Color contextMenuItemText;
+  final Color contextMenuItemTextDanger;
   final Color editorButtonPressedBg;
   final Color fabBg;
   final Color fabBgPressed;
@@ -447,6 +500,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color labelEdited;
   final Color labelMenuButton;
   final Color labelSearchPrompt;
+  final Color labelTime;
+  final Color link;
   final Color listMenuItemBg;
   final Color listMenuItemIcon;
   final Color listMenuItemText;
@@ -491,6 +546,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? background,
     Color? bannerBgIntDanger,
     Color? bannerBgIntInfo,
+    Color? bannerBgIntWarning,
     Color? bannerTextIntInfo,
     Color? bgBotBar,
     Color? bgContextMenu,
@@ -503,21 +559,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? borderMenuButtonSelected,
     Color? btnBgAttHighIntInfoActive,
     Color? btnBgAttHighIntInfoNormal,
+    Color? btnBgAttHighIntWarningActive,
+    Color? btnBgAttHighIntWarningNormal,
     Color? btnBgAttMediumIntInfoActive,
     Color? btnBgAttMediumIntInfoNormal,
+    Color? btnBgAttMediumIntWarningActive,
+    Color? btnBgAttMediumIntWarningNormal,
     Color? btnLabelAttHigh,
+    Color? btnLabelAttHighIntWarning,
     Color? btnLabelAttLowIntDanger,
     Color? btnLabelAttLowIntInfo,
     Color? btnLabelAttMediumIntDanger,
     Color? btnLabelAttMediumIntInfo,
+    Color? btnLabelAttMediumIntWarning,
     Color? btnShadowAttMed,
     Color? composeBoxBg,
     Color? contextMenuCancelText,
     Color? contextMenuItemBg,
+    Color? contextMenuItemBgDanger,
     Color? contextMenuItemIcon,
+    Color? contextMenuItemIconDanger,
     Color? contextMenuItemLabel,
     Color? contextMenuItemMeta,
     Color? contextMenuItemText,
+    Color? contextMenuItemTextDanger,
     Color? editorButtonPressedBg,
     Color? fabBg,
     Color? fabBgPressed,
@@ -531,6 +596,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? labelEdited,
     Color? labelMenuButton,
     Color? labelSearchPrompt,
+    Color? labelTime,
+    Color? link,
     Color? listMenuItemBg,
     Color? listMenuItemIcon,
     Color? listMenuItemText,
@@ -570,6 +637,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       background: background ?? this.background,
       bannerBgIntDanger: bannerBgIntDanger ?? this.bannerBgIntDanger,
       bannerBgIntInfo: bannerBgIntInfo ?? this.bannerBgIntInfo,
+      bannerBgIntWarning: bannerBgIntWarning ?? this.bannerBgIntWarning,
       bannerTextIntInfo: bannerTextIntInfo ?? this.bannerTextIntInfo,
       bgBotBar: bgBotBar ?? this.bgBotBar,
       bgContextMenu: bgContextMenu ?? this.bgContextMenu,
@@ -582,21 +650,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       borderMenuButtonSelected: borderMenuButtonSelected ?? this.borderMenuButtonSelected,
       btnBgAttHighIntInfoActive: btnBgAttHighIntInfoActive ?? this.btnBgAttHighIntInfoActive,
       btnBgAttHighIntInfoNormal: btnBgAttHighIntInfoNormal ?? this.btnBgAttHighIntInfoNormal,
+      btnBgAttHighIntWarningActive: btnBgAttHighIntWarningActive ?? this.btnBgAttHighIntWarningActive,
+      btnBgAttHighIntWarningNormal: btnBgAttHighIntWarningNormal ?? this.btnBgAttHighIntWarningNormal,
       btnBgAttMediumIntInfoActive: btnBgAttMediumIntInfoActive ?? this.btnBgAttMediumIntInfoActive,
       btnBgAttMediumIntInfoNormal: btnBgAttMediumIntInfoNormal ?? this.btnBgAttMediumIntInfoNormal,
+      btnBgAttMediumIntWarningActive: btnBgAttMediumIntWarningActive ?? this.btnBgAttMediumIntWarningActive,
+      btnBgAttMediumIntWarningNormal: btnBgAttMediumIntWarningNormal ?? this.btnBgAttMediumIntWarningNormal,
       btnLabelAttHigh: btnLabelAttHigh ?? this.btnLabelAttHigh,
+      btnLabelAttHighIntWarning: btnLabelAttHighIntWarning ?? this.btnLabelAttHighIntWarning,
       btnLabelAttLowIntDanger: btnLabelAttLowIntDanger ?? this.btnLabelAttLowIntDanger,
       btnLabelAttLowIntInfo: btnLabelAttLowIntInfo ?? this.btnLabelAttLowIntInfo,
       btnLabelAttMediumIntDanger: btnLabelAttMediumIntDanger ?? this.btnLabelAttMediumIntDanger,
       btnLabelAttMediumIntInfo: btnLabelAttMediumIntInfo ?? this.btnLabelAttMediumIntInfo,
+      btnLabelAttMediumIntWarning: btnLabelAttMediumIntWarning ?? this.btnLabelAttMediumIntWarning,
       btnShadowAttMed: btnShadowAttMed ?? this.btnShadowAttMed,
       composeBoxBg: composeBoxBg ?? this.composeBoxBg,
       contextMenuCancelText: contextMenuCancelText ?? this.contextMenuCancelText,
       contextMenuItemBg: contextMenuItemBg ?? this.contextMenuItemBg,
+      contextMenuItemBgDanger: contextMenuItemBgDanger ?? this.contextMenuItemBgDanger,
       contextMenuItemIcon: contextMenuItemIcon ?? this.contextMenuItemIcon,
+      contextMenuItemIconDanger: contextMenuItemIconDanger ?? this.contextMenuItemIconDanger,
       contextMenuItemLabel: contextMenuItemLabel ?? this.contextMenuItemLabel,
       contextMenuItemMeta: contextMenuItemMeta ?? this.contextMenuItemMeta,
       contextMenuItemText: contextMenuItemText ?? this.contextMenuItemText,
+      contextMenuItemTextDanger: contextMenuItemTextDanger ?? this.contextMenuItemTextDanger,
       editorButtonPressedBg: editorButtonPressedBg ?? this.editorButtonPressedBg,
       foreground: foreground ?? this.foreground,
       fabBg: fabBg ?? this.fabBg,
@@ -610,6 +687,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       labelEdited: labelEdited ?? this.labelEdited,
       labelMenuButton: labelMenuButton ?? this.labelMenuButton,
       labelSearchPrompt: labelSearchPrompt ?? this.labelSearchPrompt,
+      labelTime: labelTime ?? this.labelTime,
+      link: link ?? this.link,
       listMenuItemBg: listMenuItemBg ?? this.listMenuItemBg,
       listMenuItemIcon: listMenuItemIcon ?? this.listMenuItemIcon,
       listMenuItemText: listMenuItemText ?? this.listMenuItemText,
@@ -656,6 +735,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       background: Color.lerp(background, other.background, t)!,
       bannerBgIntDanger: Color.lerp(bannerBgIntDanger, other.bannerBgIntDanger, t)!,
       bannerBgIntInfo: Color.lerp(bannerBgIntInfo, other.bannerBgIntInfo, t)!,
+      bannerBgIntWarning: Color.lerp(bannerBgIntWarning, other.bannerBgIntWarning, t)!,
       bannerTextIntInfo: Color.lerp(bannerTextIntInfo, other.bannerTextIntInfo, t)!,
       bgBotBar: Color.lerp(bgBotBar, other.bgBotBar, t)!,
       bgContextMenu: Color.lerp(bgContextMenu, other.bgContextMenu, t)!,
@@ -668,21 +748,30 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       borderMenuButtonSelected: Color.lerp(borderMenuButtonSelected, other.borderMenuButtonSelected, t)!,
       btnBgAttHighIntInfoActive: Color.lerp(btnBgAttHighIntInfoActive, other.btnBgAttHighIntInfoActive, t)!,
       btnBgAttHighIntInfoNormal: Color.lerp(btnBgAttHighIntInfoNormal, other.btnBgAttHighIntInfoNormal, t)!,
+      btnBgAttHighIntWarningActive: Color.lerp(btnBgAttHighIntWarningActive, other.btnBgAttHighIntWarningActive, t)!,
+      btnBgAttHighIntWarningNormal: Color.lerp(btnBgAttHighIntWarningNormal, other.btnBgAttHighIntWarningNormal, t)!,
       btnBgAttMediumIntInfoActive: Color.lerp(btnBgAttMediumIntInfoActive, other.btnBgAttMediumIntInfoActive, t)!,
       btnBgAttMediumIntInfoNormal: Color.lerp(btnBgAttMediumIntInfoNormal, other.btnBgAttMediumIntInfoNormal, t)!,
+      btnBgAttMediumIntWarningActive: Color.lerp(btnBgAttMediumIntWarningActive, other.btnBgAttMediumIntWarningActive, t)!,
+      btnBgAttMediumIntWarningNormal: Color.lerp(btnBgAttMediumIntWarningNormal, other.btnBgAttMediumIntWarningNormal, t)!,
       btnLabelAttHigh: Color.lerp(btnLabelAttHigh, other.btnLabelAttHigh, t)!,
+      btnLabelAttHighIntWarning: Color.lerp(btnLabelAttHighIntWarning, other.btnLabelAttHighIntWarning, t)!,
       btnLabelAttLowIntDanger: Color.lerp(btnLabelAttLowIntDanger, other.btnLabelAttLowIntDanger, t)!,
       btnLabelAttLowIntInfo: Color.lerp(btnLabelAttLowIntInfo, other.btnLabelAttLowIntInfo, t)!,
       btnLabelAttMediumIntDanger: Color.lerp(btnLabelAttMediumIntDanger, other.btnLabelAttMediumIntDanger, t)!,
       btnLabelAttMediumIntInfo: Color.lerp(btnLabelAttMediumIntInfo, other.btnLabelAttMediumIntInfo, t)!,
+      btnLabelAttMediumIntWarning: Color.lerp(btnLabelAttMediumIntWarning, other.btnLabelAttMediumIntWarning, t)!,
       btnShadowAttMed: Color.lerp(btnShadowAttMed, other.btnShadowAttMed, t)!,
       composeBoxBg: Color.lerp(composeBoxBg, other.composeBoxBg, t)!,
       contextMenuCancelText: Color.lerp(contextMenuCancelText, other.contextMenuCancelText, t)!,
       contextMenuItemBg: Color.lerp(contextMenuItemBg, other.contextMenuItemBg, t)!,
+      contextMenuItemBgDanger: Color.lerp(contextMenuItemBgDanger, other.contextMenuItemBgDanger, t)!,
       contextMenuItemIcon: Color.lerp(contextMenuItemIcon, other.contextMenuItemIcon, t)!,
+      contextMenuItemIconDanger: Color.lerp(contextMenuItemIconDanger, other.contextMenuItemIconDanger, t)!,
       contextMenuItemLabel: Color.lerp(contextMenuItemLabel, other.contextMenuItemLabel, t)!,
       contextMenuItemMeta: Color.lerp(contextMenuItemMeta, other.contextMenuItemMeta, t)!,
       contextMenuItemText: Color.lerp(contextMenuItemText, other.contextMenuItemText, t)!,
+      contextMenuItemTextDanger: Color.lerp(contextMenuItemTextDanger, other.contextMenuItemTextDanger, t)!,
       editorButtonPressedBg: Color.lerp(editorButtonPressedBg, other.editorButtonPressedBg, t)!,
       foreground: Color.lerp(foreground, other.foreground, t)!,
       fabBg: Color.lerp(fabBg, other.fabBg, t)!,
@@ -696,6 +785,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       labelEdited: Color.lerp(labelEdited, other.labelEdited, t)!,
       labelMenuButton: Color.lerp(labelMenuButton, other.labelMenuButton, t)!,
       labelSearchPrompt: Color.lerp(labelSearchPrompt, other.labelSearchPrompt, t)!,
+      labelTime: Color.lerp(labelTime, other.labelTime, t)!,
+      link: Color.lerp(link, other.link, t)!,
       listMenuItemBg: Color.lerp(listMenuItemBg, other.listMenuItemBg, t)!,
       listMenuItemIcon: Color.lerp(listMenuItemIcon, other.listMenuItemIcon, t)!,
       listMenuItemText: Color.lerp(listMenuItemText, other.listMenuItemText, t)!,

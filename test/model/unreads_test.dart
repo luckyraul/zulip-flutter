@@ -78,6 +78,7 @@ void main() {
     assert(Set.of(messages.map((m) => m.id)).length == messages.length,
       'checkMatchesMessages: duplicate messages in test input');
 
+    final Map<int, SendableNarrow> expectedLocatorMap = {};
     final Map<int, TopicKeyedMap<QueueList<int>>> expectedStreams = {};
     final Map<DmNarrow, QueueList<int>> expectedDms = {};
     final Set<int> expectedMentions = {};
@@ -87,10 +88,12 @@ void main() {
       }
       switch (message) {
         case StreamMessage():
+          expectedLocatorMap[message.id] = TopicNarrow.ofMessage(message);
           final perTopic = expectedStreams[message.streamId] ??= makeTopicKeyedMap();
           final messageIds = perTopic[message.topic] ??= QueueList();
           messageIds.add(message.id);
         case DmMessage():
+          expectedLocatorMap[message.id] = DmNarrow.ofMessage(message, selfUserId: store.selfUserId);
           final narrow = DmNarrow.ofMessage(message, selfUserId: eg.selfUser.userId);
           final messageIds = expectedDms[narrow] ??= QueueList();
           messageIds.add(message.id);
@@ -112,6 +115,7 @@ void main() {
     }
 
     check(model)
+      ..locatorMap.deepEquals(expectedLocatorMap)
       ..streams.deepEquals(expectedStreams)
       ..dms.deepEquals(expectedDms)
       ..mentions.unorderedEquals(expectedMentions);
@@ -1239,22 +1243,6 @@ void main() {
         fillWithMessages([message1, message2]);
 
         model.handleUpdateMessageFlagsEvent(mkEvent([message2, message1]));
-        checkNotifiedOnce();
-
-        message1.flags.remove(MessageFlag.read);
-        message2.flags.remove(MessageFlag.read);
-        checkMatchesMessages([message1, message2]);
-      });
-
-      // TODO(server-6) remove mention of zulip/zulip#22164, fixed in 6.0
-      test('tolerates event pointing to DM/stream messages that are already unread (zulip/zulip#22164)', () {
-        final message1 = eg.streamMessage(id: 1, flags: []);
-        final message2 = eg.dmMessage(id: 2, from: eg.otherUser, to: [eg.selfUser], flags: []);
-
-        prepare();
-        fillWithMessages([message1, message2]);
-
-        model.handleUpdateMessageFlagsEvent(mkEvent([message1, message2]));
         checkNotifiedOnce();
 
         message1.flags.remove(MessageFlag.read);

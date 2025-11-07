@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,6 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:zulip/api/exception.dart';
 import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/initial_snapshot.dart';
 import 'package:zulip/api/model/model.dart';
@@ -29,6 +31,7 @@ import 'package:zulip/widgets/color.dart';
 import 'package:zulip/widgets/compose_box.dart';
 import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/icons.dart';
+import 'package:zulip/widgets/image.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/store.dart';
@@ -152,7 +155,7 @@ void main() {
     testWidgets('MessageListPageState.narrow', (tester) async {
       final stream = eg.stream();
       await setupMessageListPage(tester, narrow: ChannelNarrow(stream.streamId),
-        streams: [stream],
+        subscriptions: [eg.subscription(stream)],
         messages: [eg.streamMessage(stream: stream, content: "<p>a message</p>")]);
       final state = MessageListPage.ancestorOf(tester.element(find.text("a message")));
       check(state.narrow).equals(ChannelNarrow(stream.streamId));
@@ -165,7 +168,7 @@ void main() {
       final topic = eg.defaultRealmEmptyTopicDisplayName;
       final topicNarrow = eg.topicNarrow(stream.streamId, topic);
       await setupMessageListPage(tester, narrow: topicNarrow,
-        streams: [stream],
+        subscriptions: [eg.subscription(stream)],
         messages: [eg.streamMessage(stream: stream, topic: topic, content: "<p>a message</p>")]);
       final state = MessageListPage.ancestorOf(tester.element(find.text("a message")));
       // The page's narrow has been updated; the topic is "", not "general chat".
@@ -175,7 +178,7 @@ void main() {
     testWidgets('composeBoxState finds compose box', (tester) async {
       final stream = eg.stream();
       await setupMessageListPage(tester, narrow: ChannelNarrow(stream.streamId),
-        streams: [stream],
+        subscriptions: [eg.subscription(stream)],
         messages: [eg.streamMessage(stream: stream, content: "<p>a message</p>")]);
       final state = MessageListPage.ancestorOf(tester.element(find.text("a message")));
       check(state.composeBoxState).isNotNull();
@@ -236,7 +239,7 @@ void main() {
       final channel = eg.stream();
       await setupMessageListPage(tester,
         narrow: eg.topicNarrow(channel.streamId, ''),
-        streams: [channel],
+        subscriptions: [eg.subscription(channel)],
         messageCount: 1);
       checkAppBarChannelTopic(
         channel.name, eg.defaultRealmEmptyTopicDisplayName);
@@ -279,7 +282,7 @@ void main() {
       final channel = eg.stream();
       await setupMessageListPage(tester, narrow: eg.topicNarrow(channel.streamId, 'hi'),
         navObservers: [navObserver],
-        streams: [channel], messageCount: 1);
+        subscriptions: [eg.subscription(channel)], messageCount: 1);
 
       // Clear out initial route.
       assert(pushedRoutes.length == 1);
@@ -296,7 +299,7 @@ void main() {
       final channel = eg.stream(name: 'channel foo');
       await setupMessageListPage(tester,
         narrow: eg.topicNarrow(channel.streamId, 'topic foo'),
-        streams: [channel],
+        subscriptions: [eg.subscription(channel)],
         messages: [eg.streamMessage(stream: channel, topic: 'topic foo')]);
 
       connection.prepare(json: GetStreamTopicsResult(topics: [
@@ -331,7 +334,7 @@ void main() {
       final channel = eg.stream(name: 'channel foo');
       await setupMessageListPage(tester,
         narrow: ChannelNarrow(channel.streamId),
-        streams: [channel],
+        subscriptions: [eg.subscription(channel)],
         messages: [eg.streamMessage(stream: channel, topic: 'topic foo')]);
 
       connection.prepare(json: GetStreamTopicsResult(topics: [
@@ -388,7 +391,7 @@ void main() {
       final channel = eg.stream();
       await setupMessageListPage(tester,
         narrow: TopicNarrow(channel.streamId, eg.t('topic')),
-        streams: [channel],
+        subscriptions: [eg.subscription(channel)],
         messages: []);
       check(findPlaceholder).findsOne();
 
@@ -403,7 +406,31 @@ void main() {
   });
 
   group('presents message content appropriately', () {
-    testWidgets('content not asked to consume insets (including bottom), even without compose box', (tester) async {
+    testWidgets('content not asked to consume insets (including bottom), even without compose box, in top sliver', (tester) async {
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/1523
+      const fakePadding = FakeViewPadding(left: 10, top: 10, right: 10, bottom: 10);
+      tester.view.viewInsets = fakePadding;
+      tester.view.padding = fakePadding;
+
+      await setupMessageListPage(tester, narrow: const CombinedFeedNarrow(),
+        messages: [
+          eg.streamMessage(content: ContentExample.codeBlockPlain.html),
+          eg.streamMessage(),
+        ]);
+
+      // Verify this message list lacks a compose box.
+      // (The original bug wouldn't reproduce with a compose box present.)
+      final state = MessageListPage.ancestorOf(tester.element(find.text("verb\natim")));
+      check(state.composeBoxState).isNull();
+      // Also verify that the first message is in the top sliver.
+      check(state.model!.middleMessage).equals(1);
+
+      final element = tester.element(find.byType(CodeBlock));
+      final padding = MediaQuery.of(element).padding;
+      check(padding).equals(EdgeInsets.zero);
+    });
+
+    testWidgets('content not asked to consume insets (including bottom), even without compose box, in bottom sliver', (tester) async {
       // Regression test for: https://github.com/zulip/zulip-flutter/issues/736
       const fakePadding = FakeViewPadding(left: 10, top: 10, right: 10, bottom: 10);
       tester.view.viewInsets = fakePadding;
@@ -416,6 +443,8 @@ void main() {
       // (The original bug wouldn't reproduce with a compose box present.)
       final state = MessageListPage.ancestorOf(tester.element(find.text("verb\natim")));
       check(state.composeBoxState).isNull();
+      // Also verify that the message is in the bottom sliver.
+      check(state.model!.middleMessage).equals(0);
 
       final element = tester.element(find.byType(CodeBlock));
       final padding = MediaQuery.of(element).padding;
@@ -460,9 +489,11 @@ void main() {
 
     group('topic permalink', () {
       final someStream = eg.stream();
+      final someSubscription = eg.subscription(someStream);
       const someTopic = 'some topic';
 
       final otherStream = eg.stream();
+      final otherSubscription = eg.subscription(otherStream);
       const otherTopic = 'other topic';
 
       testWidgets('with message move', (tester) async {
@@ -471,7 +502,7 @@ void main() {
           narrow: narrow,
           // server sends the /with/<id> message in its current, different location
           messages: [eg.streamMessage(id: 1, stream: otherStream, topic: otherTopic)],
-          streams: [someStream, otherStream],
+          subscriptions: [someSubscription, otherSubscription],
           skipPumpAndSettle: true);
         await tester.pump(); // global store loaded
         await tester.pump(); // per-account store loaded
@@ -491,7 +522,7 @@ void main() {
           ..method.equals('GET')
           ..url.path.equals('/api/v1/messages')
           ..url.queryParameters.deepEquals({
-            'narrow': jsonEncode(narrow.apiEncode()),
+            'narrow': jsonEncode(resolveApiNarrowForServer(narrow.apiEncode(), connection.zulipFeatureLevel!)),
             'anchor': AnchorCode.firstUnread.toJson(),
             'num_before': kMessageListFetchBatchSize.toString(),
             'num_after': kMessageListFetchBatchSize.toString(),
@@ -505,7 +536,7 @@ void main() {
           narrow: narrow,
           // server sends the /with/<id> message in its current, different location
           messages: [eg.streamMessage(id: 1, stream: someStream, topic: someTopic)],
-          streams: [someStream],
+          subscriptions: [someSubscription],
           skipPumpAndSettle: true);
         await tester.pump(); // global store loaded
         await tester.pump(); // per-account store loaded
@@ -524,7 +555,7 @@ void main() {
           ..method.equals('GET')
           ..url.path.equals('/api/v1/messages')
           ..url.queryParameters.deepEquals({
-            'narrow': jsonEncode(narrow.apiEncode()),
+            'narrow': jsonEncode(resolveApiNarrowForServer(narrow.apiEncode(), connection.zulipFeatureLevel!)),
             'anchor': AnchorCode.firstUnread.toJson(),
             'num_before': kMessageListFetchBatchSize.toString(),
             'num_after': kMessageListFetchBatchSize.toString(),
@@ -1080,7 +1111,7 @@ void main() {
               'include_anchor': 'false',
               'num_before': '0',
               'num_after': '1000',
-              'narrow': jsonEncode(apiNarrow),
+              'narrow': jsonEncode(resolveApiNarrowForServer(apiNarrow, connection.zulipFeatureLevel!)),
               'op': 'add',
               'flag': 'read',
             });
@@ -1154,7 +1185,9 @@ void main() {
   group('Update Narrow on message move', () {
     const topic = 'foo';
     final channel = eg.stream();
+    final subscription = eg.subscription(channel);
     final otherChannel = eg.stream();
+    final otherSubscription = eg.subscription(otherChannel);
     final narrow = eg.topicNarrow(channel.streamId, topic);
 
     void prepareGetMessageResponse(List<Message> messages) {
@@ -1172,7 +1205,10 @@ void main() {
 
     testWidgets('compose box send message after move', (tester) async {
       final message = eg.streamMessage(stream: channel, topic: topic, content: 'Message to move');
-      await setupMessageListPage(tester, narrow: narrow, messages: [message], streams: [channel, otherChannel]);
+      await setupMessageListPage(tester,
+        narrow: narrow,
+        messages: [message],
+        subscriptions: [subscription, otherSubscription]);
 
       final channelContentInputFinder = find.descendant(
         of: find.byType(ComposeAutocomplete),
@@ -1212,7 +1248,8 @@ void main() {
 
     testWidgets('Move to narrow with existing messages', (tester) async {
       final message = eg.streamMessage(stream: channel, topic: topic, content: 'Message to move');
-      await setupMessageListPage(tester, narrow: narrow, messages: [message], streams: [channel]);
+      await setupMessageListPage(tester,
+        narrow: narrow, messages: [message], subscriptions: [subscription]);
       check(find.textContaining('Existing message').evaluate()).length.equals(0);
       check(find.textContaining('Message to move').evaluate()).length.equals(1);
 
@@ -1228,7 +1265,8 @@ void main() {
 
     testWidgets('show new topic in TopicNarrow after move', (tester) async {
       final message = eg.streamMessage(stream: channel, topic: topic, content: 'Message to move');
-      await setupMessageListPage(tester, narrow: narrow, messages: [message], streams: [channel]);
+      await setupMessageListPage(tester,
+        narrow: narrow, messages: [message], subscriptions: [subscription]);
 
       prepareGetMessageResponse([message]);
       await handleMessageMoveEvent([message], 'new topic');
@@ -1287,7 +1325,7 @@ void main() {
       testWidgets('do not show channel name in ChannelNarrow', (tester) async {
         await setupMessageListPage(tester,
           narrow: ChannelNarrow(stream.streamId),
-          messages: [message], streams: [stream]);
+          messages: [message], subscriptions: [eg.subscription(stream)]);
         await tester.pump();
         check(findInMessageList('stream name')).length.equals(0);
         check(findInMessageList('topic name')).length.equals(1);
@@ -1296,7 +1334,7 @@ void main() {
       testWidgets('do not show stream name in TopicNarrow', (tester) async {
         await setupMessageListPage(tester,
           narrow: TopicNarrow.ofMessage(message),
-          messages: [message], streams: [stream]);
+          messages: [message], subscriptions: [eg.subscription(stream)]);
         await tester.pump();
         check(findInMessageList('stream name')).length.equals(0);
         check(findInMessageList('topic name')).length.equals(1);
@@ -1477,7 +1515,7 @@ void main() {
         final message = eg.streamMessage(stream: channel, topic: 'topic name');
         await setupMessageListPage(tester,
           narrow: ChannelNarrow(channel.streamId),
-          streams: [channel],
+          subscriptions: [eg.subscription(channel)],
           messages: [message],
           navObservers: [navObserver]);
 
@@ -1503,7 +1541,7 @@ void main() {
         final message = eg.streamMessage(stream: channel, topic: 'topic name');
         await setupMessageListPage(tester,
           narrow: TopicNarrow.ofMessage(message),
-          streams: [channel],
+          subscriptions: [eg.subscription(channel)],
           messages: [message],
           navObservers: [navObserver]);
 
@@ -1832,7 +1870,7 @@ void main() {
           matching: find.byType(UserStatusEmoji));
         check(statusEmojiFinder).findsOne();
         check(tester.widget<UserStatusEmoji>(statusEmojiFinder)
-          .neverAnimate).isTrue();
+          .animationMode).equals(ImageAnimationMode.animateNever);
         check(find.ancestor(of: statusEmojiFinder,
           matching: find.byType(SenderRow))).findsOne();
       }
@@ -2108,7 +2146,7 @@ void main() {
 
     testWidgets('hidden -> waiting', (tester) async {
       await setupMessageListPage(tester,
-        narrow: topicNarrow, streams: [stream],
+        narrow: topicNarrow, subscriptions: [eg.subscription(stream)],
         messages: []);
 
       await sendMessageAndSucceed(tester);
@@ -2124,7 +2162,7 @@ void main() {
 
     testWidgets('hidden -> failed, tap to restore message', (tester) async {
       await setupMessageListPage(tester,
-        narrow: topicNarrow, streams: [stream],
+        narrow: topicNarrow, subscriptions: [eg.subscription(stream)],
         messages: []);
       // Send a message and fail.  Dismiss the error dialog as it pops up.
       await sendMessageAndFail(tester);
@@ -2135,16 +2173,14 @@ void main() {
     });
 
     testWidgets('hidden -> failed, tapping does nothing if compose box is not offered', (tester) async {
-      Route<dynamic>? lastPoppedRoute;
-      final navObserver = TestNavigatorObserver()
-        ..onPopped = (route, prevRoute) => lastPoppedRoute = route;
+      final transitionDurationObserver = TransitionDurationObserver();
 
       final messages = [eg.streamMessage(
         stream: stream, topic: topic, content: content)];
       await setupMessageListPage(tester,
         narrow: const CombinedFeedNarrow(),
         streams: [stream], subscriptions: [eg.subscription(stream)],
-        navObservers: [navObserver],
+        navObservers: [transitionDurationObserver],
         messages: messages);
 
       // Navigate to a message list page in a topic narrow,
@@ -2153,7 +2189,7 @@ void main() {
         eg.newestGetMessagesResult(foundOldest: true, messages: messages).toJson());
       await tester.tap(find.widgetWithText(RecipientHeader, topic));
       await tester.pump(); // handle tap
-      await tester.pump(); // wait for navigation
+      await transitionDurationObserver.pumpPastTransition(tester);
       check(contentInputFinder).findsOne();
 
       await sendMessageAndFail(tester);
@@ -2162,12 +2198,8 @@ void main() {
       // where the failed to send message should be visible.
 
       await tester.pageBack();
-      check(lastPoppedRoute)
-        .isA<MaterialAccountWidgetRoute>().page
-        .isA<MessageListPage>()
-        .initNarrow.equals(TopicNarrow(stream.streamId, eg.t(topic)));
       await tester.pump(); // handle tap
-      await tester.pump((lastPoppedRoute as TransitionRoute).reverseTransitionDuration);
+      await transitionDurationObserver.pumpPastTransition(tester);
       check(contentInputFinder).findsNothing();
       check(messageNotSentFinder).findsOne();
 
@@ -2178,7 +2210,7 @@ void main() {
 
     testWidgets('waiting -> waitPeriodExpired, tap to restore message', (tester) async {
       await setupMessageListPage(tester,
-        narrow: topicNarrow, streams: [stream],
+        narrow: topicNarrow, subscriptions: [eg.subscription(stream)],
         messages: []);
       await sendMessageAndFail(tester,
         delay: kSendMessageOfferRestoreWaitPeriod + const Duration(seconds: 1));
@@ -2280,9 +2312,9 @@ void main() {
         messages: [message]);
 
       connection.prepare(json: UpdateMessageResult().toJson());
-      store.editMessage(messageId: message.id,
+      unawaited(store.editMessage(messageId: message.id,
         originalRawContent: 'foo',
-        newContent: 'bar');
+        newContent: 'bar'));
       await tester.pump(Duration.zero);
       checkEditInProgress(tester);
       await store.handleEvent(eg.updateMessageEditEvent(message));
@@ -2297,12 +2329,14 @@ void main() {
         messages: [message]);
 
       connection.prepare(apiException: eg.apiBadRequest(), delay: Duration(seconds: 1));
-      store.editMessage(messageId: message.id,
+      unawaited(check(store.editMessage(messageId: message.id,
         originalRawContent: 'foo',
-        newContent: 'bar');
+        newContent: 'bar')).throws<ZulipApiException>());
       await tester.pump(Duration.zero);
       checkEditInProgress(tester);
       await tester.pump(Duration(seconds: 1));
+      // (the error dialog is tested elsewhere;
+      // it's triggered in the "Save" tap handler, not store.editMessage)
       checkEditFailed(tester);
 
       connection.prepare(json: GetMessageResult(

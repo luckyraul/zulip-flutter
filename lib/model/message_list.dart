@@ -459,8 +459,10 @@ mixin _MessageSequence {
       if (!messagesSameDay(prevMessageItem.message, message)) {
         items.add(MessageListDateSeparatorItem(message));
         canShareSender = false;
+      } else if (prevMessageItem.message.senderId == message.senderId) {
+        canShareSender = messagesCloseInTime(prevMessage, message);
       } else {
-        canShareSender = prevMessageItem.message.senderId == message.senderId;
+        canShareSender = false;
       }
     }
     final item = buildItem(canShareSender);
@@ -568,6 +570,12 @@ bool messagesSameDay(MessageBase prevMessage, MessageBase message) {
   return true;
 }
 
+@visibleForTesting
+bool messagesCloseInTime(MessageBase prevMessage, MessageBase message) {
+  final diffSeconds = (message.timestamp - prevMessage.timestamp).abs();
+  return diffSeconds <= 10 * 60;
+}
+
 bool _sameDay(DateTime date1, DateTime date2) {
   if (date1.year != date2.year) return false;
   if (date1.month != date2.month) return false;
@@ -614,9 +622,10 @@ class MessageListView with ChangeNotifier, _MessageSequence {
   Narrow get narrow => _narrow;
   Narrow _narrow;
 
-  /// Set [narrow] to [newNarrow], reset, [notifyListeners], and [fetchInitial].
-  void renarrowAndFetch(Narrow newNarrow) {
+  /// Set [narrow] and [anchor], reset, [notifyListeners], and [fetchInitial].
+  void renarrowAndFetch(Narrow newNarrow, Anchor anchor) {
     _narrow = newNarrow;
+    _anchor = anchor;
     _reset();
     notifyListeners();
     fetchInitial();
@@ -865,12 +874,6 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       numBefore: kMessageListFetchBatchSize,
       numAfter: 0,
       processResult: (result) {
-        if (result.messages.isNotEmpty
-            && result.messages.last.id == messages[0].id) {
-          // TODO(server-6): includeAnchor should make this impossible
-          result.messages.removeLast();
-        }
-
         store.reconcileMessages(result.messages);
         store.recentSenders.handleMessages(result.messages); // TODO(#824)
 
@@ -901,12 +904,6 @@ class MessageListView with ChangeNotifier, _MessageSequence {
       numBefore: 0,
       numAfter: kMessageListFetchBatchSize,
       processResult: (result) {
-        if (result.messages.isNotEmpty
-            && result.messages.first.id == messages.last.id) {
-          // TODO(server-6): includeAnchor should make this impossible
-          result.messages.removeAt(0);
-        }
-
         store.reconcileMessages(result.messages);
         store.recentSenders.handleMessages(result.messages); // TODO(#824)
 
@@ -1177,7 +1174,8 @@ class MessageListView with ChangeNotifier, _MessageSequence {
     switch (propagateMode) {
       case PropagateMode.changeAll:
       case PropagateMode.changeLater:
-        renarrowAndFetch(newNarrow);
+        // TODO(#1009) anchor to some visible message, if any
+        renarrowAndFetch(newNarrow, anchor);
       case PropagateMode.changeOne:
     }
   }

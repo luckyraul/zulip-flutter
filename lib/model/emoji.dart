@@ -18,9 +18,9 @@ sealed class EmojiDisplay {
 
   EmojiDisplay({required this.emojiName});
 
-  EmojiDisplay resolve(UserSettings? userSettings) { // TODO(server-5)
+  EmojiDisplay resolve(UserSettings userSettings) {
     if (this is TextEmojiDisplay) return this;
-    if (userSettings?.emojiset == Emojiset.text) {
+    if (userSettings.emojiset == Emojiset.text) {
       return TextEmojiDisplay(emojiName: emojiName);
     }
     return this;
@@ -74,10 +74,22 @@ final class EmojiCandidate {
   /// This might not be the only name this emoji has; see [aliases].
   final String emojiName;
 
+  /// [emojiName], but via [AutocompleteQuery.lowercaseAndStripDiacritics]
+  /// to support fuzzy matching.
+  String get normalizedEmojiName => _normalizedEmojiName
+    ??= AutocompleteQuery.lowercaseAndStripDiacritics(emojiName);
+  String? _normalizedEmojiName;
+
   /// Additional Zulip "emoji name" values for this emoji,
   /// to show in the emoji picker UI.
   Iterable<String> get aliases => _aliases ?? const [];
   final List<String>? _aliases;
+
+  /// [aliases], but via [AutocompleteQuery.lowercaseAndStripDiacritics]
+  /// to support fuzzy matching.
+  Iterable<String> get normalizedAliases => _normalizedAliases
+    ??= aliases.map((alias) => AutocompleteQuery.lowercaseAndStripDiacritics(alias));
+  Iterable<String>? _normalizedAliases;
 
   final EmojiDisplay emojiDisplay;
 
@@ -104,6 +116,14 @@ final class EmojiCandidate {
 
 /// The portion of [PerAccountStore] describing what emoji exist.
 mixin EmojiStore {
+  /// An [EmojiDisplay] for the specified emoji.
+  ///
+  /// Use [EmojiDisplay.resolve] on the result to apply the user's [Emojiset]
+  /// setting.
+  ///
+  /// May be a [TextEmojiDisplay] even if the emojiset is not [Emojiset.text];
+  /// this happens when we can't understand the data that describes the emoji
+  /// (e.g. when an image emoji's URL doesn't parse)..
   EmojiDisplay emojiDisplayFor({
     required ReactionType emojiType,
     required String emojiCode,
@@ -118,6 +138,8 @@ mixin EmojiStore {
   Iterable<EmojiCandidate> popularEmojiCandidates();
 
   Iterable<EmojiCandidate> allEmojiCandidates();
+
+  String? getUnicodeEmojiNameByCode(String emojiCode);
 
   // TODO cut debugServerEmojiData once we can query for lists of emoji;
   //   have tests make those queries end-to-end
@@ -143,6 +165,10 @@ mixin ProxyEmojiStore on EmojiStore {
 
   @override
   Iterable<EmojiCandidate> allEmojiCandidates() => emojiStore.allEmojiCandidates();
+
+  @override
+  String? getUnicodeEmojiNameByCode(String emojiCode) =>
+    emojiStore.getUnicodeEmojiNameByCode(emojiCode);
 
   @override
   Map<String, List<String>>? get debugServerEmojiData => emojiStore.debugServerEmojiData;
@@ -396,6 +422,10 @@ class EmojiStoreImpl extends PerAccountStoreBase with EmojiStore {
     return _allEmojiCandidates ??= _generateAllCandidates();
   }
 
+  @override
+  String? getUnicodeEmojiNameByCode(String emojiCode) =>
+    _serverEmojiData?[emojiCode]?.first; // TODO(log) if null
+
   void setServerEmojiData(ServerEmojiData data) {
     _serverEmojiData = data.codeToNames;
     _popularCandidates = null;
@@ -491,9 +521,8 @@ class EmojiAutocompleteQuery extends ComposeAutocompleteQuery {
 
   static const _separator = '_';
 
-  static String _adjustQuery(String raw) {
-    return raw.toLowerCase().replaceAll(' ', '_'); // TODO(#1067) remove diacritics too
-  }
+  static String _adjustQuery(String raw) =>
+    AutocompleteQuery.lowercaseAndStripDiacritics(raw.replaceAll(' ', '_'));
 
   @override
   EmojiAutocompleteView initViewModel({
@@ -523,29 +552,28 @@ class EmojiAutocompleteQuery extends ComposeAutocompleteQuery {
       }
     }
 
-    EmojiMatchQuality? result = _matchName(candidate.emojiName);
-    for (final alias in candidate.aliases) {
+    EmojiMatchQuality? result = _matchName(candidate.normalizedEmojiName);
+    for (final normalizedAlias in candidate.normalizedAliases) {
       if (result == EmojiMatchQuality.best) return result;
-      result = EmojiMatchQuality.bestOf(result, _matchName(alias));
+      result = EmojiMatchQuality.bestOf(result, _matchName(normalizedAlias));
     }
     return result;
   }
 
-  EmojiMatchQuality? _matchName(String emojiName) {
+  EmojiMatchQuality? _matchName(String normalizedName) {
     // Compare query_matches_string_in_order in Zulip web:shared/src/typeahead.ts
     // for a Boolean version of this logic (match vs. no match),
     // and triage_raw in the same file web:shared/src/typeahead.ts
     // for the finer distinctions.
     // See also commentary in [_rankResult].
 
-    // TODO(#1067) this assumes emojiName is already lower-case (and no diacritics)
-    if (emojiName == _adjusted)           return EmojiMatchQuality.exact;
-    if (emojiName.startsWith(_adjusted))  return EmojiMatchQuality.prefix;
-    if (emojiName.contains(_sepAdjusted)) return EmojiMatchQuality.wordAligned;
+    if (normalizedName == _adjusted)           return EmojiMatchQuality.exact;
+    if (normalizedName.startsWith(_adjusted))  return EmojiMatchQuality.prefix;
+    if (normalizedName.contains(_sepAdjusted)) return EmojiMatchQuality.wordAligned;
     if (!_adjusted.contains(_separator)) {
       // If the query is a single token (doesn't contain a separator),
       // allow a match anywhere in the string, too.
-      if (emojiName.contains(_adjusted))  return EmojiMatchQuality.other;
+      if (normalizedName.contains(_adjusted))  return EmojiMatchQuality.other;
     } else {
       // Otherwise, require at least a word-aligned match.
     }

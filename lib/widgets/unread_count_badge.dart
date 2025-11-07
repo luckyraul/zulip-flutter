@@ -1,59 +1,73 @@
 import 'package:flutter/widgets.dart';
 
-import 'channel_colors.dart';
+import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
 
 /// A widget to display a given number of unreads in a conversation.
 ///
-/// Implements the design for these in Figma:
-///   <https://www.figma.com/file/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=341%3A12387&mode=dev>
+/// See Figma's "counter-menu" component, which this is based on:
+///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=2037-186671&m=dev
+/// It looks like that component was created for the main menu,
+/// then adapted for various other contexts, like the Inbox page.
+///
+/// Currently this widget supports only those other contexts (not the main menu)
+/// and only the component's "kind=unread" variant (not "kind=quantity").
+/// For example, the "Channels" page and the topic-list page:
+///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6205-26001&m=dev
+///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6823-37113&m=dev
+/// (We use this for the topic-list page even though the Figma makes it a bit
+/// more compact there…the inconsistency seems worse and might be accidental.)
+// TODO support the main-menu context, update dartdoc
+// TODO support the "kind=quantity" variant, update dartdoc
 class UnreadCountBadge extends StatelessWidget {
   const UnreadCountBadge({
     super.key,
     required this.count,
-    required this.backgroundColor,
-    this.bold = false,
+    required this.channelIdForBackground,
   });
 
   final int count;
-  final bool bold;
 
-  /// The badge's background color.
+  /// An optional [Subscription.streamId], for a channel-colorized background.
   ///
-  /// Pass a [ChannelColorSwatch] if this badge represents messages in one
-  /// specific stream. The appropriate color from the swatch will be used.
+  /// Useful when this badge represents messages in one specific channel.
   ///
   /// If null, the default neutral background will be used.
-  final Color? backgroundColor;
+  // TODO remove; the Figma doesn't use this anymore.
+  final int? channelIdForBackground;
 
   @override
   Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
     final designVariables = DesignVariables.of(context);
 
-    final effectiveBackgroundColor = switch (backgroundColor) {
-      ChannelColorSwatch(unreadCountBadgeBackground: var color) => color,
-      Color() => backgroundColor,
-      null => designVariables.bgCounterUnread,
-    };
+    final Color textColor;
+    final Color backgroundColor;
+    if (channelIdForBackground != null) {
+      textColor = designVariables.unreadCountBadgeTextForChannel;
+
+      final subscription = store.subscriptions[channelIdForBackground!];
+      final swatch = colorSwatchFor(context, subscription);
+      backgroundColor = swatch.unreadCountBadgeBackground;
+    } else {
+      textColor = designVariables.labelCounterUnread;
+      backgroundColor = designVariables.bgCounterUnread;
+    }
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(3),
-        color: effectiveBackgroundColor,
+        borderRadius: BorderRadius.circular(5),
+        color: backgroundColor,
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 0, 4, 1),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
         child: Text(
           style: TextStyle(
             fontSize: 16,
-            height: (18 / 16),
-            fontFeatures: const [FontFeature.enable('smcp')], // small caps
-            color: backgroundColor is ChannelColorSwatch
-              ? designVariables.unreadCountBadgeTextForChannel
-              : designVariables.labelCounterUnread,
-          ).merge(weightVariableTextStyle(context,
-              wght: bold ? 600 : null)),
+            height: (16 / 16),
+            color: textColor,
+          ).merge(weightVariableTextStyle(context, wght: 500)),
           count.toString())));
   }
 }

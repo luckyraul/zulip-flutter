@@ -91,58 +91,6 @@ mixin UserStore on PerAccountStoreBase, RealmStore {
     return getUser(senderId)?.fullName ?? message.senderFullName;
   }
 
-  /// The user's real email address, if known, for displaying in the UI.
-  ///
-  /// Returns null if self-user isn't able to see the user's real email address,
-  /// or if the user isn't actually a user we know about.
-  String? userDisplayEmail(int userId) {
-    final user = getUser(userId);
-    if (user == null) return null;
-    if (zulipFeatureLevel >= 163) { // TODO(server-7)
-      // A non-null value means self-user has access to [user]'s real email,
-      // while a null value means it doesn't have access to the email.
-      // Search for "delivery_email" in https://zulip.com/api/register-queue.
-      return user.deliveryEmail;
-    } else {
-      if (user.deliveryEmail != null) {
-        // A non-null value means self-user has access to [user]'s real email,
-        // while a null value doesn't necessarily mean it doesn't have access
-        // to the email, ....
-        return user.deliveryEmail;
-      } else if (emailAddressVisibility == EmailAddressVisibility.everyone) {
-        // ... we have to also check for [PerAccountStore.emailAddressVisibility].
-        // See:
-        //   * https://github.com/zulip/zulip-mobile/pull/5515#discussion_r997731727
-        //   * https://chat.zulip.org/#narrow/stream/378-api-design/topic/email.20address.20visibility/near/1296133
-        return user.email;
-      } else {
-        return null;
-      }
-    }
-  }
-
-  /// Whether [user] has passed the realm's waiting period to be a full member.
-  ///
-  /// See:
-  ///   https://zulip.com/api/roles-and-permissions#determining-if-a-user-is-a-full-member
-  ///
-  /// To determine if a user is a full member, callers must also check that the
-  /// user's role is at least [UserRole.member].
-  bool hasPassedWaitingPeriod(User user, {required DateTime byDate}) {
-    // [User.dateJoined] is in UTC. For logged-in users, the format is:
-    // YYYY-MM-DDTHH:mm+00:00, which includes the timezone offset for UTC.
-    // For logged-out spectators, the format is: YYYY-MM-DD, which doesn't
-    // include the timezone offset. In the later case, [DateTime.parse] will
-    // interpret it as the client's local timezone, which could lead to
-    // incorrect results; but that's acceptable for now because the app
-    // doesn't support viewing as a spectator.
-    //
-    // See the related discussion:
-    //   https://chat.zulip.org/#narrow/channel/412-api-documentation/topic/provide.20an.20explicit.20format.20for.20.60realm_user.2Edate_joined.60/near/1980194
-    final dateJoined = DateTime.parse(user.dateJoined);
-    return byDate.difference(dateJoined).inDays >= realmWaitingPeriodThreshold;
-  }
-
   /// Whether the user with [userId] is muted by the self-user.
   ///
   /// Looks for [userId] in a private [Set],
@@ -226,17 +174,29 @@ abstract class HasUserStore extends HasRealmStore with UserStore, ProxyUserStore
 /// itself.  Other code accesses this functionality through [PerAccountStore],
 /// or through the mixin [UserStore] which describes its interface.
 class UserStoreImpl extends HasRealmStore with UserStore {
+  /// Construct an implementation of [UserStore] that does the work itself.
+  ///
+  /// The `userMap` parameter should be the result of
+  /// [UserStoreImpl.userMapFromInitialSnapshot] applied to `initialSnapshot`.
   UserStoreImpl({
     required super.realm,
     required InitialSnapshot initialSnapshot,
-  }) : _users = Map.fromEntries(
-         initialSnapshot.realmUsers
-         .followedBy(initialSnapshot.realmNonActiveUsers)
-         .followedBy(initialSnapshot.crossRealmBots)
-         .map((user) => MapEntry(user.userId, user))),
+    required Map<int, User> userMap,
+  }) : _users = userMap,
        _mutedUsers = Set.from(initialSnapshot.mutedUsers.map((item) => item.id)),
        _userStatuses = initialSnapshot.userStatuses.map((userId, change) =>
-         MapEntry(userId, change.apply(UserStatus.zero)));
+         MapEntry(userId, change.apply(UserStatus.zero))) {
+    // Verify that [selfUser] will work.
+    assert(_users.containsKey(selfUserId));
+  }
+
+  static Map<int, User> userMapFromInitialSnapshot(InitialSnapshot initialSnapshot) {
+    return Map.fromEntries(
+      initialSnapshot.realmUsers
+      .followedBy(initialSnapshot.realmNonActiveUsers)
+      .followedBy(initialSnapshot.crossRealmBots)
+      .map((user) => MapEntry(user.userId, user)));
+  }
 
   final Map<int, User> _users;
 
@@ -300,7 +260,6 @@ class UserStoreImpl extends HasRealmStore with UserStore {
         if (event.timezone != null)       user.timezone       = event.timezone!;
         if (event.botOwnerId != null)     user.botOwnerId     = event.botOwnerId!;
         if (event.role != null)           user.role           = event.role!;
-        if (event.isBillingAdmin != null) user.isBillingAdmin = event.isBillingAdmin!;
         if (event.deliveryEmail != null)  user.deliveryEmail  = event.deliveryEmail!.value;
         if (event.newEmail != null)       user.email          = event.newEmail!;
         if (event.isActive != null)       user.isActive       = event.isActive!;

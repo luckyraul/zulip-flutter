@@ -1,19 +1,25 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../api/model/model.dart';
 import '../api/route/settings.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../log.dart';
+import '../model/binding.dart';
 import '../model/content.dart';
 import '../model/narrow.dart';
+import '../model/presence.dart';
 import 'app_bar.dart';
 import 'button.dart';
 import 'content.dart';
+import 'icons.dart';
+import 'image.dart';
 import 'message_list.dart';
 import 'page.dart';
 import 'remote_settings.dart';
+import 'set_status.dart';
 import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
@@ -40,7 +46,6 @@ class ProfilePage extends StatelessWidget {
       page: ProfilePage(userId: userId));
   }
 
-
   @override
   Widget build(BuildContext context) {
     final zulipLocalizations = ZulipLocalizations.of(context);
@@ -54,7 +59,9 @@ class ProfilePage extends StatelessWidget {
       .merge(weightVariableTextStyle(context, wght: 700));
 
     final userStatus = store.getUserStatus(userId);
-    final displayEmail = store.userDisplayEmail(userId);
+
+    final displayEmail = user.deliveryEmail;
+
     final items = [
       Center(
         child: Avatar(
@@ -76,20 +83,25 @@ class ProfilePage extends StatelessWidget {
           ),
           // TODO write a test where the user is muted; check this and avatar
           TextSpan(text: store.userDisplayName(userId, replaceIfMuted: false)),
-          UserStatusEmoji.asWidgetSpan(
-            userId: userId,
-            fontSize: nameStyle.fontSize!,
-            textScaler: MediaQuery.textScalerOf(context),
-            neverAnimate: false,
-          ),
+          if (userId != store.selfUserId)
+            UserStatusEmoji.asWidgetSpan(
+              userId: userId,
+              fontSize: nameStyle.fontSize!,
+              textScaler: MediaQuery.textScalerOf(context),
+              animationMode: ImageAnimationMode.animateConditionally,
+            ),
         ]),
         textAlign: TextAlign.center,
         style: nameStyle),
-      if (userStatus.text != null)
+      if (userId != store.selfUserId && userStatus.text != null)
         Text(userStatus.text!,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 18, height: 22 / 18,
             color: DesignVariables.of(context).userStatusText)),
+      if (!user.isBot)
+        _LastActiveTime(userId: userId),
+
+      const SizedBox(height: 8),
       if (displayEmail != null)
         Text(displayEmail,
           textAlign: TextAlign.center,
@@ -100,9 +112,13 @@ class ProfilePage extends StatelessWidget {
       // TODO(#196) render active status
       // TODO(#292) render user local time
 
-      if (!store.realmPresenceDisabled && userId == store.selfUserId) ...[
+      if (userId == store.selfUserId) ...[
         const SizedBox(height: 16),
-        _InvisibleModeToggle(),
+        MenuButtonsShape(buttons: [
+          _SetStatusButton(),
+          if (!store.realmPresenceDisabled)
+            _InvisibleModeToggle(),
+        ]),
         const SizedBox(height: 16),
       ],
 
@@ -132,6 +148,142 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
+class _LastActiveTime extends StatefulWidget {
+  const _LastActiveTime({required this.userId});
+
+  final int userId;
+
+  @override
+  State<_LastActiveTime> createState() => _LastActiveTimeState();
+}
+
+class _LastActiveTimeState extends State<_LastActiveTime> with PerAccountStoreAwareStateMixin {
+  Presence? model;
+
+  @override
+  void onNewStore() {
+    model?.removeListener(_modelChanged);
+    model = PerAccountStoreWidget.of(context).presence
+      ..addListener(_modelChanged);
+  }
+
+  @override
+  void dispose() {
+    model!.removeListener(_modelChanged);
+    super.dispose();
+  }
+
+  void _modelChanged() {
+    setState(() {
+      // The actual state lives in [model].
+      // This method was called because that just changed.
+    });
+  }
+
+  String _lastActiveText(ZulipLocalizations zulipLocalizations) {
+    // TODO(#45): revise this relative-time logic in light of a future solution
+    //   for the lightbox, e.g. using ICU/CLDR via FFI.  See discussion:
+    //     https://github.com/zulip/zulip-flutter/pull/1793#issuecomment-3169228753
+
+    // TODO(#293), TODO(#891): auto-rebuild as relative time changes
+    final nowDate = ZulipBinding.instance.utcNow();
+
+    final status = model!.presenceStatusForUser(widget.userId,
+      utcNow: nowDate);
+    switch (status) {
+      case PresenceStatus.active: return zulipLocalizations.userActiveNow;
+      case PresenceStatus.idle:   return zulipLocalizations.userIdle;
+      case null:                  break; // handle below
+    }
+
+    final timestamp = model!.userLastActive(widget.userId);
+    if (timestamp == null) return zulipLocalizations.userNotActiveInYear;
+
+    // Compare web's timerender.last_seen_status_from_date.
+    final now = nowDate.millisecondsSinceEpoch ~/ 1000;
+    final ageSeconds = now - timestamp;
+    if (ageSeconds <= 0) {
+      // TODO or perhaps show full time, to help user in case of clock skew
+      return zulipLocalizations.userActiveNow;
+    } else if (ageSeconds < 60 * 60) {
+      return zulipLocalizations.userActiveMinutesAgo(ageSeconds ~/ 60);
+    } else if (ageSeconds < 24 * 60 * 60) {
+      return zulipLocalizations.userActiveHoursAgo(ageSeconds ~/ (60 * 60));
+    }
+
+    final todayNoon = nowDate.toLocal()
+      .copyWith(hour: 12, minute: 0, second: 0, millisecond: 0, microsecond: 0);
+    final presenceNoon = DateTime.fromMillisecondsSinceEpoch(
+        timestamp * 1000, isUtc: false)
+      .copyWith(hour: 12, minute: 0, second: 0, millisecond: 0, microsecond: 0);
+    final ageCalendarDays = (todayNoon.difference(presenceNoon)
+      .inSeconds / (24 * 60 * 60)).round();
+    if (ageCalendarDays <= 0) {
+      // The timestamp was at least 24 hours ago.
+      // If it's somehow the same or a future calendar day, then this must be a
+      // really messy time zone.  Hopefully no real time zone makes this possible.
+      return zulipLocalizations.userActiveYesterday;
+    } else if (ageCalendarDays == 1) {
+      return zulipLocalizations.userActiveYesterday;
+    } else if (ageCalendarDays < 90) {
+      return zulipLocalizations.userActiveDaysAgo(ageCalendarDays);
+    }
+
+    final DateFormat format;
+    if (presenceNoon.year == todayNoon.year) {
+      format = DateFormat.MMMd();
+    } else {
+      format = DateFormat.yMMMd();
+    }
+    return zulipLocalizations.userActiveDate(format.format(presenceNoon));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    return Text(_lastActiveText(zulipLocalizations),
+      textAlign: TextAlign.center,
+      style: TextStyle(fontSize: 18, height: 22 / 18,
+        color: DesignVariables.of(context).userStatusText));
+  }
+}
+
+class _SetStatusButton extends StatelessWidget {
+  const _SetStatusButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    final store = PerAccountStoreWidget.of(context);
+    final userStatus = store.getUserStatus(store.selfUserId);
+
+    return ZulipMenuItemButton(
+      style: ZulipMenuItemButtonStyle.list,
+      label: userStatus == UserStatus.zero
+        ? zulipLocalizations.statusButtonLabelStatusUnset
+        : zulipLocalizations.statusButtonLabelStatusSet,
+      subLabel: userStatus == UserStatus.zero ? null : TextSpan(children: [
+        UserStatusEmoji.asWidgetSpan(
+          userId: store.selfUserId,
+          fontSize: 16,
+          textScaler: MediaQuery.textScalerOf(context),
+          position: StatusEmojiPosition.before,
+          animationMode: ImageAnimationMode.animateConditionally,
+        ),
+        userStatus.text == null
+          ? TextSpan(text: zulipLocalizations.noStatusText,
+              style: TextStyle(fontStyle: FontStyle.italic))
+          : TextSpan(text: userStatus.text),
+      ]),
+      icon: ZulipIcons.chevron_right,
+      onPressed: () {
+        Navigator.push(context, SetStatusPage.buildRoute(
+          context: context, oldStatus: userStatus));
+      },
+    );
+  }
+}
+
 class _InvisibleModeToggle extends StatelessWidget {
   const _InvisibleModeToggle();
 
@@ -140,24 +292,22 @@ class _InvisibleModeToggle extends StatelessWidget {
     final zulipLocalizations = ZulipLocalizations.of(context);
     final store = PerAccountStoreWidget.of(context);
 
-    return MenuButtonsShape(buttons: [
-      // `value: true` means invisible mode is on,
-      // i.e., that presenceEnabled is false.
-      RemoteSettingBuilder<bool>(
-        findValueInStore: (store) => !store.userSettings.presenceEnabled,
-        sendValueToServer: (value) => updateSettings(store.connection,
-          newSettings: {UserSettingName.presenceEnabled: !value}),
-        // TODO(#741) interpret API errors for user
-        onError: (e, requestedValue) => reportErrorToUserBriefly(
-          requestedValue
-            ? zulipLocalizations.turnOnInvisibleModeErrorTitle
-            : zulipLocalizations.turnOffInvisibleModeErrorTitle),
-        builder: (value, handleRequestNewValue) => ZulipMenuItemButton(
-          style: ZulipMenuItemButtonStyle.list,
-          label: zulipLocalizations.invisibleMode,
-          onPressed: () => handleRequestNewValue(!value),
-          toggle: Toggle(value: value, onChanged: handleRequestNewValue))),
-    ]);
+    // `value: true` means invisible mode is on,
+    // i.e., that presenceEnabled is false.
+    return RemoteSettingBuilder<bool>(
+      findValueInStore: (store) => !store.userSettings.presenceEnabled,
+      sendValueToServer: (value) => updateSettings(store.connection,
+        newSettings: {UserSettingName.presenceEnabled: !value}),
+      // TODO(#741) interpret API errors for user
+      onError: (e, requestedValue) => reportErrorToUserBriefly(
+        requestedValue
+          ? zulipLocalizations.turnOnInvisibleModeErrorTitle
+          : zulipLocalizations.turnOffInvisibleModeErrorTitle),
+      builder: (value, handleRequestNewValue) => ZulipMenuItemButton(
+        style: ZulipMenuItemButtonStyle.list,
+        label: zulipLocalizations.invisibleMode,
+        onPressed: () => handleRequestNewValue(!value),
+        toggle: Toggle(value: value, onChanged: handleRequestNewValue)));
   }
 }
 

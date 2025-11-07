@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:checks/checks.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,11 +11,12 @@ import 'package:zulip/api/model/events.dart';
 import 'package:zulip/api/model/initial_snapshot.dart';
 import 'package:zulip/api/model/model.dart';
 import 'package:zulip/basic.dart';
+import 'package:zulip/model/localizations.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/button.dart';
-import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/icons.dart';
+import 'package:zulip/widgets/image.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/remote_settings.dart';
@@ -29,6 +31,7 @@ import '../stdlib_checks.dart';
 import '../test_images.dart';
 import '../test_navigation.dart';
 import 'checks.dart';
+import 'finders.dart';
 import 'test_app.dart';
 
 late PerAccountStore store;
@@ -115,6 +118,87 @@ void main() {
     final user = eg.user(userId: 1, fullName: longString);
     await setupPage(tester, users: [user], pageUserId: user.userId);
     check(find.text(longString).evaluate()).isNotEmpty();
+  });
+
+  group('_LastActiveTime', () {
+    Future<void> update(WidgetTester tester, User user, {
+      required int activeSeconds,
+      int? idleSeconds,
+    }) async {
+      idleSeconds ??= activeSeconds + 3600;
+      final now = clock.now().millisecondsSinceEpoch ~/ 1000;
+      final presence = PerUserPresence(
+        activeTimestamp: now - activeSeconds,
+        idleTimestamp: now - idleSeconds,
+      );
+      store.presence.debugHandlePresenceResponse({user.userId: presence});
+      await tester.pump();
+    }
+
+    testWidgets('active, idle, never', (tester) async {
+      final user = eg.user();
+      await setupPage(tester, users: [user], pageUserId: user.userId);
+      check(find.text('Not active in the last year')).findsOne();
+
+      await update(tester, user, activeSeconds: 3600, idleSeconds: 30);
+      check(find.text('Idle')).findsOne();
+
+      await update(tester, user, activeSeconds: 30);
+      check(find.text('Active now')).findsOne();
+    });
+
+    testWidgets('various ages', (tester) async {
+      final user = eg.user();
+      await setupPage(tester, users: [user], pageUserId: user.userId);
+
+      // These tests could be more detailed in making sure the behavior is
+      // exactly the way it currently is.  But save that for a future where
+      // we've made a pass over the logic to ensure we're happy with that spec.
+
+      await update(tester, user, activeSeconds: 10 * 60);
+      check(find.text('Active 10 minutes ago')).findsOne();
+
+      await update(tester, user, activeSeconds: 61 * 60);
+      check(find.text('Active 1 hour ago')).findsOne();
+
+      await update(tester, user, activeSeconds: 20 * 60 * 60);
+      check(find.text('Active 20 hours ago')).findsOne();
+
+      await update(tester, user, activeSeconds: 24 * 60 * 60);
+      check(find.text('Active yesterday')).findsOne();
+
+      await update(tester, user, activeSeconds: 2 * 24 * 60 * 60);
+      check(find.text('Active 2 days ago')).findsOne();
+
+      await update(tester, user, activeSeconds: 80 * 24 * 60 * 60);
+      check(find.text('Active 80 days ago')).findsOne();
+    });
+
+    testWidgets('dates', (tester) async {
+      final user = eg.user();
+      await setupPage(tester, users: [user], pageUserId: user.userId);
+
+      final now = DateTime.parse('2025-08-01 12:00');
+      await withClock(Clock.fixed(now), () async {
+        await update(tester, user, activeSeconds: now.difference(
+          DateTime.parse('2025-04-01 12:00')).inSeconds);
+        check(find.text('Active Apr 1')).findsOne();
+
+        await update(tester, user, activeSeconds: now.difference(
+          DateTime.parse('2024-04-01 12:00')).inSeconds);
+        check(find.text('Active Apr 1, 2024')).findsOne();
+      });
+    });
+
+    testWidgets('omit for bots', (tester) async {
+      final user = eg.user(isBot: true);
+      await setupPage(tester, users: [user], pageUserId: user.userId);
+      await update(tester, user, activeSeconds: 30);
+      check(find.text('Active now')).findsNothing();
+      check(find.textContaining('Active')).findsNothing();
+      check(find.textContaining('Idle')).findsNothing();
+      check(find.textContaining('Not active')).findsNothing();
+    });
   });
 
   group('custom profile fields', () {
@@ -362,36 +446,81 @@ void main() {
   });
 
   group('user status', () {
-    testWidgets('non-self profile, status set: status info appears', (tester) async {
-      await setupPage(tester, users: [eg.otherUser], pageUserId: eg.otherUser.userId);
+    final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+
+    Finder findStatusButton({required bool statusSet}) {
+      return find.widgetWithText(ZulipMenuItemButton,
+        statusSet
+          ? zulipLocalizations.statusButtonLabelStatusSet
+          : zulipLocalizations.statusButtonLabelStatusUnset);
+    }
+
+    testWidgets('non-self profile, status set: no status button, status info appears', (tester) async {
+      await setupPage(tester, pageUserId: eg.otherUser.userId, users: [eg.otherUser]);
       await store.changeUserStatus(eg.otherUser.userId, UserStatusChange(
         text: OptionSome('Busy'),
         emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
           emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
       await tester.pump();
 
+      check(findStatusButton(statusSet: true)).findsNothing();
+
       final statusEmojiFinder = find.ancestor(of: find.text('\u{1f6e0}'),
         matching: find.byType(UserStatusEmoji));
       check(statusEmojiFinder).findsOne();
       check(tester.widget<UserStatusEmoji>(statusEmojiFinder)
-        .neverAnimate).isFalse();
+        .animationMode).equals(ImageAnimationMode.animateConditionally);
       check(find.text('Busy')).findsOne();
     });
 
-    testWidgets('self-profile, status set: status info appears', (tester) async {
-      await setupPage(tester, users: [eg.selfUser], pageUserId: eg.selfUser.userId);
-      await store.changeUserStatus(eg.selfUser.userId, UserStatusChange(
-        text: OptionSome('Busy'),
-        emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
-          emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
-      await tester.pump();
+    group('self-profile', () {
+      testWidgets('no status set: status button appears', (tester) async {
+        await setupPage(tester, pageUserId: eg.selfUser.userId, users: [eg.selfUser]);
+        check(findStatusButton(statusSet: false)).findsOne();
+      });
 
-      final statusEmojiFinder = find.ancestor(of: find.text('\u{1f6e0}'),
-        matching: find.byType(UserStatusEmoji));
-      check(statusEmojiFinder).findsOne();
-      check(tester.widget<UserStatusEmoji>(statusEmojiFinder)
-        .neverAnimate).isFalse();
-      check(find.text('Busy')).findsOne();
+      testWidgets('status set: status button appears with status info inside it', (tester) async {
+        await setupPage(tester, pageUserId: eg.selfUser.userId, users: [eg.selfUser]);
+        await store.changeUserStatus(eg.selfUser.userId, UserStatusChange(
+          text: OptionSome('Busy'),
+          emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
+            emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
+        await tester.pump();
+
+        final statusButtonFinder = findStatusButton(statusSet: true);
+        final statusEmojiFinder = find.ancestor(of: find.text('\u{1f6e0}'),
+          matching: find.byType(UserStatusEmoji));
+        final statusTextFinder = findText(includePlaceholders: false, 'Busy');
+
+        check(statusButtonFinder).findsOne();
+        check(statusEmojiFinder).findsOne();
+        check(tester.widget<UserStatusEmoji>(statusEmojiFinder)
+          .animationMode).equals(ImageAnimationMode.animateConditionally);
+        check(statusTextFinder).findsOne();
+
+        check(find.descendant(of: statusButtonFinder,
+          matching: statusEmojiFinder)).findsOne();
+        check(find.descendant(of: statusButtonFinder,
+          matching: statusTextFinder)).findsOne();
+      });
+
+      testWidgets('not status text set: status button appears with a placeholder text inside it', (tester) async {
+        await setupPage(tester, pageUserId: eg.selfUser.userId, users: [eg.selfUser]);
+        await store.changeUserStatus(eg.selfUser.userId, UserStatusChange(
+          text: OptionNone(),
+          emoji: OptionSome(StatusEmoji(emojiName: 'working_on_it',
+            emojiCode: '1f6e0', reactionType: ReactionType.unicodeEmoji))));
+        await tester.pump();
+
+        final statusButtonFinder = findStatusButton(statusSet: true);
+        final textPlaceholderFinder = findText(
+          includePlaceholders: false, zulipLocalizations.noStatusText);
+
+        check(statusButtonFinder).findsOne();
+        check(textPlaceholderFinder).findsOne();
+        check(find.descendant(of: statusButtonFinder,
+          matching: textPlaceholderFinder)).findsOne();
+      });
     });
   });
 

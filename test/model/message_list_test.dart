@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -156,7 +157,7 @@ void main() {
       ..method.equals('GET')
       ..url.path.equals('/api/v1/messages')
       ..url.queryParameters.deepEquals({
-        'narrow': jsonEncode(narrow),
+        'narrow': jsonEncode(resolveApiNarrowForServer(narrow, connection.zulipFeatureLevel!)),
         'anchor': anchor,
         if (includeAnchor != null) 'include_anchor': includeAnchor.toString(),
         'num_before': numBefore.toString(),
@@ -427,6 +428,64 @@ void main() {
     });
   });
 
+  group('renarrowAndFetch', () {
+    test('smoke', () => awaitFakeAsync((async) async {
+      final channel = eg.stream();
+
+      const narrow = CombinedFeedNarrow();
+      await prepare(narrow: narrow, stream: channel);
+      final messages = List.generate(100,
+        (i) => eg.streamMessage(id: 1000 + i, stream: channel));
+      await prepareMessages(foundOldest: false, messages: messages);
+
+      // Start a fetchOlder, so we can check that renarrowAndFetch causes its
+      // result to be discarded.
+      connection.prepare(
+        json: olderResult(
+          anchor: 1000, foundOldest: false,
+          messages: List.generate(100,
+            (i) => eg.streamMessage(id: 900 + i, stream: channel)),
+        ).toJson(),
+        delay: Duration(milliseconds: 500),
+      );
+      unawaited(model.fetchOlder());
+      checkNotifiedOnce();
+
+      // Start the renarrowAndFetch.
+      final newNarrow = ChannelNarrow(channel.streamId);
+      final newAnchor = NumericAnchor(messages[3].id);
+
+      final result = eg.getMessagesResult(
+        anchor: newAnchor,
+        foundOldest: false, foundNewest: false,
+        messages: messages.sublist(3, 5));
+      connection.prepare(json: result.toJson(), delay: Duration(seconds: 1));
+      model.renarrowAndFetch(newNarrow, newAnchor);
+      checkNotifiedOnce();
+      check(model)
+        ..fetched.isFalse()
+        ..narrow.equals(newNarrow)
+        ..anchor.equals(newAnchor)
+        ..messages.isEmpty();
+
+      // Elapse until the fetchOlder is done but renarrowAndFetch is still
+      // pending; check that the list is still empty despite the fetchOlder.
+      async.elapse(Duration(milliseconds: 750));
+      check(model)
+        ..fetched.isFalse()
+        ..narrow.equals(newNarrow)
+        ..messages.isEmpty();
+
+      // Elapse until the renarrowAndFetch completes.
+      async.elapse(Duration(seconds: 250));
+      check(model)
+        ..fetched.isTrue()
+        ..narrow.equals(newNarrow)
+        ..anchor.equals(newAnchor)
+        ..messages.length.equals(2);
+    }));
+  });
+
   group('fetching more', () {
     test('fetchOlder smoke', () async {
       const narrow = CombinedFeedNarrow();
@@ -624,40 +683,6 @@ void main() {
       checkNotified(count: 2);
       check(connection.takeRequests()).single;
     }));
-
-    test('fetchOlder handles servers not understanding includeAnchor', () async {
-      await prepare();
-      await prepareMessages(foundOldest: false,
-        messages: List.generate(100, (i) => eg.streamMessage(id: 1000 + i)));
-
-      // The old behavior is to include the anchor message regardless of includeAnchor.
-      connection.prepare(json: olderResult(
-        anchor: 1000, foundOldest: false, foundAnchor: true,
-        messages: List.generate(101, (i) => eg.streamMessage(id: 900 + i)),
-      ).toJson());
-      await model.fetchOlder();
-      checkNotified(count: 2);
-      check(model)
-        ..busyFetchingMore.isFalse()
-        ..messages.length.equals(200);
-    });
-
-    test('fetchNewer handles servers not understanding includeAnchor', () async {
-      await prepare(anchor: NumericAnchor(1000));
-      await prepareMessages(foundOldest: true, foundNewest: false,
-        messages: List.generate(101, (i) => eg.streamMessage(id: 1000 + i)));
-
-      // The old behavior is to include the anchor message regardless of includeAnchor.
-      connection.prepare(json: newerResult(
-        anchor: 1100, foundNewest: false, foundAnchor: true,
-        messages: List.generate(101, (i) => eg.streamMessage(id: 1100 + i)),
-      ).toJson());
-      await model.fetchNewer();
-      checkNotified(count: 2);
-      check(model)
-        ..busyFetchingMore.isFalse()
-        ..messages.length.equals(201);
-    });
 
     // TODO(#824): move this test
     test('fetchOlder recent senders track all the messages', () async {
@@ -2946,39 +2971,50 @@ void main() {
     // whether the sender should be shown, but the difference between
     // fetchInitial and handleMessageEvent etc. doesn't matter.
 
+    // Elapse test's clock to a specific time, to avoid any flaky-ness
+    // that may be caused by a specific local time of the day.
+    final initialTime = DateTime(2035, 8, 21);
+    async.elapse(initialTime.difference(clock.now()));
+
     final now = clock.now();
     final t1 = eg.utcTimestamp(now.subtract(Duration(days: 1)));
-    final t2 = eg.utcTimestamp(now);
+    final t2 = t1 + Duration(minutes: 1).inSeconds;
+    final t3 = t2 + Duration(minutes: 10, seconds: 1).inSeconds;
+    final t4 = eg.utcTimestamp(now);
     final stream = eg.stream(streamId: eg.defaultStreamMessageStreamId);
-    Message streamMessage(int id, int timestamp, User sender) =>
-      eg.streamMessage(id: id, sender: sender,
+    Message streamMessage(int timestamp, User sender) =>
+      eg.streamMessage(sender: sender,
         stream: stream, topic: 'foo', timestamp: timestamp);
-    Message dmMessage(int id, int timestamp, User sender) =>
-      eg.dmMessage(id: id, from: sender, timestamp: timestamp,
+    Message dmMessage(int timestamp, User sender) =>
+      eg.dmMessage(from: sender, timestamp: timestamp,
         to: [sender.userId == eg.selfUser.userId ? eg.otherUser : eg.selfUser]);
     DmDestination dmDestination(List<User> users) =>
       DmDestination(userIds: users.map((user) => user.userId).toList());
 
     await prepare();
     await prepareMessages(foundOldest: true, messages: [
-      streamMessage(1, t1, eg.selfUser),  // first message, so show sender
-      streamMessage(2, t1, eg.selfUser),  // hide sender
-      streamMessage(3, t1, eg.otherUser), // no recipient header, but new sender
-      dmMessage(4,     t1, eg.otherUser), // same sender, but new recipient
-      dmMessage(5,     t2, eg.otherUser), // same sender/recipient, but new day
+      streamMessage(t1, eg.selfUser),  // first message, so show sender
+      streamMessage(t1, eg.selfUser),  // hide sender
+      streamMessage(t1, eg.otherUser), // no recipient header, but new sender
+      streamMessage(t2, eg.otherUser), // same sender, and within 10 mins of last message
+      streamMessage(t3, eg.otherUser), // same sender, but after 10 mins from last message
+      dmMessage(    t3, eg.otherUser), // same sender, but new recipient
+      dmMessage(    t4, eg.otherUser), // same sender/recipient, but new day
     ]);
     await prepareOutboxMessagesTo([
       dmDestination([eg.selfUser, eg.otherUser]), // same day, but new sender
       dmDestination([eg.selfUser, eg.otherUser]), // hide sender
     ]);
     assert(
-      store.outboxMessages.values.every((message) => message.timestamp == t2));
+      store.outboxMessages.values.every((message) => message.timestamp == t4));
     async.elapse(kLocalEchoDebounceDuration);
 
     // We check showSender has the right values in [checkInvariants],
     // but to make this test explicit:
     check(model.items).deepEquals(<void Function(Subject<Object?>)>[
       (it) => it.isA<MessageListRecipientHeaderItem>(),
+      (it) => it.isA<MessageListMessageItem>().showSender.isTrue(),
+      (it) => it.isA<MessageListMessageItem>().showSender.isFalse(),
       (it) => it.isA<MessageListMessageItem>().showSender.isTrue(),
       (it) => it.isA<MessageListMessageItem>().showSender.isFalse(),
       (it) => it.isA<MessageListMessageItem>().showSender.isTrue(),
@@ -3072,14 +3108,14 @@ void main() {
     });
   });
 
-  test('messagesSameDay', () {
-    // These timestamps will differ depending on the timezone of the
-    // environment where the tests are run, in order to give the same results
-    // in the code under test which is also based on the ambient timezone.
-    // TODO(dart): It'd be great if tests could control the ambient timezone,
-    //   so as to exercise cases like where local time falls back across midnight.
-    int timestampFromLocalTime(String date) => DateTime.parse(date).millisecondsSinceEpoch ~/ 1000;
+  // These timestamps will differ depending on the timezone of the
+  // environment where the tests are run, in order to give the same results
+  // in the code under test which is also based on the ambient timezone.
+  // TODO(dart): It'd be great if tests could control the ambient timezone,
+  //   so as to exercise cases like where local time falls back across midnight.
+  int timestampFromLocalTime(String date) => DateTime.parse(date).millisecondsSinceEpoch ~/ 1000;
 
+  test('messagesSameDay', () {
     const t111a = '2021-01-01 00:00:00';
     const t111b = '2021-01-01 12:00:00';
     const t111c = '2021-01-01 23:59:58';
@@ -3117,6 +3153,47 @@ void main() {
         }
       }
     }
+  });
+
+  group('messagesCloseInTime', () {
+    final stream = eg.stream();
+    void doTest(String time0, String time1, bool expected) {
+      test('$time0 vs $time1 -> $expected', () {
+        check(messagesCloseInTime(
+          eg.streamMessage(stream: stream, topic: 'foo', timestamp: timestampFromLocalTime(time0)),
+          eg.streamMessage(stream: stream, topic: 'foo', timestamp: timestampFromLocalTime(time1)),
+        )).equals(expected);
+        check(messagesCloseInTime(
+          eg.dmMessage(from: eg.selfUser, to: [], timestamp: timestampFromLocalTime(time0)),
+          eg.dmMessage(from: eg.selfUser, to: [], timestamp: timestampFromLocalTime(time1)),
+        )).equals(expected);
+        check(messagesCloseInTime(
+          eg.streamOutboxMessage(timestamp: timestampFromLocalTime(time0)),
+          eg.streamOutboxMessage(timestamp: timestampFromLocalTime(time1)),
+        )).equals(expected);
+        check(messagesCloseInTime(
+          eg.dmOutboxMessage(from: eg.selfUser, to: [], timestamp: timestampFromLocalTime(time0)),
+          eg.dmOutboxMessage(from: eg.selfUser, to: [], timestamp: timestampFromLocalTime(time1)),
+        )).equals(expected);
+      });
+    }
+
+    const time = '2021-01-01 00:30:00';
+
+    doTest('2021-01-01 00:19:59', time, false);
+    doTest('2021-01-01 00:20:00', time, true);
+    doTest('2021-01-01 00:29:59', time, true);
+    doTest('2021-01-01 00:30:00', time, true);
+
+    doTest(time, '2021-01-01 00:30:01', true);
+    doTest(time, '2021-01-01 00:39:59', true);
+    doTest(time, '2021-01-01 00:40:00', true);
+    doTest(time, '2021-01-01 00:40:01', false);
+
+    doTest(time, '2022-01-01 00:30:00', false);
+    doTest(time, '2021-02-01 00:30:00', false);
+    doTest(time, '2021-01-02 00:30:00', false);
+    doTest(time, '2021-01-01 01:30:00', false);
   });
 }
 
@@ -3223,17 +3300,21 @@ void checkInvariants(MessageListView model) {
 
   int i = 0;
   for (int j = 0; j < allMessages.length; j++) {
-    bool forcedShowSender = false;
+    final bool showSender;
     if (j == 0
         || model.oneMessagePerBlock
         || !haveSameRecipient(allMessages[j-1], allMessages[j])) {
       check(model.items[i++]).isA<MessageListRecipientHeaderItem>()
         .message.identicalTo(allMessages[j]);
-      forcedShowSender = true;
+      showSender = true;
     } else if (!messagesSameDay(allMessages[j-1], allMessages[j])) {
       check(model.items[i++]).isA<MessageListDateSeparatorItem>()
         .message.identicalTo(allMessages[j]);
-      forcedShowSender = true;
+      showSender = true;
+    } else if (allMessages[j-1].senderId == allMessages[j].senderId) {
+      showSender = !messagesCloseInTime(allMessages[j-1], allMessages[j]);
+    } else {
+      showSender = true;
     }
     if (j < model.messages.length) {
       check(model.items[i]).isA<MessageListMessageItem>()
@@ -3244,8 +3325,7 @@ void checkInvariants(MessageListView model) {
         .message.identicalTo(model.outboxMessages[j-model.messages.length]);
     }
     check(model.items[i++]).isA<MessageListMessageBaseItem>()
-      ..showSender.equals(
-        forcedShowSender || allMessages[j].senderId != allMessages[j-1].senderId)
+      ..showSender.equals(showSender)
       ..isLastInBlock.equals(
         i == model.items.length || switch (model.items[i]) {
           MessageListMessageItem()
@@ -3306,6 +3386,7 @@ extension MessageListMessageItemChecks on Subject<MessageListMessageItem> {
 extension MessageListViewChecks on Subject<MessageListView> {
   Subject<PerAccountStore> get store => has((x) => x.store, 'store');
   Subject<Narrow> get narrow => has((x) => x.narrow, 'narrow');
+  Subject<Anchor> get anchor => has((x) => x.anchor, 'anchor');
   Subject<List<Message>> get messages => has((x) => x.messages, 'messages');
   Subject<List<OutboxMessage>> get outboxMessages => has((x) => x.outboxMessages, 'outboxMessages');
   Subject<int> get middleMessage => has((x) => x.middleMessage, 'middleMessage');

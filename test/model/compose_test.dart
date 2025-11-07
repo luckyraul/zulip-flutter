@@ -316,12 +316,28 @@ hello
       check(wildcardMention(WildcardMentionOption.topic, store: store()))
         .equals('@**topic**');
     });
+
+    group('user group', () {
+      final userGroup = eg.userGroup(name: 'Group Name');
+      test('not silent', () async {
+        final store = eg.store();
+        await store.addUserGroup(userGroup);
+        check(userGroupMention(userGroup.name, silent: false))
+          .equals('@*Group Name*');
+      });
+      test('silent', () async {
+        final store = eg.store();
+        await store.addUserGroup(userGroup);
+        check(userGroupMention(userGroup.name, silent: true))
+          .equals('@_*Group Name*');
+      });
+    });
   });
 
   test('inlineLink', () {
-    check(inlineLink('CZO', Uri.parse('https://chat.zulip.org/'))).equals('[CZO](https://chat.zulip.org/)');
-    check(inlineLink('Uploading file.txt…', null)).equals('[Uploading file.txt…]()');
-    check(inlineLink('IMG_2488.png', Uri.parse('/user_uploads/2/a3/ucEMyjxk90mcNF0y9rmW5XKO/IMG_2488.png')))
+    check(inlineLink('CZO', 'https://chat.zulip.org/')).equals('[CZO](https://chat.zulip.org/)');
+    check(inlineLink('Uploading file.txt…', '')).equals('[Uploading file.txt…]()');
+    check(inlineLink('IMG_2488.png', '/user_uploads/2/a3/ucEMyjxk90mcNF0y9rmW5XKO/IMG_2488.png'))
       .equals('[IMG_2488.png](/user_uploads/2/a3/ucEMyjxk90mcNF0y9rmW5XKO/IMG_2488.png)');
   });
 
@@ -333,6 +349,19 @@ hello
     await store.addStream(stream);
     await store.addUser(sender);
 
+    check(quoteAndReplyPlaceholder(
+      GlobalLocalizations.zulipLocalizations, store, message: message)).equals('''
+@_**Full Name|123** [said](${eg.selfAccount.realmUrl}#narrow/channel/1-test-here/topic/some.20topic/near/${message.id}): *(loading message ${message.id})*
+''');
+
+    check(quoteAndReply(store, message: message, rawContent: 'Hello world!')).equals('''
+@_**Full Name|123** [said](${eg.selfAccount.realmUrl}#narrow/channel/1-test-here/topic/some.20topic/near/${message.id}):
+```quote
+Hello world!
+```
+''');
+
+    store.connection.zulipFeatureLevel = 249;
     check(quoteAndReplyPlaceholder(
       GlobalLocalizations.zulipLocalizations, store, message: message)).equals('''
 @_**Full Name|123** [said](${eg.selfAccount.realmUrl}#narrow/stream/1-test-here/topic/some.20topic/near/${message.id}): *(loading message ${message.id})*

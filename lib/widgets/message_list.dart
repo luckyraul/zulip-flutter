@@ -133,9 +133,20 @@ class MessageListTheme extends ThemeExtension<MessageListTheme> {
 /// The interface for the state of a [MessageListPage].
 ///
 /// To obtain one of these, see [MessageListPage.ancestorOf].
-abstract class MessageListPageState {
+abstract class MessageListPageState extends State<MessageListPage> {
   /// The narrow for this page's message list.
   Narrow get narrow;
+
+  /// Resets the [MessageListView] model, triggering an initial fetch.
+  ///
+  /// If [anchor] isn't passed, reuses the anchor from the last initial fetch.
+  ///
+  /// Useful when updates won't arrive through the event system,
+  /// as when showing an unsubscribed channel.
+  /// (New-message events aren't sent for unsubscribed channels.)
+  ///
+  /// Does nothing if [MessageList] has not mounted yet.
+  void refresh([Anchor? anchor]);
 
   /// The [ComposeBoxState] for this [MessageListPage]'s compose box,
   /// if this [MessageListPage] offers a compose box and it has mounted,
@@ -171,11 +182,20 @@ class MessageListPage extends StatefulWidget {
     this.initAnchorMessageId,
   });
 
-  static AccountRoute<void> buildRoute({int? accountId, BuildContext? context,
-      required Narrow narrow, int? initAnchorMessageId}) {
-    return MaterialAccountWidgetRoute(accountId: accountId, context: context,
+  static AccountRoute<void> buildRoute({
+    int? accountId,
+    BuildContext? context,
+    GlobalKey<MessageListPageState>? key,
+    required Narrow narrow,
+    int? initAnchorMessageId,
+  }) {
+    return MaterialAccountWidgetRoute(
+      accountId: accountId,
+      context: context,
       page: MessageListPage(
-        initNarrow: narrow, initAnchorMessageId: initAnchorMessageId));
+        key: key,
+        initNarrow: narrow,
+        initAnchorMessageId: initAnchorMessageId));
   }
 
   /// The "revealed" state of a message from a muted sender,
@@ -197,12 +217,28 @@ class MessageListPage extends StatefulWidget {
   ///
   /// Uses the inefficient [BuildContext.findAncestorStateOfType];
   /// don't call this in a build method.
-  // If we do find ourselves wanting this in a build method, it won't be hard
-  // to enable that: we'd just need to add an [InheritedWidget] here.
+  ///
+  /// See also:
+  ///  * [maybeAncestorOf], which returns null instead of throwing
+  ///    when an ancestor [MessageListPageState] is not found.
   static MessageListPageState ancestorOf(BuildContext context) {
-    final state = context.findAncestorStateOfType<_MessageListPageState>();
+    final state = maybeAncestorOf(context);
     assert(state != null, 'No MessageListPage ancestor');
     return state!;
+  }
+
+  /// The [MessageListPageState] above this context in the tree, if any.
+  ///
+  /// Uses the inefficient [BuildContext.findAncestorStateOfType];
+  /// don't call this in a build method.
+  ///
+  /// See also:
+  ///  * [ancestorOf], which throws instead of returning null
+  ///    when an ancestor [MessageListPageState] is not found.
+  // If we do find ourselves wanting this in a build method, it won't be hard
+  // to enable that: we'd just need to add an [InheritedWidget] here.
+  static MessageListPageState? maybeAncestorOf(BuildContext context) {
+    return context.findAncestorStateOfType<_MessageListPageState>();
   }
 
   final Narrow initNarrow;
@@ -241,6 +277,14 @@ class MessageListPage extends StatefulWidget {
 class _MessageListPageState extends State<MessageListPage> implements MessageListPageState {
   @override
   late Narrow narrow;
+
+  @override
+  void refresh([Anchor? anchor]) {
+    // TODO If anchor isn't passed, check if there's some onscreen message
+    //   we can anchor to, before defaulting to model.anchor.
+    //   Update the dartdoc on this method with the new behavior.
+    model?.renarrowAndFetch(narrow, anchor ?? model!.anchor);
+  }
 
   @override
   ComposeBoxState? get composeBoxState => _composeBoxKey.currentState;
@@ -584,7 +628,7 @@ class MessageListAppBarTitle extends StatelessWidget {
               behavior: HitTestBehavior.translucent,
               onLongPress: () {
                 final someMessage = MessageListPage.ancestorOf(context)
-                  .model?.messages.firstOrNull;
+                  .model?.messages.lastOrNull;
                 // If someMessage is null, the topic action sheet won't have a
                 // resolve/unresolve button. That seems OK; in that case we're
                 // either still fetching messages (and the user can reopen the
@@ -614,7 +658,8 @@ class MessageListAppBarTitle extends StatelessWidget {
       case KeywordSearchNarrow():
         assert(!willCenterTitle);
         return _SearchBar(onSubmitted: (narrow) {
-          MessageListPage.ancestorOf(context).model!.renarrowAndFetch(narrow);
+          MessageListPage.ancestorOf(context).model!
+            .renarrowAndFetch(narrow, AnchorCode.newest);
         });
     }
   }
@@ -987,14 +1032,14 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
     if (!model.fetched) return const Center(child: CircularProgressIndicator());
 
     if (model.items.isEmpty && model.haveNewest && model.haveOldest) {
-      final String message;
+      final String header;
       if (widget.narrow is KeywordSearchNarrow) {
-        message = zulipLocalizations.emptyMessageListSearch;
+        header = zulipLocalizations.emptyMessageListSearch;
       } else {
-        message = zulipLocalizations.emptyMessageList;
+        header = zulipLocalizations.emptyMessageList;
       }
 
-      return PageBodyEmptyContentPlaceholder(message: message);
+      return PageBodyEmptyContentPlaceholder(header: header);
     }
 
     // Pad the left and right insets, for small devices in landscape.
@@ -1044,7 +1089,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
 
     // The top sliver has its child 0 as the item just before the
     // sliver boundary, child 1 as the item before that, and so on.
-    final topSliver = SliverStickyHeaderList(
+    Widget topSliver = SliverStickyHeaderList(
       headerPlacement: HeaderPlacement.scrollingStart,
       delegate: SliverChildBuilderDelegate(
         // To preserve state across rebuilds for individual [MessageItem]
@@ -1123,6 +1168,15 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
       // TODO(#311) If we have a bottom nav, it will pad the bottom inset,
       //   and this can be removed; also remove mention in MessageList dartdoc
       bottomSliver = SliverSafeArea(key: bottomSliver.key, sliver: bottomSliver);
+      topSliver = MediaQuery.removePadding(context: context,
+        // In the top sliver, forget the bottom inset;
+        // we're having the bottom sliver take care of it.
+        removeBottom: true,
+        // (Also forget the left and right insets; the outer SafeArea, above,
+        // does that, but the `context` we're passing to this `removePadding`
+        // is from outside that SafeArea, so we need to repeat it.)
+        removeLeft: true, removeRight: true,
+        child: topSliver);
     }
 
     return MessageListScrollView(

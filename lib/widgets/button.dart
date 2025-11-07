@@ -41,6 +41,18 @@ class ZulipWebUiKitButton extends StatelessWidget {
         });
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.neutral):
+      case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.warning):
+        throw UnimplementedError();
+      case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.warning):
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.btnBgAttMediumIntWarningActive,
+          ~WidgetState.pressed: designVariables.btnBgAttMediumIntWarningNormal,
+        });
+      case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.warning):
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.btnBgAttHighIntWarningActive,
+          ~WidgetState.pressed: designVariables.btnBgAttHighIntWarningNormal,
+        });
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.info):
         throw UnimplementedError();
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.info):
@@ -63,6 +75,12 @@ class ZulipWebUiKitButton extends StatelessWidget {
         return designVariables.neutralButtonLabel.withFadedAlpha(0.85);
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.neutral):
+      case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.warning):
+        throw UnimplementedError();
+      case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.warning):
+        return designVariables.btnLabelAttMediumIntWarning;
+      case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.warning):
+        return designVariables.btnLabelAttHighIntWarning;
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.info):
         throw UnimplementedError();
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.info):
@@ -195,7 +213,7 @@ enum ZulipWebUiKitButtonAttention {
 
 enum ZulipWebUiKitButtonIntent {
   neutral,
-  // warning,
+  warning,
   // danger,
   info,
   // success,
@@ -211,6 +229,45 @@ enum ZulipWebUiKitButtonSize {
   small,
 
   normal,
+}
+
+/// The "icon button" component in the Figma.
+///
+/// See Figma:
+///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=7728-10468&m=dev
+class ZulipIconButton extends StatelessWidget {
+  const ZulipIconButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
+    // Really `fg-05` from the Zulip Web UI Kit palette,
+    // but this seems at least as good as that.
+    final touchFeedbackColor = designVariables.foreground.withFadedAlpha(0.05);
+
+    return IconButton(
+      color: designVariables.icon,
+      iconSize: 24,
+      icon: Icon(icon),
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        fixedSize: Size.square(40),
+
+        // TODO(#417): Disable splash effects for all buttons globally.
+        splashFactory: NoSplash.splashFactory,
+        highlightColor: touchFeedbackColor,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(4)))));
+  }
 }
 
 /// Apply [Transform.scale] to the child widget when tapped, and reset its scale
@@ -288,8 +345,9 @@ class MenuButtonsShape extends StatelessWidget {
 class ZulipMenuItemButton extends StatelessWidget {
   const ZulipMenuItemButton({
     super.key,
-    this.style = ZulipMenuItemButtonStyle.menu,
+    required this.style,
     required this.label,
+    this.subLabel,
     required this.onPressed,
     this.icon,
     this.toggle,
@@ -297,6 +355,7 @@ class ZulipMenuItemButton extends StatelessWidget {
 
   final ZulipMenuItemButtonStyle style;
   final String label;
+  final TextSpan? subLabel;
   final VoidCallback onPressed;
   final IconData? icon;
 
@@ -309,7 +368,8 @@ class ZulipMenuItemButton extends StatelessWidget {
   final Widget? toggle;
 
   double get itemSpacingAndEndPadding => switch (style) {
-    ZulipMenuItemButtonStyle.menu => 16,
+    ZulipMenuItemButtonStyle.menu
+      || ZulipMenuItemButtonStyle.menuDestructive => 16,
     ZulipMenuItemButtonStyle.list => 12,
   };
 
@@ -332,6 +392,11 @@ class ZulipMenuItemButton extends StatelessWidget {
           WidgetState.pressed: designVariables.contextMenuItemBg.withFadedAlpha(0.20),
           ~WidgetState.pressed: designVariables.contextMenuItemBg.withFadedAlpha(0.12),
         });
+      case ZulipMenuItemButtonStyle.menuDestructive:
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.contextMenuItemBgDanger.withFadedAlpha(0.20),
+          ~WidgetState.pressed: designVariables.contextMenuItemBgDanger.withFadedAlpha(0.12),
+        });
       case ZulipMenuItemButtonStyle.list:
         return WidgetStateColor.fromMap({
           WidgetState.pressed: designVariables.listMenuItemBg.withFadedAlpha(0.7),
@@ -343,13 +408,15 @@ class ZulipMenuItemButton extends StatelessWidget {
   Color _labelColor(DesignVariables designVariables) {
     return switch (style) {
       ZulipMenuItemButtonStyle.menu => designVariables.contextMenuItemText,
+      ZulipMenuItemButtonStyle.menuDestructive => designVariables.contextMenuItemTextDanger,
       ZulipMenuItemButtonStyle.list => designVariables.listMenuItemText,
     };
   }
 
   double _labelWght() {
     return switch (style) {
-      ZulipMenuItemButtonStyle.menu => 600,
+      ZulipMenuItemButtonStyle.menu
+        || ZulipMenuItemButtonStyle.menuDestructive => 600,
       ZulipMenuItemButtonStyle.list => 500,
     };
   }
@@ -357,6 +424,7 @@ class ZulipMenuItemButton extends StatelessWidget {
   Color _iconColor(DesignVariables designVariables) {
     return switch (style) {
       ZulipMenuItemButtonStyle.menu => designVariables.contextMenuItemIcon,
+      ZulipMenuItemButtonStyle.menuDestructive => designVariables.contextMenuItemIconDanger,
       ZulipMenuItemButtonStyle.list => designVariables.listMenuItemIcon,
     };
   }
@@ -393,13 +461,29 @@ class ZulipMenuItemButton extends StatelessWidget {
         foregroundColor: _labelColor(designVariables),
         splashFactory: NoSplash.splashFactory,
       ).copyWith(backgroundColor: _backgroundColor(designVariables)),
+      overflowAxis: Axis.vertical,
       onPressed: onPressed,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        // TODO sublabel, for [ZulipMenuItemButtonStyle.list]
-        child: Text(label,
-          style: const TextStyle(fontSize: 20, height: 24 / 20)
-            .merge(weightVariableTextStyle(context, wght: _labelWght())))));
+        child: Row(
+          spacing: 8,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: localizedTextBaseline(context),
+          children: [
+            Flexible(child: Text(label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 20, height: 24 / 20)
+                .merge(weightVariableTextStyle(context, wght: _labelWght())))),
+            if (subLabel != null)
+              Flexible(child: Text.rich(subLabel!,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 16 / 16,
+                  color: _labelColor(designVariables).withFadedAlpha(0.70),
+                ).merge(weightVariableTextStyle(context, wght: _labelWght())))),
+          ],
+        )));
   }
 }
 
@@ -411,6 +495,12 @@ enum ZulipMenuItemButtonStyle {
   ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=3302-20443&m=dev
   menu,
 
+  /// The red, destructive variant of [menu].
+  ///
+  /// See Figma:
+  ///   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6329-127234&m=dev
+  menuDestructive,
+
   /// The gray "list button" component in Figma, with 12px end padding.
   ///
   /// See Figma:
@@ -419,6 +509,9 @@ enum ZulipMenuItemButtonStyle {
 }
 
 /// The "toggle" component in Figma.
+///
+/// If [onChanged] is null, the switch will be displayed as disabled.
+/// (Like in the Material [Switch] widget.)
 ///
 /// See Figma:
 ///    https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=6070-60682&m=dev
@@ -430,17 +523,30 @@ class Toggle extends StatelessWidget {
   });
 
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final designVariables = DesignVariables.of(context);
+
     // Figma has this (blue/500) in both light and dark mode.
     // TODO(#831)
     final activeColor = Color(0xff4370f0);
 
+    final activeColorDisabled = activeColor.withFadedAlpha(0.4);
+
     // Figma has this (grey/400) in both light and dark mode.
     // TODO(#831)
     final inactiveColor = Color(0xff9194a3);
+
+    final inactiveColorDisabled = inactiveColor.withFadedAlpha(0.4);
+
+    final trackColor = WidgetStateColor.fromMap({
+      WidgetState.selected  & ~WidgetState.disabled: activeColor,
+      WidgetState.selected  &  WidgetState.disabled: activeColorDisabled,
+      ~WidgetState.selected & ~WidgetState.disabled: inactiveColor,
+      ~WidgetState.selected &  WidgetState.disabled: inactiveColorDisabled,
+    });
 
     // TODO(#1636):
     //   All of these just need _SwitchConfig to be exposed,
@@ -464,15 +570,13 @@ class Toggle extends StatelessWidget {
         ~WidgetState.selected: null,
       }),
 
-      // Figma has white for "on" and "off" in both light and dark mode.
-      thumbColor: WidgetStatePropertyAll(Colors.white),
-
-      activeTrackColor: activeColor,
-      inactiveTrackColor: inactiveColor,
-      trackOutlineColor: WidgetStateColor.fromMap({
-        WidgetState.selected: activeColor,
-        ~WidgetState.selected: inactiveColor,
+      thumbColor: WidgetStateProperty.fromMap({
+        WidgetState.selected: Colors.white,
+        ~WidgetState.selected: designVariables.mainBackground,
       }),
+
+      trackColor: trackColor,
+      trackOutlineColor: WidgetStatePropertyAll(Colors.transparent),
       trackOutlineWidth: WidgetStateProperty<double>.fromMap({
         // The outline is effectively painted with strokeAlignCenter:
         //   https://api.flutter.dev/flutter/painting/BorderSide/strokeAlignCenter-constant.html

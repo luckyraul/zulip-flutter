@@ -3,6 +3,218 @@
 ## Unreleased
 
 
+## 30.0.267 (2025-11-06)
+
+### Highlights for users
+
+* (Android) Support Android 8. (#1898)
+* (Android) Fix crash on opening unsupported types of images. (#1973)
+* Fill in topic properly on quote-and-reply. (#1469)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* User-visible changes not described above:
+  * More error reporting on malformed events or register-queue
+    failure. (#1083, #890)
+  * Adjust design of "All channels" page to more resemble "Channels".
+    (#1914)
+  * Revise design of empty-page placeholders. (PR #1946)
+  * Better handle unavailable image emoji in user status. (PR #1928)
+  * Update messages in unsubscribed channels when re-fetched.
+    (PR #1912)
+  * Use `max_topic_length` instead of hardcoded value of 60. (#307)
+  * Make settings page scrollable. (#1904)
+  * Upgrade Flutter. (PR #1971, fixing #1973)
+  * Make unread-count badges and topic-list items larger. (PR #1959)
+  * Update translations. (PR #1975)
+
+* Resolved: #890, #1083, #1898, #1914, PR #1946, PR #1928, PR #1912,
+  #307, #1904, #1973, #1469, PR #1959, PR #1975
+
+
+## 30.0.266 (2025-10-23)
+
+### Highlights for users
+
+* (Android) Fix bug causing repeated re-downloads of images. (#1892)
+* Open uploaded files without logging in again. (#1732)
+* (Android) Fix bug in showing certain HEIF images. (#1785)
+* Polls show immediate feedback when you vote. (#1808)
+
+
+### Highlights for developers
+
+* Two scripts for automating some steps of the release process,
+  tools/bump-version and tools/format-changelog, now work again.
+  (PR #1874, PR #1875)
+
+* User-visible changes not described above:
+  * Use group-based permission to better determine when to show
+    can't-send banner. (#1862)
+  * Tone down can't-send banner. (#1870)
+  * Use group-based permission to better determine what warning text
+    to show in unsubscribe confirmation dialog. (#1786)
+  * Adjust color in toggle thumbs. (PR #1891)
+  * Show "#" before channel name in a dialog. (PR #1893)
+  * Confirm before unsubscribing, in more cases. (#1878, #1827)
+  * Adjust color in inbox unread badges. (PR #1895)
+  * Adjust placeholder text for self-DMs. (PR #1876)
+  * Show refresh/subscribe banner in some cases on message feed
+    when not subscribed. (PR #1873, toward #1798)
+  * Show channel/topic at top of their action sheets. (#1533)
+  * Upgrade Flutter and other dependencies. (PR #1935)
+  * Handle image previews on Zulip servers using Camo in general.
+    (PR #1933)
+  * Update translations. (PR #1881)
+
+* Resolved: #1862, PR #1885, #1870, #1786, PR #1891, PR #1893, #1878,
+  #1827, #1837, PR #1895, #1808, #1036, PR #1876, PR #1873, PR #1894,
+  #1533, PR #1874, #1732, PR #1922, PR #1875, PR #1926, PR #1923,
+  PR #1935, #1785, #1892, PR #1933, PR #1881
+
+
+## 30.0.265 (2025-09-25)
+
+### Highlights for users
+
+* The app launches with the Zulip account you most recently used,
+  rather than the first one you logged into. (#524)
+* Browse channels you're not subscribed to, and subscribe. (#188)
+* Delete a message completely. (#1548)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* User-visible changes not described above:
+  * horizontal scrollbar in code block was sometimes too high (#1523)
+  * (Android) updated emoji font for Unicode 16 and Unicode 17
+    (PR #1835, PR #1865)
+  * upgraded Flutter and other dependencies (PR #1846, PR #1859)
+  * (iOS) use "destructive" and "default" styles on dialog actions
+    (#1032)
+  * translations (PR #1828)
+
+* Resolved: #1687, #814, #1825, PR #1833, #1804, #1523, #524,
+  PR #1835, #1716, PR #1842, PR #1846, #188, PR #1859, PR #1855,
+  #1850, PR #1865, PR #1866, PR #1868, #1032, #1548, PR #1828
+
+
+## 30.0.264 (2025-08-20)
+
+### Highlights for users (since last mainline release, v30.0.263)
+
+* (Android) Paste an image into a message, or insert a sticker from
+  your keyboard. (#1173, #419)
+* Autocomplete matches people's names regardless of diacritics. (#237)
+* Show message separated from last after a 10-minute gap. (#1773)
+* Link to channel feed in channel action sheet. (#1705)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers (since last mainline release, v30.0.263)
+
+* User-visible changes not described above:
+  * upgrade Flutter (PR #1791)
+  * show error dialog on edit-message request error (PR #1792)
+  * generate narrow links with "channel", vs "stream" (#633)
+  * TeX: big operators, null delimiters (#1671, #1677)
+  * several tweaks to set-status page (#1769, #1770, #1771)
+  * hide topic-list button in channel action sheet when redundant
+    (in PR #1794, for #1705)
+  * wildcard-mention autocomplete case-insensitive
+    (in PR #1806, for #237)
+  * emoji autocomplete insensitive to diacritics (#1067)
+  * new-DM search insensitive to diacritics
+    (in PR #1806, for #237)
+  * who-reacted and read-receipts sheets now draggable-scrollable
+    (PR #1802)
+  * translations (PR #1809)
+  * propagate nested text styles in several cases (#1818, #1817, #806,
+    #1812)
+
+* In tests, the user list always includes the self-user. (PR #1814)
+
+* Resolved in the beta-prelaunch branch (and v0.0.34): #1603
+
+* Resolved in main: #268, PR #1791, #1647, PR #1792, #633, #419,
+  #1173, #1677, #1671, #1769, #1770, #1771, PR #1814, #1705, #237,
+  #1067, PR #1802, PR #1809, #1818, #1817, #806, #1812, #1773
+
+
+## 0.0.34 (2025-08-18)
+
+This is a release from the "beta-prelaunch" branch, with selected
+changes atop the previous pre-launch beta release 0.0.33.
+
+
+### Highlights for users
+
+Thanks for being a beta tester of the new Zulip app!
+
+This app became the main Zulip mobile app in June 2025, and this
+beta version is no longer maintained.  We recommend uninstalling
+this beta after switching to the main Zulip app, in order to get
+the latest features and bug fixes.
+
+Changes in this version from the previous beta:
+* Give a notice on startup that this beta version is no longer
+  maintained, with links to switch to the main Zulip app. (#1603)
+
+
+### Highlights for developers
+
+* Resolved in this beta branch: #1603
+
+
+## 30.0.263 (2025-08-12)
+
+### Highlights for users
+
+* (Android) Share to Zulip from other apps. (#53)
+* See read receipts. (#667)
+* Autocomplete mentioning a group. (#233)
+* Fix bug when uploading a file with a non-ASCII name. (#1709)
+* Copy link to a channel or topic. (#1227, #792)
+* Zoom in farther in lightbox. (#1091)
+* Subscribe or unsubscribe to a channel. (#1224)
+
+
+### Highlights for developers
+
+* User-visible changes not described above:
+  * upgrade Flutter (PR #1763)
+  * drop "always scrollable" on list of suggested statuses
+    (in caf1ddb7b; revision to PR #1701, for #198)
+  * handle colored text in KaTeX content (#1679)
+  * user autocomplete matches on email (#236)
+  * semantics on reaction chips; no tooltip; "You" first
+    (41e3d57f2, b2321839f, 025b0cee8; revision to PR #1700, for #740)
+  * various changes to who-reacted feature
+    (in e2c10ae21; revision to PR #1700, for #740):
+    * show who-reacted button only when there was a reaction
+    * fix an edge case in who-reacted sheet: don't re-apply
+      initialReactionType on new store
+    * dispose in _ViewReactionsState, fixing potential get-stuck bug
+    * align emoji in center of who-reacted header, not start
+    * semantics in who-reacted sheet
+  * adjust scroll-into-view behavior in who-reacted header
+    (98b94bd2a; revision to PR #1700, for #740)
+  * Cupertino dialogs (#996, PR #1782)
+  * mark-channel-read button at top of action sheet (PR #1789)
+  * reject login sooner when server too old (PR #1783)
+  * translations (PR #1757)
+
+* Set visualDensity to mobile value on desktop, fixing assert in
+  buttons (PR #1781)
+
+* Resolved in main: #332, PR #1763, #1227, #792, #198, #1679, #1709,
+  #1091, #236, #233, #740, #996, PR #1781, PR #1782, PR #1789,
+  PR #1783, #1224, PR #1757, #667, #53
+
+
 ## 30.0.262 (2025-07-24)
 
 This release branch includes some experimental changes

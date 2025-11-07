@@ -92,6 +92,9 @@ int utcTimestamp([DateTime? dateTime]) {
 final Uri realmUrl = Uri.parse('https://chat.example/');
 Uri get _realmUrl => realmUrl;
 
+final Uri realmIcon = Uri.parse('/user_avatars/2/realm/icon.png?version=3');
+Uri get _realmIcon => realmIcon;
+
 const String recentZulipVersion = '9.0';
 const int recentZulipFeatureLevel = 382;
 const int futureZulipFeatureLevel = 9999;
@@ -109,7 +112,7 @@ GetServerSettingsResult serverSettings({
   bool? requireEmailFormatUsernames,
   Uri? realmUrl,
   String? realmName,
-  String? realmIcon,
+  Uri? realmIcon,
   String? realmDescription,
   bool? realmWebPublicAccessEnabled,
 }) {
@@ -125,7 +128,7 @@ GetServerSettingsResult serverSettings({
     requireEmailFormatUsernames: requireEmailFormatUsernames ?? true,
     realmUrl: realmUrl ?? _realmUrl,
     realmName: realmName ?? 'Example Zulip organization',
-    realmIcon: realmIcon ?? '$realmUrl/icon.png',
+    realmIcon: realmIcon ?? _realmIcon,
     realmDescription: realmDescription ?? 'An example Zulip organization',
     realmWebPublicAccessEnabled: realmWebPublicAccessEnabled ?? false,
   );
@@ -198,6 +201,8 @@ int _lastUserGroupId = 100;
 
 UserGroup userGroup({
   int? id,
+  Iterable<int>? members,
+  Iterable<int>? directSubgroupIds,
   String? name,
   String? description,
   bool isSystemGroup = false,
@@ -205,12 +210,28 @@ UserGroup userGroup({
 }) {
   return UserGroup(
     id: id ??= _nextUserGroupId(),
+    members: Set.of(members ?? []),
+    directSubgroupIds: Set.of(directSubgroupIds ?? []),
     name: name ??= 'group-$id',
     description: description ?? 'A group named $name',
     isSystemGroup: isSystemGroup,
     deactivated: deactivated,
   );
 }
+
+final UserGroup nobodyGroup = userGroup(
+  isSystemGroup: true,
+  name: 'role:nobody', description: 'Nobody',
+  members: [], directSubgroupIds: [],
+);
+
+GroupSettingValueNameless groupSetting({
+  List<int>? members,
+  List<int>? subgroups,
+}) => GroupSettingValueNameless(
+  directMembers: members ?? [],
+  directSubgroups: subgroups ?? [],
+);
 
 RealmEmojiItem realmEmojiItem({
   required String emojiCode,
@@ -251,7 +272,7 @@ int _lastEmailSuffix = 1000;
 /// other data in the test, or if the IDs need to increase in a different order
 /// from the calls to [user].
 ///
-/// If `email` is not given, it defaults to `deliveryEmail` if given,
+/// If `email` is not given, it defaults to `deliveryEmail` if given and non-null,
 /// or else to a value resembling the Zulip server's generated fake emails.
 User user({
   int? userId,
@@ -261,6 +282,7 @@ User user({
   String? dateJoined,
   bool? isActive,
   bool? isBot,
+  int? botOwnerId,
   UserRole? role,
   String? avatarUrl,
   Map<int, ProfileFieldUserData>? profileData,
@@ -274,10 +296,9 @@ User user({
     fullName: fullName ?? 'A user', // TODO generate example names
     dateJoined: dateJoined ?? '2024-02-24T11:18+00:00',
     isActive: isActive ?? true,
-    isBillingAdmin: false,
     isBot: isBot ?? false,
     botType: null,
-    botOwnerId: null,
+    botOwnerId: botOwnerId,
     role: role ?? UserRole.member,
     timezone: 'UTC',
     avatarUrl: avatarUrl,
@@ -290,6 +311,8 @@ User user({
 Account account({
   int? id,
   Uri? realmUrl,
+  String? realmName,
+  Uri? realmIcon,
   required User user,
   String? apiKey,
   int? zulipFeatureLevel,
@@ -305,6 +328,8 @@ Account account({
   return Account(
     id: id ?? 1000, // TODO generate example IDs
     realmUrl: realmUrl ?? _realmUrl,
+    realmName: realmName ?? 'Example Zulip organization',
+    realmIcon: realmIcon ?? _realmIcon,
     email: email,
     apiKey: apiKey ?? 'aeouasdf',
     userId: user.userId,
@@ -314,6 +339,7 @@ Account account({
     ackedPushToken: ackedPushToken,
   );
 }
+const _account = account;
 
 /// A [User] which throws on attempting to mutate any of its fields.
 ///
@@ -331,7 +357,6 @@ class _ImmutableUser extends User {
     fullName: user.fullName,
     dateJoined: user.dateJoined,
     isActive: user.isActive,
-    isBillingAdmin: user.isBillingAdmin,
     isBot: user.isBot,
     botType: user.botType,
     botOwnerId: user.botOwnerId,
@@ -356,7 +381,6 @@ class _ImmutableUser extends User {
   @override set fullName(_) => throw _error;
   // dateJoined already immutable
   @override set isActive(_) => throw _error;
-  @override set isBillingAdmin(_) => throw _error;
   // isBot already immutable
   // botType already immutable
   @override set botOwnerId(_) => throw _error;
@@ -384,6 +408,11 @@ final Account otherAccount = account(
   id: 1002,
   user: otherUser,
   apiKey: '6dxT4b73BYpCTU+i4BB9LAKC5h/CufqY', // A Zulip API key is 32 digits of base64.
+);
+final Account thirdAccount = account(
+  id: 1003,
+  user: thirdUser,
+  apiKey: 'q8HdN7u5Yz3Wc9LhQv1Rb4o2sXjKf6Ut', // A Zulip API key is 32 digits of base64.
 );
 
 //|//////////////////////////////////////////////////////////////
@@ -427,6 +456,7 @@ ZulipStream stream({
   int? streamId,
   String? name,
   String? description,
+  bool? isArchived,
   String? renderedDescription,
   int? dateCreated,
   int? firstMessageId,
@@ -435,8 +465,20 @@ ZulipStream stream({
   bool? historyPublicToSubscribers,
   int? messageRetentionDays,
   ChannelPostPolicy? channelPostPolicy,
+  int? folderId,
+  GroupSettingValue? canAddSubscribersGroup,
+  GroupSettingValue? canDeleteAnyMessageGroup,
+  GroupSettingValue? canDeleteOwnMessageGroup,
+  GroupSettingValue? canSendMessageGroup,
+  GroupSettingValue? canSubscribeGroup,
   int? streamWeeklyTraffic,
 }) {
+  if (channelPostPolicy == null) {
+    // Set a default for realmCanDeleteOwnMessageGroup, but only if we're
+    // not trying to test legacy behavior with channelPostPolicy.
+    canSendMessageGroup ??= groupSetting(members: [selfUser.userId]);
+  }
+
   _checkPositive(streamId, 'stream ID');
   _checkPositive(firstMessageId, 'message ID');
   var effectiveStreamId = streamId ?? _nextStreamId();
@@ -445,6 +487,7 @@ ZulipStream stream({
   return ZulipStream(
     streamId: effectiveStreamId,
     name: effectiveName,
+    isArchived: isArchived ?? false,
     description: effectiveDescription,
     renderedDescription: renderedDescription ?? '<p>$effectiveDescription</p>',
     dateCreated: dateCreated ?? 1686774898,
@@ -454,6 +497,12 @@ ZulipStream stream({
     historyPublicToSubscribers: historyPublicToSubscribers ?? true,
     messageRetentionDays: messageRetentionDays,
     channelPostPolicy: channelPostPolicy ?? ChannelPostPolicy.any,
+    folderId: folderId,
+    canAddSubscribersGroup: canAddSubscribersGroup ?? GroupSettingValueNamed(nobodyGroup.id),
+    canDeleteAnyMessageGroup: canDeleteAnyMessageGroup ?? GroupSettingValueNamed(nobodyGroup.id),
+    canDeleteOwnMessageGroup: canDeleteOwnMessageGroup ?? GroupSettingValueNamed(nobodyGroup.id),
+    canSendMessageGroup: canSendMessageGroup,
+    canSubscribeGroup: canSubscribeGroup ?? GroupSettingValueNamed(nobodyGroup.id),
     streamWeeklyTraffic: streamWeeklyTraffic,
   );
 }
@@ -483,6 +532,7 @@ Subscription subscription(
   return Subscription(
     streamId: stream.streamId,
     name: stream.name,
+    isArchived: stream.isArchived,
     description: stream.description,
     renderedDescription: stream.renderedDescription,
     dateCreated: stream.dateCreated,
@@ -492,6 +542,12 @@ Subscription subscription(
     historyPublicToSubscribers: stream.historyPublicToSubscribers,
     messageRetentionDays: stream.messageRetentionDays,
     channelPostPolicy: stream.channelPostPolicy,
+    folderId: stream.folderId,
+    canAddSubscribersGroup: stream.canAddSubscribersGroup,
+    canDeleteAnyMessageGroup: stream.canDeleteAnyMessageGroup,
+    canDeleteOwnMessageGroup: stream.canDeleteOwnMessageGroup,
+    canSendMessageGroup: stream.canSendMessageGroup,
+    canSubscribeGroup: stream.canSubscribeGroup,
     streamWeeklyTraffic: stream.streamWeeklyTraffic,
     desktopNotifications: desktopNotifications ?? false,
     emailNotifications: emailNotifications ?? false,
@@ -501,6 +557,49 @@ Subscription subscription(
     pinToTop: pinToTop ?? false,
     isMuted: isMuted ?? false,
     color: color ?? 0xFFFF0000,
+  );
+}
+
+/// A fresh channel folder ID,
+/// from a random but always strictly increasing sequence.
+int _nextChannelFolderId() => (_lastChannelFolderId += 1 + Random().nextInt(100));
+int _lastChannelFolderId = 1000;
+
+ChannelFolder channelFolder({
+  int? id,
+  String? name,
+  int? order,
+  int? dateCreated,
+  int? creatorId,
+  String? description,
+  String? renderedDescription,
+  bool? isArchived,
+}) {
+  final effectiveId = id ?? _nextChannelFolderId();
+  final effectiveDescription = description ?? 'An example channel folder.';
+  return ChannelFolder(
+    id: effectiveId,
+    name: name ?? 'channel folder $effectiveId',
+    order: order,
+    dateCreated: dateCreated ?? utcTimestamp(),
+    creatorId: creatorId ?? selfUser.userId,
+    description: effectiveDescription,
+    renderedDescription: renderedDescription ?? '<p>$effectiveDescription</p>',
+    isArchived: isArchived ?? false,
+  );
+}
+
+ChannelFolderChange channelFolderChange({
+  String? name,
+  String? description,
+  String? renderedDescription,
+  bool? isArchived,
+}) {
+  return ChannelFolderChange(
+    name: name,
+    description: description,
+    renderedDescription: renderedDescription,
+    isArchived: isArchived,
   );
 }
 
@@ -775,14 +874,13 @@ GetMessagesResult nearGetMessagesResult({
 /// A GetMessagesResult the server might return when we request older messages.
 GetMessagesResult olderGetMessagesResult({
   required int anchor,
-  bool foundAnchor = false, // the value if the server understood includeAnchor false
   required bool foundOldest,
   bool historyLimited = false,
   required List<Message> messages,
 }) {
   return GetMessagesResult(
     anchor: anchor,
-    foundAnchor: foundAnchor,
+    foundAnchor: false,
     foundNewest: false, // empirically always this, even when anchor happens to be latest
     foundOldest: foundOldest,
     historyLimited: historyLimited,
@@ -793,14 +891,13 @@ GetMessagesResult olderGetMessagesResult({
 /// A GetMessagesResult the server might return when we request newer messages.
 GetMessagesResult newerGetMessagesResult({
   required int anchor,
-  bool foundAnchor = false, // the value if the server understood includeAnchor false
   required bool foundNewest,
   bool historyLimited = false,
   required List<Message> messages,
 }) {
   return GetMessagesResult(
     anchor: anchor,
-    foundAnchor: foundAnchor,
+    foundAnchor: false,
     foundOldest: false,
     foundNewest: foundNewest,
     historyLimited: historyLimited,
@@ -943,7 +1040,7 @@ DeleteMessageEvent deleteMessageEvent(List<StreamMessage> messages) {
 UpdateMessageEvent updateMessageEditEvent(
   Message origMessage, {
   int? userId = -1, // null means null; default is [selfUser.userId]
-  bool? renderingOnly = false,
+  bool renderingOnly = false,
   int? messageId,
   List<MessageFlag>? flags,
   int? editTimestamp,
@@ -1153,6 +1250,9 @@ ChannelUpdateEvent channelUpdateEvent(
 }) {
   switch (property) {
     case ChannelPropertyName.name:
+      assert(value is String);
+    case ChannelPropertyName.isArchived:
+      assert(value is bool);
     case ChannelPropertyName.description:
       assert(value is String);
     case ChannelPropertyName.firstMessageId:
@@ -1163,6 +1263,14 @@ ChannelUpdateEvent channelUpdateEvent(
       assert(value is int?);
     case ChannelPropertyName.channelPostPolicy:
       assert(value is ChannelPostPolicy);
+    case ChannelPropertyName.folderId:
+      assert(value is int?);
+    case ChannelPropertyName.canAddSubscribersGroup:
+    case ChannelPropertyName.canDeleteAnyMessageGroup:
+    case ChannelPropertyName.canDeleteOwnMessageGroup:
+    case ChannelPropertyName.canSendMessageGroup:
+    case ChannelPropertyName.canSubscribeGroup:
+      assert(value is GroupSettingValue);
     case ChannelPropertyName.streamWeeklyTraffic:
       assert(value is int?);
   }
@@ -1182,11 +1290,13 @@ ChannelUpdateEvent channelUpdateEvent(
 TestGlobalStore globalStore({
   GlobalSettingsData? globalSettings,
   Map<BoolGlobalSetting, bool>? boolGlobalSettings,
+  Map<IntGlobalSetting, int>? intGlobalSettings,
   List<Account> accounts = const [],
 }) {
   return TestGlobalStore(
     globalSettings: globalSettings,
     boolGlobalSettings: boolGlobalSettings,
+    intGlobalSettings: intGlobalSettings,
     accounts: accounts,
   );
 }
@@ -1202,7 +1312,7 @@ InitialSnapshot initialSnapshot({
   String? zulipMergeBase,
   List<String>? alertWords,
   List<CustomProfileField>? customProfileFields,
-  EmailAddressVisibility? emailAddressVisibility,
+  int? maxTopicLength,
   int? serverPresencePingIntervalSeconds,
   int? serverPresenceOfflineThresholdSeconds,
   int? serverTypingStartedExpiryPeriodMilliseconds,
@@ -1215,16 +1325,24 @@ InitialSnapshot initialSnapshot({
   List<RecentDmConversation>? recentPrivateConversations,
   List<SavedSnippet>? savedSnippets,
   List<Subscription>? subscriptions,
+  List<ChannelFolder>? channelFolders,
   UnreadMessagesSnapshot? unreadMsgs,
   List<ZulipStream>? streams,
   Map<int, UserStatusChange>? userStatuses,
   UserSettings? userSettings,
   List<UserTopicItem>? userTopics,
+  GroupSettingValue? realmCanDeleteAnyMessageGroup,
+  GroupSettingValue? realmCanDeleteOwnMessageGroup,
+  RealmDeleteOwnMessagePolicy? realmDeleteOwnMessagePolicy,
   RealmWildcardMentionPolicy? realmWildcardMentionPolicy,
   bool? realmMandatoryTopics,
+  String? realmName,
   int? realmWaitingPeriodThreshold,
+  int? realmMessageContentDeleteLimitSeconds,
   bool? realmAllowMessageEditing,
   int? realmMessageContentEditLimitSeconds,
+  bool? realmEnableReadReceipts,
+  Uri? realmIconUrl,
   bool? realmPresenceDisabled,
   Map<String, RealmDefaultExternalAccount>? realmDefaultExternalAccounts,
   int? maxFileUploadSizeMib,
@@ -1234,6 +1352,13 @@ InitialSnapshot initialSnapshot({
   List<User>? realmNonActiveUsers,
   List<User>? crossRealmBots,
 }) {
+  if (realmDeleteOwnMessagePolicy == null) {
+    // Set a default for realmCanDeleteOwnMessageGroup, but only if we're
+    // trying to simulate a modern server without realmDeleteOwnMessagePolicy.
+    realmCanDeleteOwnMessageGroup ??= GroupSettingValueNamed(nobodyGroup.id);
+  }
+  assert((realmCanDeleteOwnMessageGroup != null) ^ (realmDeleteOwnMessagePolicy != null));
+
   return InitialSnapshot(
     queueId: queueId ?? '1:2345',
     lastEventId: lastEventId ?? -1,
@@ -1242,7 +1367,7 @@ InitialSnapshot initialSnapshot({
     zulipMergeBase: zulipMergeBase ?? recentZulipVersion,
     alertWords: alertWords ?? ['klaxon'],
     customProfileFields: customProfileFields ?? [],
-    emailAddressVisibility: emailAddressVisibility ?? EmailAddressVisibility.everyone,
+    maxTopicLength: maxTopicLength ?? 60,
     serverPresencePingIntervalSeconds: serverPresencePingIntervalSeconds ?? 60,
     serverPresenceOfflineThresholdSeconds: serverPresenceOfflineThresholdSeconds ?? 140,
     serverTypingStartedExpiryPeriodMilliseconds:
@@ -1258,6 +1383,7 @@ InitialSnapshot initialSnapshot({
     recentPrivateConversations: recentPrivateConversations ?? [],
     savedSnippets: savedSnippets ?? [],
     subscriptions: subscriptions ?? [], // TODO add subscriptions to default
+    channelFolders: channelFolders ?? [],
     unreadMsgs: unreadMsgs ?? _unreadMsgs(),
     streams: streams ?? [], // TODO add streams to default
     userStatuses: userStatuses ?? {},
@@ -1267,19 +1393,27 @@ InitialSnapshot initialSnapshot({
       emojiset: Emojiset.google,
       presenceEnabled: true,
     ),
-    userTopics: userTopics,
+    userTopics: userTopics ?? [],
+    // no default; allow `null` to simulate servers without this
+    realmCanDeleteAnyMessageGroup: realmCanDeleteAnyMessageGroup,
+    realmCanDeleteOwnMessageGroup: realmCanDeleteOwnMessageGroup,
+    realmDeleteOwnMessagePolicy: realmDeleteOwnMessagePolicy,
     realmWildcardMentionPolicy: realmWildcardMentionPolicy ?? RealmWildcardMentionPolicy.everyone,
     realmMandatoryTopics: realmMandatoryTopics ?? true,
+    realmName: realmName ?? 'Example Zulip organization',
     realmWaitingPeriodThreshold: realmWaitingPeriodThreshold ?? 0,
+    realmMessageContentDeleteLimitSeconds: realmMessageContentDeleteLimitSeconds,
     realmAllowMessageEditing: realmAllowMessageEditing ?? true,
     realmMessageContentEditLimitSeconds: realmMessageContentEditLimitSeconds,
+    realmEnableReadReceipts: realmEnableReadReceipts ?? true,
+    realmIconUrl: realmIconUrl ?? _realmIcon,
     realmPresenceDisabled: realmPresenceDisabled ?? false,
     realmDefaultExternalAccounts: realmDefaultExternalAccounts ?? {},
     maxFileUploadSizeMib: maxFileUploadSizeMib ?? 25,
     serverEmojiDataUrl: serverEmojiDataUrl
       ?? realmUrl.replace(path: '/static/emoji.json'),
     realmEmptyTopicDisplayName: realmEmptyTopicDisplayName ?? defaultRealmEmptyTopicDisplayName,
-    realmUsers: realmUsers ?? [],
+    realmUsers: realmUsers ?? [selfUser],
     realmNonActiveUsers: realmNonActiveUsers ?? [],
     crossRealmBots: crossRealmBots ?? [],
   );
@@ -1288,10 +1422,13 @@ const _initialSnapshot = initialSnapshot;
 
 PerAccountStore store({
   GlobalStore? globalStore,
+  User? selfUser,
   Account? account,
   InitialSnapshot? initialSnapshot,
 }) {
-  final effectiveAccount = account ?? selfAccount;
+  assert(!(account != null && selfUser != null));
+  final effectiveAccount = account
+    ?? (selfUser != null ? _account(user: selfUser) : selfAccount);
   return PerAccountStore.fromInitialSnapshot(
     globalStore: globalStore ?? _globalStore(accounts: [effectiveAccount]),
     accountId: effectiveAccount.id,

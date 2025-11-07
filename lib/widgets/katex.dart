@@ -96,10 +96,10 @@ class _KatexSpan extends StatelessWidget {
     }
 
     final styles = node.styles;
-
-    // Currently, we expect `top` to be only present with the
-    // vlist inner row span, and parser handles that explicitly.
-    assert(styles.topEm == null);
+    if (styles.topEm != null) {
+      // The meaning of `top` would be different without `position: relative`.
+      assert(styles.position == KatexSpanPosition.relative);
+    }
 
     final fontFamily = styles.fontFamily;
     final fontSize = switch (styles.fontSizeEm) {
@@ -117,12 +117,18 @@ class _KatexSpan extends StatelessWidget {
       KatexSpanFontStyle.italic => FontStyle.italic,
       null => null,
     };
+    final color = switch (styles.color) {
+      KatexSpanColor katexColor =>
+        Color.fromARGB(katexColor.a, katexColor.r, katexColor.g, katexColor.b),
+      null => null,
+    };
 
     TextStyle? textStyle;
     if (fontFamily != null ||
         fontSize != null ||
         fontWeight != null ||
-        fontStyle != null) {
+        fontStyle != null ||
+        color != null) {
       // TODO(upstream) remove this workaround when upstream fixes the broken
       //   rendering of KaTeX_Math font with italic font style on Android:
       //     https://github.com/flutter/flutter/issues/167474
@@ -136,6 +142,7 @@ class _KatexSpan extends StatelessWidget {
         fontSize: fontSize,
         fontWeight: fontWeight,
         fontStyle: fontStyle,
+        color: color,
       );
     }
     final textAlign = switch (styles.textAlign) {
@@ -153,6 +160,9 @@ class _KatexSpan extends StatelessWidget {
     }
 
     widget = SizedBox(
+      width: styles.widthEm != null
+        ? styles.widthEm! * em
+        : null,
       height: styles.heightEm != null
         ? styles.heightEm! * em
         : null,
@@ -171,6 +181,18 @@ class _KatexSpan extends StatelessWidget {
     if (margin != null) {
       assert(margin.isNonNegative);
       widget = Padding(padding: margin, child: widget);
+    }
+
+    switch (styles.position) {
+      case KatexSpanPosition.relative:
+        if (styles.topEm case final topEm?) {
+          widget = Transform.translate(
+            offset: Offset(0, topEm * em),
+            child: widget);
+        }
+
+      case null:
+        break;
     }
 
     return widget;

@@ -6,26 +6,26 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_checks/flutter_checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:zulip/api/core.dart';
 import 'package:zulip/api/model/initial_snapshot.dart';
 import 'package:zulip/api/model/model.dart';
+import 'package:zulip/api/route/messages.dart';
 import 'package:zulip/model/content.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/settings.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/widgets/content.dart';
 import 'package:zulip/widgets/icons.dart';
+import 'package:zulip/widgets/image.dart';
 import 'package:zulip/widgets/katex.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
-import 'package:zulip/widgets/store.dart';
 import 'package:zulip/widgets/text.dart';
 
+import '../api/fake_api.dart';
 import '../example_data.dart' as eg;
 import '../flutter_checks.dart';
 import '../model/binding.dart';
 import '../model/content_test.dart';
-import '../model/store_checks.dart';
 import '../model/test_store.dart';
 import '../test_images.dart';
 import '../test_navigation.dart';
@@ -187,11 +187,11 @@ void main() {
   /// [styleFinder] must return the [TextStyle] containing the "wght"
   /// (in [TextStyle.fontVariations]) and the [TextStyle.fontWeight]
   /// to be checked.
-  Future<void> testFontWeight(String description, {
+  void testFontWeight(String description, {
     required Widget content,
     required double expectedWght,
     required TextStyle Function(WidgetTester tester) styleFinder,
-  }) async {
+  }) {
     for (final platformRequestsBold in [false, true]) {
       testWidgets(
         description + (platformRequestsBold ? ' (platform requests bold)' : ''),
@@ -312,7 +312,7 @@ void main() {
           ..status.equals(expected ? AnimationStatus.completed : AnimationStatus.dismissed);
       }
 
-      const example = ContentExample.spoilerHeaderHasImage;
+      const example = ContentExample.spoilerHeaderHasImagePreview;
 
       testWidgets('tap image', (tester) async {
         final pushedRoutes = await prepare(tester, example.html);
@@ -358,7 +358,7 @@ void main() {
 
   testContentSmoke(ContentExample.quotation);
 
-  group('MessageImage, MessageImageList', () {
+  group('MessageImagePreview, MessageImagePreviewList', () {
     Future<void> prepare(WidgetTester tester, String html) async {
       await prepareContent(tester,
         // Message is needed for an image's lightbox.
@@ -369,9 +369,9 @@ void main() {
     }
 
     testWidgets('single image', (tester) async {
-      const example = ContentExample.imageSingle;
+      const example = ContentExample.imagePreviewSingle;
       await prepare(tester, example.html);
-      final expectedImages = (example.expectedNodes[0] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[0] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -379,9 +379,9 @@ void main() {
     });
 
     testWidgets('single image no thumbnail', (tester) async {
-      const example = ContentExample.imageSingleNoThumbnail;
+      const example = ContentExample.imagePreviewSingleNoThumbnail;
       await prepare(tester, example.html);
-      final expectedImages = (example.expectedNodes[0] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[0] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -389,27 +389,28 @@ void main() {
     });
 
     testWidgets('single image loading placeholder', (tester) async {
-      const example = ContentExample.imageSingleLoadingPlaceholder;
+      const example = ContentExample.imagePreviewSingleLoadingPlaceholder;
       await prepare(tester, example.html);
       await tester.ensureVisible(find.byType(CupertinoActivityIndicator));
     });
 
     testWidgets('image with invalid src URL', (tester) async {
-      const example = ContentExample.imageInvalidUrl;
+      const example = ContentExample.imagePreviewInvalidUrl;
       await prepare(tester, example.html);
       // The image indeed has an invalid URL.
-      final expectedImages = (example.expectedNodes[0] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[0] as ImagePreviewNodeList).imagePreviews;
       check(() => Uri.parse(expectedImages.single.srcUrl)).throws<void>();
       check(tryResolveUrl(eg.realmUrl, expectedImages.single.srcUrl)).isNull();
-      // The MessageImage has shown up, but it doesn't attempt a RealmContentNetworkImage.
-      check(tester.widgetList(find.byType(MessageImage))).isNotEmpty();
+      // The MessageImagePreview has shown up,
+      // but it doesn't attempt a RealmContentNetworkImage.
+      check(tester.widgetList(find.byType(MessageImagePreview))).isNotEmpty();
       check(tester.widgetList(find.byType(RealmContentNetworkImage))).isEmpty();
     });
 
     testWidgets('multiple images', (tester) async {
-      const example = ContentExample.imageCluster;
+      const example = ContentExample.imagePreviewCluster;
       await prepare(tester, example.html);
-      final expectedImages = (example.expectedNodes[1] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[1] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -417,9 +418,9 @@ void main() {
     });
 
     testWidgets('multiple images no thumbnails', (tester) async {
-      const example = ContentExample.imageClusterNoThumbnails;
+      const example = ContentExample.imagePreviewClusterNoThumbnails;
       await prepare(tester, example.html);
-      final expectedImages = (example.expectedNodes[1] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[1] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -427,9 +428,9 @@ void main() {
     });
 
     testWidgets('content after image cluster', (tester) async {
-      const example = ContentExample.imageClusterThenContent;
+      const example = ContentExample.imagePreviewClusterThenContent;
       await prepare(tester, example.html);
-      final expectedImages = (example.expectedNodes[1] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[1] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -437,10 +438,10 @@ void main() {
     });
 
     testWidgets('multiple clusters of images', (tester) async {
-      const example = ContentExample.imageMultipleClusters;
+      const example = ContentExample.imagePreviewMultipleClusters;
       await prepare(tester, example.html);
-      final expectedImages = (example.expectedNodes[1] as ImageNodeList).images
-        + (example.expectedNodes[4] as ImageNodeList).images;
+      final expectedImages = (example.expectedNodes[1] as ImagePreviewNodeList).imagePreviews
+        + (example.expectedNodes[4] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -448,10 +449,10 @@ void main() {
     });
 
     testWidgets('image as immediate child in implicit paragraph', (tester) async {
-      const example = ContentExample.imageInImplicitParagraph;
+      const example = ContentExample.imagePreviewInImplicitParagraph;
       await prepare(tester, example.html);
       final expectedImages = ((example.expectedNodes[0] as ListNode)
-        .items[0][0] as ImageNodeList).images;
+        .items[0][0] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -459,10 +460,10 @@ void main() {
     });
 
     testWidgets('image cluster in implicit paragraph', (tester) async {
-      const example = ContentExample.imageClusterInImplicitParagraph;
+      const example = ContentExample.imagePreviewClusterInImplicitParagraph;
       await prepare(tester, example.html);
       final expectedImages = ((example.expectedNodes[0] as ListNode)
-        .items[0][1] as ImageNodeList).images;
+        .items[0][1] as ImagePreviewNodeList).imagePreviews;
       final images = tester.widgetList<RealmContentNetworkImage>(
         find.byType(RealmContentNetworkImage));
       check(images.map((i) => i.src.toString()).toList())
@@ -566,23 +567,14 @@ void main() {
 
     testContentSmoke(ContentExample.mathBlock);
 
-    testWidgets('displays KaTeX source; experimental flag disabled', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, false);
-
-      await prepareContent(tester, plainContent(ContentExample.mathBlock.html));
-      tester.widget(find.text(r'\lambda', findRichText: true));
-    });
-
-    testWidgets('displays KaTeX content; experimental flag enabled', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
-      check(globalSettings).getBool(BoolGlobalSetting.renderKatex).isTrue();
-
+    testWidgets('displays KaTeX content', (tester) async {
       await prepareContent(tester, plainContent(ContentExample.mathBlock.html));
       tester.widget(find.text('λ', findRichText: true));
+    });
+
+    testWidgets('fallback to displaying KaTeX source if unsupported KaTeX HTML', (tester) async {
+      await prepareContent(tester, plainContent(ContentExample.mathBlockUnknown.html));
+      tester.widget(find.text(r'\lambda', findRichText: true));
     });
   });
 
@@ -717,7 +709,17 @@ void main() {
           '<tbody>\n<tr>\n<td>text</td>\n</tr>\n</tbody>\n'
           '</table>'),
       styleFinder: findWordBold);
+
+    testWidgets('has strike-through line in strike-through', (tester) async {
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/1817
+      await prepareContent(tester,
+        plainContent('<p><del><strong>bold</strong></del></p>'));
+      final style = mergedStyleOf(tester, 'bold');
+      check(style!.decoration).equals(TextDecoration.lineThrough);
+    });
   });
+
+  testContentSmoke(ContentExample.deleted);
 
   testContentSmoke(ContentExample.emphasis);
 
@@ -728,6 +730,22 @@ void main() {
       await checkFontSizeRatio(tester,
         targetHtml: '<code>code</code>',
         targetFontSizeFinder: mkTargetFontSizeFinderFromPattern('code'));
+    });
+
+    testFontWeight('is bold in bold span',
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/1812
+      expectedWght: 600,
+      // **`bold`**
+      content: plainContent('<p><strong><code>bold</code></strong></p>'),
+      styleFinder: (tester) => mergedStyleOf(tester, 'bold')!,
+    );
+
+    testWidgets('is link-colored in link span', (tester) async {
+      // Regression test for: https://github.com/zulip/zulip-flutter/issues/806
+      await prepareContent(tester,
+        plainContent('<p><a href="https://example/"><code>code</code></a></p>'));
+      final style = mergedStyleOf(tester, 'code');
+      check(style!.color).equals(const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor());
     });
   });
 
@@ -928,6 +946,9 @@ void main() {
   });
 
   group('LinkNode on internal links', () {
+    late PerAccountStore store;
+    late FakeApiConnection connection;
+
     Future<List<Route<dynamic>>> prepare(WidgetTester tester, String html) async {
       final pushedRoutes = <Route<dynamic>>[];
       final testNavObserver = TestNavigatorObserver()
@@ -943,12 +964,13 @@ void main() {
       assert(pushedRoutes.length == 1);
       pushedRoutes.removeLast();
 
-      final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+      store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+      connection = store.connection as FakeApiConnection;
       await store.addStream(eg.stream(name: 'stream'));
       return pushedRoutes;
     }
 
-    testWidgets('valid internal links are navigated to within app', (tester) async {
+    testWidgets('narrow links are navigated to within app', (tester) async {
       final pushedRoutes = await prepare(tester,
         '<p><a href="/#narrow/stream/1-check">stream</a></p>');
 
@@ -959,6 +981,22 @@ void main() {
     });
 
     // TODO(#1570): test links with /near/ go to the specific message
+
+    testWidgets('uploaded-file links are opened with temporary authed URL', (tester) async {
+      final pushedRoutes = await prepare(tester,
+        '<p><a href="/user_uploads/123/ab/paper.pdf">paper.pdf</a></p>');
+
+      final tempUrlString = '/temp/s3kr1t-auth-token/paper.pdf';
+      final expectedUrl = eg.realmUrl.resolve(tempUrlString);
+
+      connection.prepare(json: GetFileTemporaryUrlResult(
+        url: tempUrlString).toJson());
+      await tapText(tester, find.text('paper.pdf'));
+      await tester.pump(Duration.zero);
+      check(testBinding.takeLaunchUrlCalls())
+        .single.equals((url: expectedUrl, mode: LaunchMode.inAppBrowserView));
+      check(pushedRoutes).isEmpty();
+    });
 
     testWidgets('invalid internal links are opened in browser', (tester) async {
       // Link is invalid due to `topic` operator missing an operand.
@@ -990,6 +1028,14 @@ void main() {
           _ => throw StateError('unexpected platform in test'),
         });
     }, variant: const TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
+
+    testWidgets('has strike-through line in strike-through', (tester) async {
+      // Regression test for https://github.com/zulip/zulip-flutter/issues/1818
+      await prepareContent(tester,
+        plainContent('<p><del>foo<span aria-label="thumbs up" class="emoji emoji-1f44d" role="img" title="thumbs up">:thumbs_up:</span>bar</del></p>'));
+      final style = mergedStyleOf(tester, '\u{1f44d}');
+      check(style!.decoration).equals(TextDecoration.lineThrough);
+    });
   });
 
   group('inline math', () {
@@ -1000,11 +1046,6 @@ void main() {
     testContentSmoke(ContentExample.mathInline);
 
     testWidgets('maintains font-size ratio with surrounding text', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
-      check(globalSettings.getBool(BoolGlobalSetting.renderKatex)).isTrue();
-
       const html = '<span class="katex">'
         '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow>'
           '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
@@ -1025,50 +1066,35 @@ void main() {
         });
     });
 
-    testWidgets('maintains font-size ratio with surrounding text, when showing TeX source', (tester) async {
-      const html = '<span class="katex">'
-        '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow>'
-          '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
-        '<span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span></span></span></span>';
-      await checkFontSizeRatio(tester,
-        targetHtml: html,
-        targetFontSizeFinder: mkTargetFontSizeFinderFromPattern(r'λ'));
-    }, skip: true // TODO(#46): adapt this test
-                  //   (it needs a more complex targetFontSizeFinder;
-                  //    see other uses in this file for examples.)
-    );
+    group('fallback to displaying KaTeX source if unsupported KaTeX HTML', () {
+      testContentSmoke(ContentExample.mathInlineUnknown);
 
-    testWidgets('maintains font-size ratio with surrounding text, when showing TeX source', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, false);
+      assert(ContentExample.mathInlineUnknown.html.startsWith('<p>'));
+      assert(ContentExample.mathInlineUnknown.html.endsWith('</p>'));
+      final unsupportedKatexHtml = ContentExample.mathInlineUnknown.html
+        .substring(3, ContentExample.mathInlineUnknown.html.length - 4);
+      final expectedText = ContentExample.mathInlineUnknown.expectedText!;
 
-      const html = '<span class="katex">'
-        '<span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow>'
-          '<annotation encoding="application/x-tex"> \\lambda </annotation></semantics></math></span>'
-        '<span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">λ</span></span></span></span>';
-      await checkFontSizeRatio(tester,
-        targetHtml: html,
-        targetFontSizeFinder: mkTargetFontSizeFinderFromPattern(r'\lambda'));
-    });
+      testWidgets('maintains font-size ratio with surrounding text, when falling back to TeX source', (tester) async {
+        await checkFontSizeRatio(tester,
+          targetHtml: unsupportedKatexHtml,
+          targetFontSizeFinder: mkTargetFontSizeFinderFromPattern(expectedText));
+      });
 
-    testWidgets('displays KaTeX source; experimental flag disabled', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, false);
+      testFontWeight('is bold in bold span',
+        // Regression test for: https://github.com/zulip/zulip-flutter/issues/1812
+        expectedWght: 600,
+        content: plainContent('<p><strong>$unsupportedKatexHtml</strong></p>'),
+        styleFinder: (tester) => mergedStyleOf(tester, expectedText)!,
+      );
 
-      await prepareContent(tester, plainContent(ContentExample.mathInline.html));
-      tester.widget(find.text(r'\lambda', findRichText: true));
-    });
-
-    testWidgets('displays KaTeX content; experimental flag enabled', (tester) async {
-      addTearDown(testBinding.reset);
-      final globalSettings = testBinding.globalStore.settings;
-      await globalSettings.setBool(BoolGlobalSetting.renderKatex, true);
-      check(globalSettings.getBool(BoolGlobalSetting.renderKatex)).isTrue();
-
-      await prepareContent(tester, plainContent(ContentExample.mathInline.html));
-      tester.widget(find.text('λ', findRichText: true));
+      testWidgets('is link-colored in link span', (tester) async {
+        // Regression test for: https://github.com/zulip/zulip-flutter/issues/806
+        await prepareContent(tester,
+          plainContent('<p><a href="https://example/">$unsupportedKatexHtml</a></p>'));
+        final style = mergedStyleOf(tester, expectedText);
+        check(style!.color).equals(const HSLColor.fromAHSL(1, 200, 1, 0.4).toColor());
+      });
     });
   });
 
@@ -1186,10 +1212,14 @@ void main() {
     }
 
     testWidgets('tapping on audio link opens it in browser', (tester) async {
-      final url = eg.realmUrl.resolve('/user_uploads/2/f2/a_WnijOXIeRnI6OSxo9F6gZM/crab-rave.mp3');
       await prepare(tester, ContentExample.audioInline.html);
+      final store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
+      final connection = store.connection as FakeApiConnection;
 
+      final url = eg.realmUrl.resolve('/temp/token/crab-rave.mp3');
+      connection.prepare(json: GetFileTemporaryUrlResult(url: url.path).toJson());
       await tapText(tester, find.text('crab-rave.mp3'));
+      await tester.pump(Duration.zero);
 
       final expectedLaunchMode = defaultTargetPlatform == TargetPlatform.iOS ?
         LaunchMode.externalApplication : LaunchMode.inAppBrowserView;
@@ -1286,46 +1316,6 @@ void main() {
       check(testBinding.takeLaunchUrlCalls())
         .single.equals((url: url, mode: LaunchMode.inAppBrowserView));
       debugNetworkImageHttpClientProvider = null;
-    });
-  });
-
-  group('RealmContentNetworkImage', () {
-    final authHeaders = authHeader(email: eg.selfAccount.email, apiKey: eg.selfAccount.apiKey);
-
-    Future<Map<String, List<String>>> actualHeaders(WidgetTester tester, Uri src) async {
-      addTearDown(testBinding.reset);
-      await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot());
-
-      final httpClient = prepareBoringImageHttpClient();
-
-      await tester.pumpWidget(GlobalStoreWidget(
-        child: PerAccountStoreWidget(accountId: eg.selfAccount.id,
-          child: RealmContentNetworkImage(src))));
-      await tester.pump();
-      await tester.pump();
-
-      return httpClient.request.headers.values;
-    }
-
-    testWidgets('includes auth header if `src` on-realm', (tester) async {
-      check(await actualHeaders(tester, Uri.parse('https://chat.example/image.png')))
-        .deepEquals({
-          'Authorization': [authHeaders['Authorization']!],
-          'User-Agent': [userAgentHeader()['User-Agent']!],
-        });
-      debugNetworkImageHttpClientProvider = null;
-    });
-
-    testWidgets('excludes auth header if `src` off-realm', (tester) async {
-      check(await actualHeaders(tester, Uri.parse('https://other.example/image.png')))
-        .deepEquals({'User-Agent': [userAgentHeader()['User-Agent']!]});
-      debugNetworkImageHttpClientProvider = null;
-    });
-
-    testWidgets('throws if no `PerAccountStoreWidget` ancestor', (tester) async {
-      await tester.pumpWidget(
-        RealmContentNetworkImage(Uri.parse('https://zulip.invalid/path/to/image.png'), filterQuality: FilterQuality.medium));
-      check(tester.takeException()).isA<AssertionError>();
     });
   });
 

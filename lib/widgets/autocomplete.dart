@@ -178,8 +178,8 @@ class ComposeAutocomplete extends AutocompleteField<ComposeAutocompleteQuery, Co
   @override
   ComposeAutocompleteView initViewModel(BuildContext context, ComposeAutocompleteQuery query) {
     final store = PerAccountStoreWidget.of(context);
-    final localizations = ZulipLocalizations.of(context);
-    return query.initViewModel(store: store, localizations: localizations,
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    return query.initViewModel(store: store, localizations: zulipLocalizations,
       narrow: narrow);
   }
 
@@ -202,12 +202,30 @@ class ComposeAutocomplete extends AutocompleteField<ComposeAutocompleteQuery, Co
         if (query is! MentionAutocompleteQuery) {
           return; // Shrug; similar to `intent == null` case above.
         }
-        final user = store.getUser(userId)!; // must exist because UserMentionAutocompleteResult
-        // TODO(i18n) language-appropriate space character; check active keyboard?
+        final user = store.getUser(userId);
+        if (user == null) {
+          // Don't crash on theoretical race between async results-filtering
+          // and losing data for the user.
+          return;
+        }
+        // TODO(#1805) language-appropriate space character; check active keyboard?
         //   (maybe handle centrally in `controller`)
         replacementString = '${userMention(user, silent: query.silent, users: store)} ';
       case WildcardMentionAutocompleteResult(:var wildcardOption):
         replacementString = '${wildcardMention(wildcardOption, store: store)} ';
+      case UserGroupMentionAutocompleteResult(:final groupId):
+        if (query is! MentionAutocompleteQuery) {
+          return; // Shrug; similar to `intent == null` case above.
+        }
+        final userGroup = store.getGroup(groupId);
+        if (userGroup == null) {
+          // Don't crash on theoretical race between async results-filtering
+          // and losing data for the group.
+          return;
+        }
+        // TODO(#1805) language-appropriate space character; check active keyboard?
+        //   (maybe handle centrally in `controller`)
+        replacementString = '${userGroupMention(userGroup.name, silent: query.silent)} ';
     }
 
     controller.value = intent.textEditingValue.replaced(
@@ -255,18 +273,18 @@ class MentionAutocompleteItem extends StatelessWidget {
   }) {
     final isDmNarrow = narrow is DmNarrow;
     final isChannelWildcardAvailable = store.zulipFeatureLevel >= 247; // TODO(server-9)
-    final localizations = ZulipLocalizations.of(context);
+    final zulipLocalizations = ZulipLocalizations.of(context);
     return switch (wildcardOption) {
       WildcardMentionOption.all || WildcardMentionOption.everyone => isDmNarrow
-        ? localizations.wildcardMentionAllDmDescription
+        ? zulipLocalizations.wildcardMentionAllDmDescription
         : isChannelWildcardAvailable
-            ? localizations.wildcardMentionChannelDescription
-            : localizations.wildcardMentionStreamDescription,
-      WildcardMentionOption.channel => localizations.wildcardMentionChannelDescription,
+            ? zulipLocalizations.wildcardMentionChannelDescription
+            : zulipLocalizations.wildcardMentionStreamDescription,
+      WildcardMentionOption.channel => zulipLocalizations.wildcardMentionChannelDescription,
       WildcardMentionOption.stream => isChannelWildcardAvailable
-        ? localizations.wildcardMentionChannelDescription
-        : localizations.wildcardMentionStreamDescription,
-      WildcardMentionOption.topic => localizations.wildcardMentionTopicDescription,
+        ? zulipLocalizations.wildcardMentionChannelDescription
+        : zulipLocalizations.wildcardMentionStreamDescription,
+      WildcardMentionOption.topic => zulipLocalizations.wildcardMentionTopicDescription,
     };
   }
 
@@ -285,7 +303,17 @@ class MentionAutocompleteItem extends StatelessWidget {
         label = store.userDisplayName(userId);
         emoji = UserStatusEmoji(userId: userId, size: 18,
           padding: const EdgeInsetsDirectional.only(start: 5.0));
-        sublabel = store.userDisplayEmail(userId);
+        sublabel = store.getUser(userId)?.deliveryEmail;
+      case UserGroupMentionAutocompleteResult(:final groupId):
+        final group = store.getGroup(groupId);
+        avatar = SizedBox.square(dimension: 36,
+          child: const Icon(ZulipIcons.three_person, size: 24));
+        label = group?.name
+          // Don't crash on theoretical race between async results-filtering
+          // and losing data for the group.
+          ?? '';
+        emoji = null;
+        sublabel = group?.description;
       case WildcardMentionAutocompleteResult(:var wildcardOption):
         avatar = SizedBox.square(dimension: 36,
           child: const Icon(ZulipIcons.three_person, size: 24));
@@ -342,13 +370,13 @@ class _EmojiAutocompleteItem extends StatelessWidget {
     final designVariables = DesignVariables.of(context);
     final candidate = option.candidate;
 
-    // TODO deduplicate this logic with [EmojiPickerListEntry]
     final emojiDisplay = candidate.emojiDisplay.resolve(store.userSettings);
     final Widget? glyph = switch (emojiDisplay) {
-      ImageEmojiDisplay() =>
-        ImageEmojiWidget(size: _size, emojiDisplay: emojiDisplay),
-      UnicodeEmojiDisplay() =>
-        UnicodeEmojiWidget(size: _size, emojiDisplay: emojiDisplay),
+      ImageEmojiDisplay() || UnicodeEmojiDisplay() => EmojiWidget(
+        emojiDisplay: emojiDisplay,
+        squareDimension: _size,
+        imagePlaceholderStyle: EmojiImagePlaceholderStyle.square,
+      ),
       TextEmojiDisplay() => null, // The text is already shown separately.
     };
 

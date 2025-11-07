@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import '../api/model/model.dart';
 import '../model/avatar_url.dart';
 import '../model/binding.dart';
-import '../model/emoji.dart';
 import '../model/presence.dart';
-import 'content.dart';
 import 'emoji.dart';
 import 'icons.dart';
+import 'image.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -289,25 +288,33 @@ class _PresenceCircleState extends State<PresenceCircle> with PerAccountStoreAwa
 
 /// A user status emoji to be displayed in different parts of the app.
 ///
+/// Use [userId] to show status emoji for that user.
+/// Use [emoji] to show the specific emoji passed.
+///
+/// Only one of [userId] or [emoji] should be passed.
+///
 /// Use [padding] to control the padding of status emoji from neighboring
 /// widgets.
 /// When there is no status emoji to be shown, the padding will be omitted too.
 ///
-/// Use [neverAnimate] to forcefully disable the animation for animated emojis.
-/// Defaults to true.
+/// Use [animationMode] to control whether an animated emoji is shown
+/// in its still or animated version.
 class UserStatusEmoji extends StatelessWidget {
   const UserStatusEmoji({
     super.key,
-    required this.userId,
+    this.userId,
+    this.emoji,
     required this.size,
     this.padding = EdgeInsets.zero,
-    this.neverAnimate = true,
-  });
+    this.animationMode = ImageAnimationMode.animateNever,
+  }) : assert((userId == null) != (emoji == null),
+              'Only one of the userId or emoji should be provided.');
 
-  final int userId;
+  final int? userId;
+  final StatusEmoji? emoji;
   final double size;
   final EdgeInsetsGeometry padding;
-  final bool neverAnimate;
+  final ImageAnimationMode animationMode;
 
   static const double _spanPadding = 4;
 
@@ -317,11 +324,12 @@ class UserStatusEmoji extends StatelessWidget {
   /// Use [position] to tell the emoji span where it is located relative to
   /// another span, so that it can adjust the necessary padding from it.
   static InlineSpan asWidgetSpan({
-    required int userId,
+    int? userId,
+    StatusEmoji? emoji,
     required double fontSize,
     required TextScaler textScaler,
     StatusEmojiPosition position = StatusEmojiPosition.after,
-    bool neverAnimate = true,
+    ImageAnimationMode animationMode = ImageAnimationMode.animateNever,
   }) {
     final (double paddingStart, double paddingEnd) = switch (position) {
       StatusEmojiPosition.before => (0,            _spanPadding),
@@ -330,43 +338,38 @@ class UserStatusEmoji extends StatelessWidget {
     final size = textScaler.scale(fontSize);
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
-      child: UserStatusEmoji(userId: userId, size: size,
+      child: UserStatusEmoji(userId: userId, emoji: emoji, size: size,
         padding: EdgeInsetsDirectional.only(start: paddingStart, end: paddingEnd),
-        neverAnimate: neverAnimate));
+        animationMode: animationMode));
   }
 
   @override
   Widget build(BuildContext context) {
     final store = PerAccountStoreWidget.of(context);
-    final emoji = store.getUserStatus(userId).emoji;
+    final effectiveEmoji = emoji ?? store.getUserStatus(userId!).emoji;
 
-    final placeholder = SizedBox.shrink();
-    if (emoji == null) return placeholder;
+    if (effectiveEmoji == null) return SizedBox.shrink();
 
     final emojiDisplay = store.emojiDisplayFor(
-      emojiType: emoji.reactionType,
-      emojiCode: emoji.emojiCode,
-      emojiName: emoji.emojiName)
-        // Web doesn't seem to respect the emojiset user settings for user status.
+      emojiType: effectiveEmoji.reactionType,
+      emojiCode: effectiveEmoji.emojiCode,
+      emojiName: effectiveEmoji.emojiName)
+        // The user-status feature doesn't support a :text_emoji:-style display.
         // .resolve(store.userSettings)
     ;
-    return switch (emojiDisplay) {
-      UnicodeEmojiDisplay() => Padding(
-        padding: padding,
-        child: UnicodeEmojiWidget(size: size, emojiDisplay: emojiDisplay)),
-      ImageEmojiDisplay() => Padding(
-        padding: padding,
-        child: ImageEmojiWidget(
-          size: size,
-          emojiDisplay: emojiDisplay,
-          neverAnimate: neverAnimate,
-          // If image emoji fails to load, show nothing.
-          errorBuilder: (_, _, _) => placeholder)),
-      // The user-status feature doesn't support a :text_emoji:-style display.
-      // Also, if an image emoji's URL string doesn't parse, it'll fall back to
-      // a :text_emoji:-style display. We show nothing for this case.
-      TextEmojiDisplay() => placeholder,
-    };
+
+    return Padding(
+      padding: padding,
+      child: EmojiWidget(
+        emojiDisplay: emojiDisplay,
+        squareDimension: size,
+        imageAnimationMode: animationMode,
+        buildCustomTextEmoji: () =>
+          // Invoked when an image emoji's URL didn't parse; see
+          // EmojiStore.emojiDisplayFor. Don't show text, just an empty square.
+          // TODO(design) refine?; offer a visible touch target with tooltip?
+          SizedBox.square(dimension: size),
+      ));
   }
 }
 

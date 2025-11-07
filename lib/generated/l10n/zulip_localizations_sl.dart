@@ -44,7 +44,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String tryAnotherAccountMessage(Object url) {
-    return 'Nalaganje vašega računa na $url traja dlje kot običajno.';
+    return 'Nalaganje vašega računa iz $url traja dlje kot običajno.';
   }
 
   @override
@@ -65,6 +65,16 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get chooseAccountButtonAddAnAccount => 'Dodaj račun';
+
+  @override
+  String get navButtonAllChannels => 'Vsi kanali';
+
+  @override
+  String get allChannelsPageTitle => 'Vsi kanali';
+
+  @override
+  String get allChannelsEmptyPlaceholderHeader =>
+      'V tej organizaciji ni kanalov, do katerih imate dostop.';
 
   @override
   String get profileButtonSendDirectMessage => 'Pošlji neposredno sporočilo';
@@ -88,10 +98,40 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
       'Za nalaganje datotek v nastavitvah omogočite Zulipu dostop do shrambe datotek.';
 
   @override
+  String get actionSheetOptionSubscribe => 'Naroči se';
+
+  @override
+  String get subscribeFailedTitle => 'Naročnina ni uspela';
+
+  @override
   String get actionSheetOptionMarkChannelAsRead => 'Označi kanal kot prebran';
 
   @override
+  String get actionSheetOptionCopyChannelLink => 'Kopiraj povezavo do kanala';
+
+  @override
   String get actionSheetOptionListOfTopics => 'Seznam tem';
+
+  @override
+  String get actionSheetOptionChannelFeed => 'Vir kanala';
+
+  @override
+  String get actionSheetOptionUnsubscribe => 'Prekliči naročnino';
+
+  @override
+  String unsubscribeConfirmationDialogTitle(String channelName) {
+    return 'Odjava iz $channelName?';
+  }
+
+  @override
+  String get unsubscribeConfirmationDialogMessageCannotResubscribe =>
+      'Ko zapustite kanal, se ne boste več mogli pridružiti nazaj.';
+
+  @override
+  String get unsubscribeConfirmationDialogConfirmButton => 'Prekliči naročnino';
+
+  @override
+  String get unsubscribeFailedTitle => 'Preklic naročnine ni uspel';
 
   @override
   String get actionSheetOptionMuteTopic => 'Utišaj temo';
@@ -118,6 +158,62 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   @override
   String get errorUnresolveTopicFailedTitle =>
       'Neuspela označitev teme kot nerazrešene';
+
+  @override
+  String get actionSheetOptionSeeWhoReacted => 'Poglej, kdo se je odzval';
+
+  @override
+  String get seeWhoReactedSheetNoReactions => 'To sporočilo nima odzivov.';
+
+  @override
+  String seeWhoReactedSheetHeaderLabel(int num) {
+    return 'Odzivi z emodžiji (skupaj $num)';
+  }
+
+  @override
+  String seeWhoReactedSheetEmojiNameWithVoteCount(String emojiName, int num) {
+    String _temp0 = intl.Intl.pluralLogic(
+      num,
+      locale: localeName,
+      other: '$num glasov',
+      few: '$num glasovi',
+      two: '2 glasa',
+      one: '1 glas',
+    );
+    return '$emojiName: $_temp0';
+  }
+
+  @override
+  String seeWhoReactedSheetUserListLabel(String emojiName, int num) {
+    return 'Glasovi za $emojiName ($num)';
+  }
+
+  @override
+  String get actionSheetOptionViewReadReceipts => 'Poglej potrdila o branju';
+
+  @override
+  String get actionSheetReadReceipts => 'Potrdila o branju';
+
+  @override
+  String actionSheetReadReceiptsReadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'To sporočilo je <z-link>prebralo</z-link> $count oseb:',
+      few: 'To sporočilo so <z-link>prebrale</z-link> $count osebe:',
+      two: 'To sporočilo sta <z-link>prebrali</z-link> $count osebi:',
+      one: 'To sporočilo je <z-link>prebrala</z-link> $count oseba:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get actionSheetReadReceiptsZeroReadCount =>
+      'Tega sporočila še nihče ni prebral.';
+
+  @override
+  String get actionSheetReadReceiptsErrorReadCount =>
+      'Nalaganje potrdil o branju ni uspelo.';
 
   @override
   String get actionSheetOptionCopyMessageText => 'Kopiraj besedilo sporočila';
@@ -150,7 +246,26 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get actionSheetOptionEditMessage => 'Uredi sporočilo';
 
   @override
+  String get actionSheetOptionDeleteMessage => 'Izbriši sporočilo';
+
+  @override
+  String get deleteMessageConfirmationDialogTitle => 'Izbrišem sporočilo?';
+
+  @override
+  String get deleteMessageConfirmationDialogMessage =>
+      'Brisanje sporočila ga trajno odstrani za vse.';
+
+  @override
+  String get deleteMessageConfirmationDialogConfirmButton => 'Izbriši';
+
+  @override
+  String get errorDeleteMessageFailedTitle => 'Sporočila se ne da izbrisati';
+
+  @override
   String get actionSheetOptionMarkTopicAsRead => 'Označi temo kot prebrano';
+
+  @override
+  String get actionSheetOptionCopyTopicLink => 'Kopiraj povezavo do teme';
 
   @override
   String get errorWebAuthOperationalErrorTitle => 'Nekaj je šlo narobe';
@@ -170,6 +285,10 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   @override
   String get errorCouldNotFetchMessageSource =>
       'Ni bilo mogoče pridobiti vira sporočila.';
+
+  @override
+  String get errorCouldNotAccessUploadedFileTitle =>
+      'Dostop do naložene datoteke ni mogoč';
 
   @override
   String get errorCopyingFailed => 'Kopiranje ni uspelo';
@@ -321,12 +440,28 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
       'Povezava do sporočila je bila kopirana';
 
   @override
+  String get successTopicLinkCopied => 'Povezava do teme kopirana';
+
+  @override
+  String get successChannelLinkCopied => 'Povezava do kanala kopirana';
+
+  @override
   String get errorBannerDeactivatedDmLabel =>
       'Deaktiviranim uporabnikom ne morete pošiljati sporočil.';
 
   @override
   String get errorBannerCannotPostInChannelLabel =>
       'Nimate dovoljenja za objavljanje v tem kanalu.';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
+      'Nova sporočila se ne bodo prikazala samodejno.';
+
+  @override
+  String get composeBoxBannerButtonRefresh => 'Osveži';
+
+  @override
+  String get composeBoxBannerButtonSubscribe => 'Naroči se';
 
   @override
   String get composeBoxBannerLabelEditMessage => 'Uredi sporočilo';
@@ -405,7 +540,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get composeBoxGroupDmContentHint => 'Skupinsko sporočilo';
 
   @override
-  String get composeBoxSelfDmContentHint => 'Zapišite opombo zase';
+  String get composeBoxSelfDmContentHint => 'Zapišite si opombo';
 
   @override
   String composeBoxChannelContentHint(String destination) {
@@ -456,10 +591,10 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   }
 
   @override
-  String get emptyMessageList => 'There are no messages here.';
+  String get emptyMessageList => 'Tukaj ni sporočil.';
 
   @override
-  String get emptyMessageListSearch => 'No search results.';
+  String get emptyMessageListSearch => 'Ni zadetkov iskanja.';
 
   @override
   String get messageListGroupYouWithYourself => 'Sporočila sebi';
@@ -551,12 +686,26 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get loginErrorMissingUsername => 'Vnesite svoje uporabniško ime.';
 
   @override
-  String get topicValidationErrorTooLong =>
-      'Dolžina teme ne sme presegati 60 znakov.';
+  String topicValidationErrorTooLong(int maxLength) {
+    String _temp0 = intl.Intl.pluralLogic(
+      maxLength,
+      locale: localeName,
+      other: '$maxLength znakov',
+      one: '1 znaka',
+    );
+    return 'Dolžina teme ne sme presegati $_temp0.';
+  }
 
   @override
   String get topicValidationErrorMandatoryButEmpty =>
       'Teme so v tej organizaciji obvezne.';
+
+  @override
+  String get errorContentNotInsertedTitle => 'Vsebina ni vstavljena';
+
+  @override
+  String get errorContentToInsertIsEmpty =>
+      'Datoteka za vstavljanje je prazna ali nedostopna.';
 
   @override
   String errorServerVersionUnsupportedMessage(
@@ -662,15 +811,71 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get yesterday => 'Včeraj';
 
   @override
-  String get invisibleMode => 'Invisible mode';
+  String get userActiveNow => 'Trenutno aktiven';
+
+  @override
+  String get userIdle => 'Nedejaven';
+
+  @override
+  String userActiveMinutesAgo(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutami',
+      few: '$minutes minutami',
+      two: '$minutes minutama',
+      one: '1 minuto',
+    );
+    return 'Aktiven pred $_temp0';
+  }
+
+  @override
+  String userActiveHoursAgo(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours urami',
+      few: '$hours urami',
+      two: '$hours urama',
+      one: '1 uro',
+    );
+    return 'Aktiven pred $_temp0';
+  }
+
+  @override
+  String get userActiveYesterday => 'Aktiven včeraj';
+
+  @override
+  String userActiveDaysAgo(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days dnevi',
+      few: '$days dnevi',
+      two: '$days dnevoma',
+      one: '1 dnevom',
+    );
+    return 'Aktiven pred $_temp0';
+  }
+
+  @override
+  String userActiveDate(String date) {
+    return 'Nazadnje aktiven $date';
+  }
+
+  @override
+  String get userNotActiveInYear => 'Ni bil aktiven v zadnjem letu';
+
+  @override
+  String get invisibleMode => 'Nevidni način';
 
   @override
   String get turnOnInvisibleModeErrorTitle =>
-      'Error turning on invisible mode. Please try again.';
+      'Napaka pri vklopu nevidnega načina. Poskusite znova.';
 
   @override
   String get turnOffInvisibleModeErrorTitle =>
-      'Error turning off invisible mode. Please try again.';
+      'Napaka pri izklopu nevidnega načina. Poskusite znova.';
 
   @override
   String get userRoleOwner => 'Lastnik';
@@ -691,20 +896,69 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get userRoleUnknown => 'Neznano';
 
   @override
-  String get searchMessagesPageTitle => 'Search';
+  String get statusButtonLabelStatusSet => 'Status';
 
   @override
-  String get searchMessagesHintText => 'Search';
+  String get statusButtonLabelStatusUnset => 'Nastavi status';
 
   @override
-  String get searchMessagesClearButtonTooltip => 'Clear';
+  String get noStatusText => 'Brez statusa';
+
+  @override
+  String get setStatusPageTitle => 'Nastavi status';
+
+  @override
+  String get statusClearButtonLabel => 'Počisti';
+
+  @override
+  String get statusSaveButtonLabel => 'Shrani';
+
+  @override
+  String get statusTextHint => 'Vaš status';
+
+  @override
+  String get userStatusBusy => 'Zaposlen';
+
+  @override
+  String get userStatusInAMeeting => 'Na sestanku';
+
+  @override
+  String get userStatusCommuting => 'Na poti v službo';
+
+  @override
+  String get userStatusOutSick => 'Na bolniški';
+
+  @override
+  String get userStatusVacationing => 'Na dopustu';
+
+  @override
+  String get userStatusWorkingRemotely => 'Delo na daljavo';
+
+  @override
+  String get userStatusAtTheOffice => 'V pisarni';
+
+  @override
+  String get updateStatusErrorTitle =>
+      'Napaka pri posodabljanju statusa uporabnika. Poskusite znova.';
+
+  @override
+  String get searchMessagesPageTitle => 'Iskanje';
+
+  @override
+  String get searchMessagesHintText => 'Išči';
+
+  @override
+  String get searchMessagesClearButtonTooltip => 'Počisti';
 
   @override
   String get inboxPageTitle => 'Nabiralnik';
 
   @override
-  String get inboxEmptyPlaceholder =>
-      'V vašem nabiralniku ni neprebranih sporočil. Uporabite spodnje gumbe za ogled združenega prikaza ali seznama kanalov.';
+  String get inboxEmptyPlaceholderHeader => 'Ni neprebranih sporočil.';
+
+  @override
+  String get inboxEmptyPlaceholderMessage =>
+      'Uporabite spodnje gumbe za ogled združenega vira ali seznama kanalov.';
 
   @override
   String get recentDmConversationsPageTitle => 'Neposredna sporočila';
@@ -713,8 +967,12 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get recentDmConversationsSectionHeader => 'Neposredna sporočila';
 
   @override
-  String get recentDmConversationsEmptyPlaceholder =>
-      'Zaenkrat še nimate neposrednih sporočil! Zakaj ne bi začeli pogovora?';
+  String get recentDmConversationsEmptyPlaceholderHeader =>
+      'Nimate nobenih neposrednih sproročil!';
+
+  @override
+  String get recentDmConversationsEmptyPlaceholderMessage =>
+      'Zakaj ne bi začeli pogovora?';
 
   @override
   String get combinedFeedPageTitle => 'Združen prikaz';
@@ -729,7 +987,16 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get channelsPageTitle => 'Kanali';
 
   @override
-  String get channelsEmptyPlaceholder => 'Niste še naročeni na noben kanal.';
+  String get channelsEmptyPlaceholderHeader =>
+      'Niste še naročeni na noben kanal.';
+
+  @override
+  String channelsEmptyPlaceholderMessage(String allChannelsPageTitle) {
+    return 'Poskusite odpreti <z-link>$allChannelsPageTitle</z-link> in se jim pridružiti.';
+  }
+
+  @override
+  String get sharePageTitle => 'Deli';
 
   @override
   String get mainMenuMyProfile => 'Moj profil';
@@ -762,6 +1029,27 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get reactedEmojiSelfUser => 'Vi';
+
+  @override
+  String get reactionChipsLabel => 'Odzivi';
+
+  @override
+  String reactionChipLabel(String emojiName, String votes) {
+    return '$emojiName: $votes';
+  }
+
+  @override
+  String reactionChipVotesYouAndOthers(int otherUsersCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      otherUsersCount,
+      locale: localeName,
+      other: 'Vi in $otherUsersCount drugih',
+      few: 'Vi in $otherUsersCount druge osebe',
+      two: 'Vi in 2 drugi osebi',
+      one: 'Vi in 1 druga oseba',
+    );
+    return '$_temp0';
+  }
 
   @override
   String onePersonTyping(String typist) {
@@ -901,6 +1189,13 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
       'Reakcije ni bilo mogoče odstraniti';
 
   @override
+  String get errorSharingTitle => 'Deljenje vsebine ni uspelo';
+
+  @override
+  String get errorSharingAccountNotLoggedIn =>
+      'Noben račun ni prijavljen. Prijavite se v račun in poskusite znova.';
+
+  @override
   String get emojiReactionsMore => 'več';
 
   @override
@@ -910,7 +1205,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get noEarlierMessages => 'Ni starejših sporočil';
 
   @override
-  String get revealButtonLabel => 'Prikaži sporočilo utišanega pošiljatelja';
+  String get revealButtonLabel => 'Razkrij sporočilo';
 
   @override
   String get mutedUser => 'Uporabnik je utišan';

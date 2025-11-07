@@ -8,6 +8,24 @@ part of 'model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+GroupSettingValueNameless _$GroupSettingValueNamelessFromJson(
+  Map<String, dynamic> json,
+) => GroupSettingValueNameless(
+  directMembers: (json['direct_members'] as List<dynamic>)
+      .map((e) => (e as num).toInt())
+      .toList(),
+  directSubgroups: (json['direct_subgroups'] as List<dynamic>)
+      .map((e) => (e as num).toInt())
+      .toList(),
+);
+
+Map<String, dynamic> _$GroupSettingValueNamelessToJson(
+  GroupSettingValueNameless instance,
+) => <String, dynamic>{
+  'direct_members': instance.directMembers,
+  'direct_subgroups': instance.directSubgroups,
+};
+
 CustomProfileField _$CustomProfileFieldFromJson(Map<String, dynamic> json) =>
     CustomProfileField(
       id: (json['id'] as num).toInt(),
@@ -96,6 +114,12 @@ Map<String, dynamic> _$RealmEmojiItemToJson(RealmEmojiItem instance) =>
 
 UserGroup _$UserGroupFromJson(Map<String, dynamic> json) => UserGroup(
   id: (json['id'] as num).toInt(),
+  members: (json['members'] as List<dynamic>)
+      .map((e) => (e as num).toInt())
+      .toSet(),
+  directSubgroupIds: (json['direct_subgroup_ids'] as List<dynamic>)
+      .map((e) => (e as num).toInt())
+      .toSet(),
   name: json['name'] as String,
   description: json['description'] as String,
   isSystemGroup: json['is_system_group'] as bool,
@@ -104,6 +128,8 @@ UserGroup _$UserGroupFromJson(Map<String, dynamic> json) => UserGroup(
 
 Map<String, dynamic> _$UserGroupToJson(UserGroup instance) => <String, dynamic>{
   'id': instance.id,
+  'members': instance.members.toList(),
+  'direct_subgroup_ids': instance.directSubgroupIds.toList(),
   'name': instance.name,
   'description': instance.description,
   'is_system_group': instance.isSystemGroup,
@@ -117,7 +143,6 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
   fullName: json['full_name'] as String,
   dateJoined: json['date_joined'] as String,
   isActive: json['is_active'] as bool,
-  isBillingAdmin: json['is_billing_admin'] as bool?,
   isBot: json['is_bot'] as bool,
   botType: (json['bot_type'] as num?)?.toInt(),
   botOwnerId: (json['bot_owner_id'] as num?)?.toInt(),
@@ -137,7 +162,7 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
               ProfileFieldUserData.fromJson(e as Map<String, dynamic>),
             ),
           ),
-  isSystemBot: User._readIsSystemBot(json, 'is_system_bot') as bool,
+  isSystemBot: json['is_system_bot'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
@@ -147,7 +172,6 @@ Map<String, dynamic> _$UserToJson(User instance) => <String, dynamic>{
   'full_name': instance.fullName,
   'date_joined': instance.dateJoined,
   'is_active': instance.isActive,
-  'is_billing_admin': instance.isBillingAdmin,
   'is_bot': instance.isBot,
   'bot_type': instance.botType,
   'bot_owner_id': instance.botOwnerId,
@@ -214,6 +238,7 @@ Map<String, dynamic> _$SavedSnippetToJson(SavedSnippet instance) =>
 ZulipStream _$ZulipStreamFromJson(Map<String, dynamic> json) => ZulipStream(
   streamId: (json['stream_id'] as num).toInt(),
   name: json['name'] as String,
+  isArchived: json['is_archived'] as bool? ?? false,
   description: json['description'] as String,
   renderedDescription: json['rendered_description'] as String,
   dateCreated: (json['date_created'] as num).toInt(),
@@ -222,10 +247,26 @@ ZulipStream _$ZulipStreamFromJson(Map<String, dynamic> json) => ZulipStream(
   isWebPublic: json['is_web_public'] as bool,
   historyPublicToSubscribers: json['history_public_to_subscribers'] as bool,
   messageRetentionDays: (json['message_retention_days'] as num?)?.toInt(),
-  channelPostPolicy: $enumDecode(
+  channelPostPolicy: $enumDecodeNullable(
     _$ChannelPostPolicyEnumMap,
     json['stream_post_policy'],
   ),
+  folderId: (json['folder_id'] as num?)?.toInt(),
+  canAddSubscribersGroup: json['can_add_subscribers_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_add_subscribers_group']),
+  canDeleteAnyMessageGroup: json['can_delete_any_message_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_delete_any_message_group']),
+  canDeleteOwnMessageGroup: json['can_delete_own_message_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_delete_own_message_group']),
+  canSendMessageGroup: json['can_send_message_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_send_message_group']),
+  canSubscribeGroup: json['can_subscribe_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_subscribe_group']),
   streamWeeklyTraffic: (json['stream_weekly_traffic'] as num?)?.toInt(),
 );
 
@@ -233,15 +274,22 @@ Map<String, dynamic> _$ZulipStreamToJson(ZulipStream instance) =>
     <String, dynamic>{
       'stream_id': instance.streamId,
       'name': instance.name,
+      'is_archived': instance.isArchived,
       'description': instance.description,
       'rendered_description': instance.renderedDescription,
       'date_created': instance.dateCreated,
       'first_message_id': instance.firstMessageId,
+      'folder_id': instance.folderId,
       'invite_only': instance.inviteOnly,
       'is_web_public': instance.isWebPublic,
       'history_public_to_subscribers': instance.historyPublicToSubscribers,
       'message_retention_days': instance.messageRetentionDays,
       'stream_post_policy': instance.channelPostPolicy,
+      'can_add_subscribers_group': instance.canAddSubscribersGroup,
+      'can_delete_any_message_group': instance.canDeleteAnyMessageGroup,
+      'can_delete_own_message_group': instance.canDeleteOwnMessageGroup,
+      'can_send_message_group': instance.canSendMessageGroup,
+      'can_subscribe_group': instance.canSubscribeGroup,
       'stream_weekly_traffic': instance.streamWeeklyTraffic,
     };
 
@@ -257,6 +305,7 @@ Subscription _$SubscriptionFromJson(Map<String, dynamic> json) => Subscription(
   streamId: (json['stream_id'] as num).toInt(),
   name: json['name'] as String,
   description: json['description'] as String,
+  isArchived: json['is_archived'] as bool? ?? false,
   renderedDescription: json['rendered_description'] as String,
   dateCreated: (json['date_created'] as num).toInt(),
   firstMessageId: (json['first_message_id'] as num?)?.toInt(),
@@ -264,10 +313,26 @@ Subscription _$SubscriptionFromJson(Map<String, dynamic> json) => Subscription(
   isWebPublic: json['is_web_public'] as bool,
   historyPublicToSubscribers: json['history_public_to_subscribers'] as bool,
   messageRetentionDays: (json['message_retention_days'] as num?)?.toInt(),
-  channelPostPolicy: $enumDecode(
+  channelPostPolicy: $enumDecodeNullable(
     _$ChannelPostPolicyEnumMap,
     json['stream_post_policy'],
   ),
+  folderId: (json['folder_id'] as num?)?.toInt(),
+  canAddSubscribersGroup: json['can_add_subscribers_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_add_subscribers_group']),
+  canDeleteAnyMessageGroup: json['can_delete_any_message_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_delete_any_message_group']),
+  canDeleteOwnMessageGroup: json['can_delete_own_message_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_delete_own_message_group']),
+  canSendMessageGroup: json['can_send_message_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_send_message_group']),
+  canSubscribeGroup: json['can_subscribe_group'] == null
+      ? null
+      : GroupSettingValue.fromJson(json['can_subscribe_group']),
   streamWeeklyTraffic: (json['stream_weekly_traffic'] as num?)?.toInt(),
   desktopNotifications: json['desktop_notifications'] as bool?,
   emailNotifications: json['email_notifications'] as bool?,
@@ -283,15 +348,22 @@ Map<String, dynamic> _$SubscriptionToJson(Subscription instance) =>
     <String, dynamic>{
       'stream_id': instance.streamId,
       'name': instance.name,
+      'is_archived': instance.isArchived,
       'description': instance.description,
       'rendered_description': instance.renderedDescription,
       'date_created': instance.dateCreated,
       'first_message_id': instance.firstMessageId,
+      'folder_id': instance.folderId,
       'invite_only': instance.inviteOnly,
       'is_web_public': instance.isWebPublic,
       'history_public_to_subscribers': instance.historyPublicToSubscribers,
       'message_retention_days': instance.messageRetentionDays,
       'stream_post_policy': instance.channelPostPolicy,
+      'can_add_subscribers_group': instance.canAddSubscribersGroup,
+      'can_delete_any_message_group': instance.canDeleteAnyMessageGroup,
+      'can_delete_own_message_group': instance.canDeleteOwnMessageGroup,
+      'can_send_message_group': instance.canSendMessageGroup,
+      'can_subscribe_group': instance.canSubscribeGroup,
       'stream_weekly_traffic': instance.streamWeeklyTraffic,
       'desktop_notifications': instance.desktopNotifications,
       'email_notifications': instance.emailNotifications,
@@ -301,6 +373,30 @@ Map<String, dynamic> _$SubscriptionToJson(Subscription instance) =>
       'pin_to_top': instance.pinToTop,
       'is_muted': instance.isMuted,
       'color': instance.color,
+    };
+
+ChannelFolder _$ChannelFolderFromJson(Map<String, dynamic> json) =>
+    ChannelFolder(
+      id: (json['id'] as num).toInt(),
+      name: json['name'] as String,
+      order: (json['order'] as num?)?.toInt(),
+      dateCreated: (json['date_created'] as num?)?.toInt(),
+      creatorId: (json['creator_id'] as num?)?.toInt(),
+      description: json['description'] as String,
+      renderedDescription: json['rendered_description'] as String,
+      isArchived: json['is_archived'] as bool,
+    );
+
+Map<String, dynamic> _$ChannelFolderToJson(ChannelFolder instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'order': instance.order,
+      'date_created': instance.dateCreated,
+      'creator_id': instance.creatorId,
+      'description': instance.description,
+      'rendered_description': instance.renderedDescription,
+      'is_archived': instance.isArchived,
     };
 
 StreamConversation _$StreamConversationFromJson(Map<String, dynamic> json) {
@@ -446,11 +542,18 @@ const _$PresenceStatusEnumMap = {
 
 const _$ChannelPropertyNameEnumMap = {
   ChannelPropertyName.name: 'name',
+  ChannelPropertyName.isArchived: 'is_archived',
   ChannelPropertyName.description: 'description',
   ChannelPropertyName.firstMessageId: 'first_message_id',
   ChannelPropertyName.inviteOnly: 'invite_only',
   ChannelPropertyName.messageRetentionDays: 'message_retention_days',
   ChannelPropertyName.channelPostPolicy: 'stream_post_policy',
+  ChannelPropertyName.folderId: 'folder_id',
+  ChannelPropertyName.canAddSubscribersGroup: 'can_add_subscribers_group',
+  ChannelPropertyName.canDeleteAnyMessageGroup: 'can_delete_any_message_group',
+  ChannelPropertyName.canDeleteOwnMessageGroup: 'can_delete_own_message_group',
+  ChannelPropertyName.canSendMessageGroup: 'can_send_message_group',
+  ChannelPropertyName.canSubscribeGroup: 'can_subscribe_group',
   ChannelPropertyName.streamWeeklyTraffic: 'stream_weekly_traffic',
 };
 

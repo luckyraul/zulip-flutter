@@ -11,6 +11,7 @@ import 'package:zulip/api/model/model.dart';
 import 'package:zulip/api/model/narrow.dart';
 import 'package:zulip/api/route/messages.dart';
 import 'package:zulip/model/binding.dart';
+import 'package:zulip/model/internal_link.dart';
 import 'package:zulip/model/localizations.dart';
 import 'package:zulip/model/narrow.dart';
 import 'package:zulip/model/settings.dart';
@@ -74,7 +75,7 @@ void main() {
               'include_anchor': 'false',
               'num_before': '0',
               'num_after': '1000',
-              'narrow': jsonEncode(apiNarrow),
+              'narrow': jsonEncode(resolveApiNarrowForServer(apiNarrow, connection.zulipFeatureLevel!)),
               'op': 'add',
               'flag': 'read',
             });
@@ -155,7 +156,7 @@ void main() {
               'include_anchor': 'false',
               'num_before': '0',
               'num_after': '1000',
-              'narrow': jsonEncode(apiNarrow),
+              'narrow': jsonEncode(resolveApiNarrowForServer(apiNarrow, connection.zulipFeatureLevel!)),
               'op': 'add',
               'flag': 'read',
             });
@@ -180,7 +181,7 @@ void main() {
               'include_anchor': 'false',
               'num_before': '0',
               'num_after': '1000',
-              'narrow': jsonEncode(apiNarrow),
+              'narrow': jsonEncode(resolveApiNarrowForServer(apiNarrow, connection.zulipFeatureLevel!)),
               'op': 'add',
               'flag': 'read',
             });
@@ -199,7 +200,7 @@ void main() {
               'include_anchor': 'false',
               'num_before': '0',
               'num_after': '1000',
-              'narrow': jsonEncode(apiNarrow),
+              'narrow': jsonEncode(resolveApiNarrowForServer(apiNarrow, connection.zulipFeatureLevel!)),
               'op': 'add',
               'flag': 'read',
             });
@@ -223,7 +224,7 @@ void main() {
               'include_anchor': 'false',
               'num_before': '0',
               'num_after': '1000',
-              'narrow': jsonEncode(apiNarrow),
+              'narrow': jsonEncode(resolveApiNarrowForServer(apiNarrow, connection.zulipFeatureLevel!)),
               'op': 'add',
               'flag': 'read',
             });
@@ -242,6 +243,27 @@ void main() {
           expectedTitle: onFailedTitle,
           expectedMessage: 'NetworkException: Oops (ClientException: Oops)');
         check(await didPass).isFalse();
+      });
+    });
+
+    group('getFileTemporaryUrl', () {
+      testWidgets('smoke', (tester) async {
+        await prepare(tester);
+        connection.prepare(json: GetFileTemporaryUrlResult(
+          url: '/temp/s3kr1t-auth-token/paper.pdf').toJson());
+        final link = parseInternalLink(
+          store.tryResolveUrl('/user_uploads/123/ab/paper.pdf')!, store);
+
+        final future = ZulipAction.getFileTemporaryUrl(context,
+          link as UserUploadLink);
+        await tester.pump(Duration.zero);
+        check(connection.lastRequest).isA<http.Request>()
+          ..method.equals('GET')
+          ..url.path.equals('/api/v1/user_uploads/123/ab/paper.pdf')
+          ..url.query.isEmpty()
+          ..body.isEmpty();
+        check(await future).equals(
+          store.tryResolveUrl('/temp/s3kr1t-auth-token/paper.pdf')!);
       });
     });
   });

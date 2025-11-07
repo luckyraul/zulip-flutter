@@ -6,6 +6,7 @@ import 'package:zulip/model/autocomplete.dart';
 import 'package:zulip/model/binding.dart';
 import 'package:zulip/model/database.dart';
 import 'package:zulip/model/recent_dm_conversations.dart';
+import 'package:zulip/model/server_support.dart';
 import 'package:zulip/model/settings.dart';
 import 'package:zulip/model/store.dart';
 import 'package:zulip/model/unreads.dart';
@@ -18,6 +19,8 @@ extension GlobalSettingsDataChecks on Subject<GlobalSettingsData> {
 extension AccountChecks on Subject<Account> {
   Subject<int> get id => has((x) => x.id, 'id');
   Subject<Uri> get realmUrl => has((x) => x.realmUrl, 'realmUrl');
+  Subject<String?> get realmName => has((x) => x.realmName, 'realmName');
+  Subject<Uri?> get realmIcon => has((x) => x.realmIcon, 'realmIcon');
   Subject<int> get userId => has((x) => x.userId, 'userId');
   Subject<String> get email => has((x) => x.email, 'email');
   Subject<String> get apiKey => has((x) => x.apiKey, 'apiKey');
@@ -35,6 +38,7 @@ extension GlobalSettingsStoreChecks on Subject<GlobalSettingsStore> {
   Subject<VisitFirstUnreadSetting> get visitFirstUnread => has((x) => x.visitFirstUnread, 'visitFirstUnread');
   Subject<MarkReadOnScrollSetting> get markReadOnScroll => has((x) => x.markReadOnScroll, 'markReadOnScroll');
   Subject<bool> getBool(BoolGlobalSetting setting) => has((x) => x.getBool(setting), 'getBool(${setting.name}');
+  Subject<int?> getInt(IntGlobalSetting setting) => has((x) => x.getInt(setting), 'getInt(${setting.name}');
 }
 
 extension GlobalStoreChecks on Subject<GlobalStore> {
@@ -43,6 +47,7 @@ extension GlobalStoreChecks on Subject<GlobalStore> {
   Subject<Iterable<int>> get accountIds => has((x) => x.accountIds, 'accountIds');
   Subject<Iterable<({ int accountId, Account account })>> get accountEntries => has((x) => x.accountEntries, 'accountEntries');
   Subject<Account?> getAccount(int id) => has((x) => x.getAccount(id), 'getAccount($id)');
+  Subject<Account?> get lastVisitedAccount => has((x) => x.lastVisitedAccount, 'lastVisitedAccount');
 }
 
 extension PerAccountStoreChecks on Subject<PerAccountStore> {
@@ -57,7 +62,7 @@ extension PerAccountStoreChecks on Subject<PerAccountStore> {
   Subject<int> get accountId => has((x) => x.accountId, 'accountId');
   Subject<Account> get account => has((x) => x.account, 'account');
   Subject<int> get selfUserId => has((x) => x.selfUserId, 'selfUserId');
-  Subject<UserSettings?> get userSettings => has((x) => x.userSettings, 'userSettings');
+  Subject<UserSettings> get userSettings => has((x) => x.userSettings, 'userSettings');
   Subject<Map<int, SavedSnippet>> get savedSnippets => has((x) => x.savedSnippets, 'savedSnippets');
   Subject<Map<int, ZulipStream>> get streams => has((x) => x.streams, 'streams');
   Subject<Map<String, ZulipStream>> get streamsByName => has((x) => x.streamsByName, 'streamsByName');

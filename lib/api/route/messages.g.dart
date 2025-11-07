@@ -50,10 +50,18 @@ Map<String, dynamic> _$UpdateMessageResultToJson(
 ) => <String, dynamic>{};
 
 UploadFileResult _$UploadFileResultFromJson(Map<String, dynamic> json) =>
-    UploadFileResult(uri: json['uri'] as String);
+    UploadFileResult(url: json['uri'] as String);
 
 Map<String, dynamic> _$UploadFileResultToJson(UploadFileResult instance) =>
-    <String, dynamic>{'uri': instance.uri};
+    <String, dynamic>{'uri': instance.url};
+
+GetFileTemporaryUrlResult _$GetFileTemporaryUrlResultFromJson(
+  Map<String, dynamic> json,
+) => GetFileTemporaryUrlResult(url: json['url'] as String);
+
+Map<String, dynamic> _$GetFileTemporaryUrlResultToJson(
+  GetFileTemporaryUrlResult instance,
+) => <String, dynamic>{'url': instance.url};
 
 UpdateMessageFlagsResult _$UpdateMessageFlagsResultFromJson(
   Map<String, dynamic> json,
@@ -88,6 +96,18 @@ Map<String, dynamic> _$UpdateMessageFlagsForNarrowResultToJson(
   'found_oldest': instance.foundOldest,
   'found_newest': instance.foundNewest,
 };
+
+GetReadReceiptsResult _$GetReadReceiptsResultFromJson(
+  Map<String, dynamic> json,
+) => GetReadReceiptsResult(
+  userIds: (json['user_ids'] as List<dynamic>)
+      .map((e) => (e as num).toInt())
+      .toList(),
+);
+
+Map<String, dynamic> _$GetReadReceiptsResultToJson(
+  GetReadReceiptsResult instance,
+) => <String, dynamic>{'user_ids': instance.userIds};
 
 const _$AnchorCodeEnumMap = {
   AnchorCode.newest: 'newest',

@@ -71,7 +71,7 @@ Uri narrowLink(PerAccountStore store, Narrow narrow, {int? nearMessageId}) {
     fragment.write('${element.operator}/');
 
     switch (element) {
-      case ApiNarrowStream():
+      case ApiNarrowChannel():
         final streamId = element.operand;
         final name = store.streams[streamId]?.name ?? 'unknown';
         final slugifiedName = _encodeHashComponent(name.replaceAll(' ', '-'));
@@ -128,6 +128,47 @@ class NarrowLink extends InternalLink {
   final int? nearMessageId;
 }
 
+/// A parsed link to an uploaded file in Zulip.
+///
+/// The structure mirrors the data required for [getFileTemporaryUrl]:
+///   https://zulip.com/api/get-file-temporary-url
+class UserUploadLink extends InternalLink {
+  UserUploadLink(this.realmId, this.path, {required super.realmUrl});
+
+  static UserUploadLink? _tryParse(String urlPath, Uri realmUrl) {
+    final match = _urlPathRegexp.matchAsPrefix(urlPath);
+    if (match == null) return null;
+    final realmId = int.parse(match.group(1)!, radix: 10);
+    return UserUploadLink(realmId, match.group(2)!, realmUrl: realmUrl);
+  }
+
+  static const _urlPathPrefix = '/user_uploads/';
+  static final _urlPathRegexp = RegExp(r'^/user_uploads/(\d+)/(.+)$');
+
+  final int realmId;
+
+  /// The remaining path components after the realm ID.
+  ///
+  /// This value excludes the slash that separates the realm ID from the
+  /// next component, but includes the rest of the URL path after that slash.
+  ///
+  /// This value should only be used as part of a URL, not elsewhere
+  /// in the Zulip API.  Other uses are likely to cause a new version
+  /// of the following issue:
+  ///   https://github.com/zulip/zulip-flutter/issues/1709
+  /// Concretely, this string might differ from the corresponding substring of
+  /// the original URL string (e.g., one found in the HTML of a Zulip message):
+  /// if there were non-ASCII characters in the original string,
+  /// then [Uri.parse] will have converted them to percent-encoded form.
+  /// This is fine as part of a URL, because then the HTTP client would
+  /// otherwise have had to percent-encode those characters anyway.
+  ///
+  /// This corresponds to `filename` in the arguments to [getFileTemporaryUrl];
+  /// but it's typically several path components,
+  /// not just one as that name would suggest.
+  final String path;
+}
+
 /// Try to parse the given URL as a page in this app, on `store`'s realm.
 ///
 /// `url` must already be a result from [PerAccountStore.tryResolveUrl]
@@ -148,27 +189,37 @@ class NarrowLink extends InternalLink {
 ///   #narrow/stream/1-announce/stream/1-announce (duplicated operator)
 // TODO(#1661): handle all valid narrow links, returning a search narrow
 InternalLink? parseInternalLink(Uri url, PerAccountStore store) {
-  if (!_isInternalLink(url, store.realmUrl)) return null;
+  if (!_sameOrigin(url, store.realmUrl)) return null;
 
-  final (category, segments) = _getCategoryAndSegmentsFromFragment(url.fragment);
-  switch (category) {
-    case 'narrow':
-      if (segments.isEmpty || !segments.length.isEven) return null;
-      return _interpretNarrowSegments(segments, store);
+  if ((url.hasEmptyPath || url.path == '/')) {
+    if (url.hasQuery) return null;
+    if (!url.hasFragment) return null;
+    // The URL is of the form `/#…` relative to the realm URL,
+    // the shape used for representing a state within the web app.
+    final (category, segments) = _getCategoryAndSegmentsFromFragment(url.fragment);
+    switch (category) {
+      case 'narrow':
+        if (segments.isEmpty || !segments.length.isEven) return null;
+        return _interpretNarrowSegments(segments, store);
+    }
+  } else if (url.path.startsWith(UserUploadLink._urlPathPrefix)) {
+    return UserUploadLink._tryParse(url.path, store.realmUrl);
   }
+
   return null;
 }
 
-/// Check if `url` is an internal link on the given `realmUrl`.
-bool _isInternalLink(Uri url, Uri realmUrl) {
+/// Check if `url` has the same origin as `realmUrl`.
+bool _sameOrigin(Uri url, Uri realmUrl) {
   try {
-    if (url.origin != realmUrl.origin) return false;
+    return url.origin == realmUrl.origin;
   } on StateError {
+    // The getter [Uri.origin] throws if the scheme is not "http" or "https".
+    // (Also if the URL is relative or certain kinds of malformed, but those
+    // should be impossible as `url` came from [PerAccountStore.tryResolveUrl]).
+    // In that case `url` has no "origin", and certainly not the realm's origin.
     return false;
   }
-  return (url.hasEmptyPath || url.path == '/')
-    && !url.hasQuery
-    && url.hasFragment;
 }
 
 /// Split `fragment` of arbitrary segments and handle trailing slashes
@@ -182,7 +233,7 @@ NarrowLink? _interpretNarrowSegments(List<String> segments, PerAccountStore stor
   assert(segments.isNotEmpty);
   assert(segments.length.isEven);
 
-  ApiNarrowStream? streamElement;
+  ApiNarrowChannel? channelElement;
   ApiNarrowTopic? topicElement;
   ApiNarrowDm? dmElement;
   ApiNarrowWith? withElement;
@@ -196,10 +247,10 @@ NarrowLink? _interpretNarrowSegments(List<String> segments, PerAccountStore stor
     switch (operator) {
       case _NarrowOperator.stream:
       case _NarrowOperator.channel:
-        if (streamElement != null) return null;
+        if (channelElement != null) return null;
         final streamId = _parseStreamOperand(operand, store);
         if (streamId == null) return null;
-        streamElement = ApiNarrowStream(streamId, negated: negated);
+        channelElement = ApiNarrowChannel(streamId, negated: negated);
 
       case _NarrowOperator.topic:
       case _NarrowOperator.subject:
@@ -238,7 +289,7 @@ NarrowLink? _interpretNarrowSegments(List<String> segments, PerAccountStore stor
 
   final Narrow? narrow;
   if (isElementOperands.isNotEmpty) {
-    if (streamElement != null || topicElement != null || dmElement != null || withElement != null) {
+    if (channelElement != null || topicElement != null || dmElement != null || withElement != null) {
       return null;
     }
     if (isElementOperands.length > 1) return null;
@@ -257,10 +308,10 @@ NarrowLink? _interpretNarrowSegments(List<String> segments, PerAccountStore stor
         return null;
     }
   } else if (dmElement != null) {
-    if (streamElement != null || topicElement != null || withElement != null) return null;
+    if (channelElement != null || topicElement != null || withElement != null) return null;
     narrow = DmNarrow.withUsers(dmElement.operand, selfUserId: store.selfUserId);
-  } else if (streamElement != null) {
-    final streamId = streamElement.operand;
+  } else if (channelElement != null) {
+    final streamId = channelElement.operand;
     if (topicElement != null) {
       narrow = TopicNarrow(streamId, topicElement.operand, with_: withElement?.operand);
     } else {

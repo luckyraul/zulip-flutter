@@ -17,8 +17,8 @@ import 'package:zulip/api/route/realm.dart';
 import 'package:zulip/log.dart';
 import 'package:zulip/model/actions.dart';
 import 'package:zulip/model/presence.dart';
+import 'package:zulip/model/server_support.dart';
 import 'package:zulip/model/store.dart';
-import 'package:zulip/notifications/receive.dart';
 
 import '../api/fake_api.dart';
 import '../api/model/model_checks.dart';
@@ -46,7 +46,7 @@ void main() {
     final store1 = PerAccountStore.fromInitialSnapshot(
       globalStore: globalStore,
       accountId: 1,
-      initialSnapshot: eg.initialSnapshot(),
+      initialSnapshot: eg.initialSnapshot(realmUsers: [eg.selfUser]),
     );
     completers(1).single.complete(store1);
     check(await future1).identicalTo(store1);
@@ -57,7 +57,7 @@ void main() {
     final store2 = PerAccountStore.fromInitialSnapshot(
       globalStore: globalStore,
       accountId: 2,
-      initialSnapshot: eg.initialSnapshot(),
+      initialSnapshot: eg.initialSnapshot(realmUsers: [eg.otherUser]),
     );
     completers(2).single.complete(store2);
     check(await future2).identicalTo(store2);
@@ -84,12 +84,12 @@ void main() {
     final store1 = PerAccountStore.fromInitialSnapshot(
       globalStore: globalStore,
       accountId: 1,
-      initialSnapshot: eg.initialSnapshot(),
+      initialSnapshot: eg.initialSnapshot(realmUsers: [eg.selfUser]),
     );
     final store2 = PerAccountStore.fromInitialSnapshot(
       globalStore: globalStore,
       accountId: 2,
-      initialSnapshot: eg.initialSnapshot(),
+      initialSnapshot: eg.initialSnapshot(realmUsers: [eg.otherUser]),
     );
     completers(1).single.complete(store1);
     completers(2).single.complete(store2);
@@ -135,17 +135,14 @@ void main() {
   }));
 
   test('GlobalStore.perAccount loading succeeds', () => awaitFakeAsync((async) async {
-    NotificationService.instance.token = ValueNotifier('asdf');
-    addTearDown(NotificationService.debugReset);
-
     final globalStore = UpdateMachineTestGlobalStore(accounts: [eg.selfAccount]);
     final connection = globalStore.apiConnectionFromAccount(eg.selfAccount) as FakeApiConnection;
     final future = globalStore.perAccount(eg.selfAccount.id);
     check(connection.takeRequests()).length.equals(1); // register request
 
     await future;
-    // poll, server-emoji-data, register-token requests
-    check(connection.takeRequests()).length.equals(3);
+    // poll and server-emoji-data requests
+    check(connection.takeRequests()).length.equals(2);
     check(connection).isOpen.isTrue();
   }));
 
@@ -161,7 +158,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).single.equals(eg.selfAccount.id);
-    // no poll, server-emoji-data, or register-token requests
+    // no poll or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -180,7 +177,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).single.equals(eg.selfAccount.id);
-    // no poll, server-emoji-data, or register-token requests
+    // no poll or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -201,7 +198,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).isEmpty();
-    // no poll, server-emoji-data, or register-token requests
+    // no poll or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -222,7 +219,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).isEmpty();
-    // no poll, server-emoji-data, or register-token requests
+    // no poll or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -244,7 +241,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).isEmpty();
-    // no poll, server-emoji-data, or register-token requests
+    // no poll or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -268,7 +265,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).isEmpty();
-    // no poll, server-emoji-data, or register-token requests
+    // no poll or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -292,7 +289,7 @@ void main() {
 
     await check(future).throws<AccountNotFoundException>();
     check(globalStore.takeDoRemoveAccountCalls()).isEmpty();
-    // no retry-register, poll, server-emoji-data, or register-token requests
+    // no retry-register, poll, or other follow-up requests
     check(connection.takeRequests()).isEmpty();
     check(connection).isOpen.isFalse();
   }));
@@ -377,6 +374,21 @@ void main() {
       zulipVersion: newZulipVersion,
       zulipMergeBase: Value(newZulipMergeBase),
       zulipFeatureLevel: newZulipFeatureLevel));
+  });
+
+  test('GlobalStore.updateRealmData', () async {
+    final selfAccount = eg.selfAccount.copyWith(
+      realmName: Value('Organization A'),
+      realmIcon: Value(Uri.parse('/image-a.png')));
+    final globalStore = eg.globalStore(accounts: [selfAccount]);
+    final updated = await globalStore.updateRealmData(selfAccount.id,
+      realmName: 'Organization B',
+      realmIcon: Uri.parse('/image-b.png'));
+    check(globalStore.getAccount(selfAccount.id))
+      ..identicalTo(updated)
+      ..equals(selfAccount.copyWith(
+        realmName: Value('Organization B'),
+        realmIcon: Value(Uri.parse('/image-b.png'))));
   });
 
   group('GlobalStore.removeAccount', () {
@@ -482,8 +494,6 @@ void main() {
         as FakeApiConnection);
       UpdateMachine.debugEnableFetchEmojiData = false;
       addTearDown(() => UpdateMachine.debugEnableFetchEmojiData = true);
-      UpdateMachine.debugEnableRegisterNotificationToken = false;
-      addTearDown(() => UpdateMachine.debugEnableRegisterNotificationToken = true);
     }
 
     void checkLastRequest() {
@@ -514,18 +524,24 @@ void main() {
 
     test('updates account from snapshot', () => awaitFakeAsync((async) async {
       final account = eg.account(user: eg.selfUser,
+        realmName: 'Organization A',
+        realmIcon: Uri.parse('/image-a.png'),
         zulipVersion: '6.0+gabcd',
         zulipMergeBase: '6.0',
         zulipFeatureLevel: 123,
       );
       await prepareStore(account: account);
       check(globalStore.getAccount(account.id)).isNotNull()
+        ..realmName.equals('Organization A')
+        ..realmIcon.equals(Uri.parse('/image-a.png'))
         ..zulipVersion.equals('6.0+gabcd')
         ..zulipMergeBase.equals('6.0')
         ..zulipFeatureLevel.equals(123);
 
       globalStore.useCachedApiConnections = true;
       connection.prepare(json: eg.initialSnapshot(
+        realmName: 'Organization B',
+        realmIconUrl: Uri.parse('/image-b.png'),
         zulipVersion: '8.0+g9876',
         zulipMergeBase: '8.0',
         zulipFeatureLevel: 234,
@@ -534,6 +550,8 @@ void main() {
       updateMachine.debugPauseLoop();
       check(globalStore.getAccount(account.id)).isNotNull()
         ..identicalTo(updateMachine.store.account)
+        ..realmName.equals('Organization B')
+        ..realmIcon.equals(Uri.parse('/image-b.png'))
         ..zulipVersion.equals('8.0+g9876')
         ..zulipMergeBase.equals('8.0')
         ..zulipFeatureLevel.equals(234);
@@ -570,7 +588,6 @@ void main() {
     }));
 
     // TODO test UpdateMachine.load starts polling loop
-    // TODO test UpdateMachine.load calls registerNotificationToken
   });
 
   group('UpdateMachine.fetchEmojiData', () {
@@ -1156,116 +1173,6 @@ void main() {
       async.flushTimers();
       // Reload never succeeds and there are no unhandled errors.
       check(globalStore.perAccountSync(eg.selfAccount.id)).isNull();
-    }));
-  });
-
-  group('UpdateMachine.registerNotificationToken', () {
-    late UpdateMachine updateMachine;
-    late FakeApiConnection connection;
-
-    void prepareStore() {
-      updateMachine = eg.updateMachine();
-      connection = updateMachine.store.connection as FakeApiConnection;
-    }
-
-    void checkLastRequestApns({required String token, required String appid}) {
-      check(connection.takeRequests()).single.isA<http.Request>()
-        ..method.equals('POST')
-        ..url.path.equals('/api/v1/users/me/apns_device_token')
-        ..bodyFields.deepEquals({'token': token, 'appid': appid});
-    }
-
-    void checkLastRequestFcm({required String token}) {
-      check(connection.takeRequests()).single.isA<http.Request>()
-        ..method.equals('POST')
-        ..url.path.equals('/api/v1/users/me/android_gcm_reg_id')
-        ..bodyFields.deepEquals({'token': token});
-    }
-
-    testAndroidIos('token already known', () => awaitFakeAsync((async) async {
-      // This tests the case where [NotificationService.start] has already
-      // learned the token before the store is created.
-      // (This is probably the common case.)
-      addTearDown(testBinding.reset);
-      testBinding.firebaseMessagingInitialToken = '012abc';
-      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.mygento.zulip');
-      addTearDown(NotificationService.debugReset);
-      await NotificationService.instance.start();
-
-      // On store startup, send the token.
-      prepareStore();
-      connection.prepare(json: {});
-      await updateMachine.registerNotificationToken();
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        checkLastRequestFcm(token: '012abc');
-      } else {
-        checkLastRequestApns(token: '012abc', appid: 'com.mygento.zulip');
-      }
-
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        // If the token changes, send it again.
-        testBinding.firebaseMessaging.setToken('456def');
-        connection.prepare(json: {});
-        async.flushMicrotasks();
-        checkLastRequestFcm(token: '456def');
-      }
-    }));
-
-    testAndroidIos('token initially unknown', () => awaitFakeAsync((async) async {
-      // This tests the case where the store is created while our
-      // request for the token is still pending.
-      addTearDown(testBinding.reset);
-      testBinding.firebaseMessagingInitialToken = '012abc';
-      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.mygento.zulip');
-      addTearDown(NotificationService.debugReset);
-      final startFuture = NotificationService.instance.start();
-
-      // TODO this test is a bit brittle in its interaction with asynchrony;
-      //   to fix, probably extend TestZulipBinding to control when getToken finishes.
-      //
-      // The aim here is to first wait for `store.registerNotificationToken`
-      // to complete whatever it's going to do; then check no request was made;
-      // and only after that wait for `NotificationService.start` to finish,
-      // including its `getToken` call.
-
-      // On store startup, send nothing (because we have nothing to send).
-      prepareStore();
-      await updateMachine.registerNotificationToken();
-      check(connection.lastRequest).isNull();
-
-      // When the token later appears, send it.
-      connection.prepare(json: {});
-      await startFuture;
-      async.flushMicrotasks();
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        checkLastRequestFcm(token: '012abc');
-      } else {
-        checkLastRequestApns(token: '012abc', appid: 'com.mygento.zulip');
-      }
-
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        // If the token subsequently changes, send it again.
-        testBinding.firebaseMessaging.setToken('456def');
-        connection.prepare(json: {});
-        async.flushMicrotasks();
-        checkLastRequestFcm(token: '456def');
-      }
-    }));
-
-    test('on iOS, use provided app ID from packageInfo', () => awaitFakeAsync((async) async {
-      final origTargetPlatform = debugDefaultTargetPlatformOverride;
-      addTearDown(() => debugDefaultTargetPlatformOverride = origTargetPlatform);
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(testBinding.reset);
-      testBinding.firebaseMessagingInitialToken = '012abc';
-      testBinding.packageInfoResult = eg.packageInfo(packageName: 'com.example.test');
-      addTearDown(NotificationService.debugReset);
-      await NotificationService.instance.start();
-
-      prepareStore();
-      connection.prepare(json: {});
-      await updateMachine.registerNotificationToken();
-      checkLastRequestApns(token: '012abc', appid: 'com.example.test');
     }));
   });
 

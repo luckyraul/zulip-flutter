@@ -34,7 +34,6 @@ extension UserChecks on Subject<User> {
   Subject<String> get fullName => has((x) => x.fullName, 'fullName');
   Subject<String> get dateJoined => has((x) => x.dateJoined, 'dateJoined');
   Subject<bool> get isActive => has((x) => x.isActive, 'isActive');
-  Subject<bool?> get isBillingAdmin => has((x) => x.isBillingAdmin, 'isBillingAdmin');
   Subject<bool> get isBot => has((x) => x.isBot, 'isBot');
   Subject<int?> get botType => has((x) => x.botType, 'botType');
   Subject<int?> get botOwnerId => has((x) => x.botOwnerId, 'botOwnerId');
@@ -54,6 +53,21 @@ extension SavedSnippetChecks on Subject<SavedSnippet> {
 }
 
 extension ZulipStreamChecks on Subject<ZulipStream> {
+  Subject<int> get streamId => has((x) => x.streamId, 'streamId');
+
+  Subject<bool> get inviteOnly => has((x) => x.inviteOnly, 'inviteOnly');
+  Subject<bool> get isWebPublic => has((x) => x.isWebPublic, 'isWebPublic');
+}
+
+extension ChannelFolderChecks on Subject<ChannelFolder> {
+  Subject<int> get id => has((x) => x.id, 'id');
+  Subject<String> get name => has((x) => x.name, 'name');
+  Subject<int?> get order => has((x) => x.order, 'order');
+  Subject<int?> get dateCreated => has((x) => x.dateCreated, 'dateCreated');
+  Subject<int?> get creatorId => has((x) => x.creatorId, 'creatorId');
+  Subject<String> get description => has((x) => x.description, 'description');
+  Subject<String> get renderedDescription => has((x) => x.renderedDescription, 'renderedDescription');
+  Subject<bool> get isArchived => has((x) => x.isArchived, 'isArchived');
 }
 
 extension TopicNameChecks on Subject<TopicName> {
