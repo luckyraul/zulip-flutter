@@ -185,6 +185,7 @@ class UserSettingsUpdateEvent extends Event {
     switch (UserSettingName.fromRawString(json['property'] as String)) {
       case UserSettingName.twentyFourHourTime:
         return TwentyFourHourTimeMode.fromApiValue(value as bool?);
+      case UserSettingName.starredMessageCounts:
       case UserSettingName.displayEmojiReactionUsers:
         return value as bool;
       case UserSettingName.emojiset:
@@ -616,9 +617,21 @@ class ChannelDeleteEvent extends ChannelEvent {
   @JsonKey(includeToJson: true)
   String get op => 'delete';
 
-  final List<ZulipStream> streams;
+  @JsonKey(name: 'stream_ids', readValue: _readChannelIds)
+  final List<int> channelIds;
 
-  ChannelDeleteEvent({required super.id, required this.streams});
+  // TODO(server-10) simplify away; rely on stream_ids
+  static List<int> _readChannelIds(Map<dynamic, dynamic> json, String key) {
+    final channelIds = json['stream_ids'] as List<dynamic>?;
+    if (channelIds != null) return channelIds.map((id) => id as int).toList();
+
+    final channels = json['streams'] as List<dynamic>;
+    return channels
+      .map((c) => (c as Map<String, dynamic>)['stream_id'] as int)
+      .toList();
+  }
+
+  ChannelDeleteEvent({required super.id, required this.channelIds});
 
   factory ChannelDeleteEvent.fromJson(Map<String, dynamic> json) =>
     _$ChannelDeleteEventFromJson(json);
@@ -691,6 +704,8 @@ class ChannelUpdateEvent extends ChannelEvent {
       case ChannelPropertyName.canSendMessageGroup:
       case ChannelPropertyName.canSubscribeGroup:
         return GroupSettingValue.fromJson(value);
+      case ChannelPropertyName.isRecentlyActive:
+        return value as bool;
       case ChannelPropertyName.streamWeeklyTraffic:
         return value as int?;
       case null:

@@ -161,7 +161,7 @@ class UnicodeEmojiWidget extends StatelessWidget {
         //   accomplished with help from a [StrutStyle]; see below).
         // - There seems to be approximately no space on its left.
         final boxSize = textScaler.scale(size);
-        return Stack(alignment: Alignment.centerLeft, clipBehavior: Clip.none, children: [
+        return Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
           SizedBox(height: boxSize, width: boxSize),
           PositionedDirectional(start: 0, child: Text(
             textScaler: textScaler,
@@ -214,7 +214,7 @@ class ImageEmojiWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = textScaler.scale(this.size);
 
-    final resolvedUrl = animationMode.resolve(context)
+    final resolvedUrl = animationMode.shouldAnimate(context)
       ? emojiDisplay.resolvedUrl
       : (emojiDisplay.resolvedStillUrl ?? emojiDisplay.resolvedUrl);
 

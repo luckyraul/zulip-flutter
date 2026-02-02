@@ -32,6 +32,7 @@ import 'server_support.dart';
 import 'channel.dart';
 import 'saved_snippet.dart';
 import 'settings.dart';
+import 'topics.dart';
 import 'typing_status.dart';
 import 'unreads.dart';
 import 'user.dart';
@@ -345,6 +346,71 @@ abstract class GlobalStore extends ChangeNotifier {
     ));
   }
 
+  /// Fetches the server settings for the given [realmUrl].
+  ///
+  /// The caller is responsible for checking if the returned
+  /// [GetServerSettingsResult] represents a supported version, by
+  /// parsing it via [ZulipVersionData.fromServerSettings] and checking
+  /// [ZulipVersionData.isUnsupported].
+  Future<GetServerSettingsResult> fetchServerSettings(Uri realmUrl) async {
+    final connection = apiConnection(
+      realmUrl: realmUrl,
+      zulipFeatureLevel: null);
+    try {
+      return await getServerSettings(connection);
+    } on MalformedServerResponseException catch (e) {
+      final zulipVersionData = ZulipVersionData.fromMalformedServerResponseException(e);
+      if (zulipVersionData != null && zulipVersionData.isUnsupported) {
+        throw ServerVersionUnsupportedException(zulipVersionData);
+      }
+      rethrow;
+    } finally {
+      connection.close();
+    }
+  }
+
+  /// Attempt to refresh the realm metadata for each account.
+  ///
+  /// Fetches server settings for each account and then calls [updateRealmData]
+  /// to update the realm metadata (name and icon).
+  ///
+  /// The update for some accounts may be skipped if:
+  ///  - The [PerAccountStore] for the account is already loaded or is loading.
+  ///  - The Zulip Server version of the realm's server is unsupported.
+  ///
+  /// Returns immediately; the fetches and updates are done asynchronously.
+  void refreshRealmMetadata() {
+    for (final account in accounts) {
+      final accountId = account.id;
+
+      // Avoid updating realm metadata if per account store has already
+      // loaded or is being loaded. It will be updated with data from
+      // the initial snapshot or realm update events.
+      if (_perAccountStoresLoading.containsKey(accountId)) continue;
+      if (_perAccountStores.containsKey(accountId)) continue;
+
+      // Fetch the server settings and update the realm data without awaiting.
+      // This allows fetching server settings of all the accounts in parallel.
+      unawaited(() async {
+        final serverSettings = await fetchServerSettings(account.realmUrl);
+        // Skip the server version check here.  The server settings response
+        // got parsed successfully and we only care about realm name and
+        // realm icon URL from it.
+
+        // Account got logged out while fetching server settings.
+        if (getAccount(accountId) == null) return;
+
+        if (_perAccountStoresLoading.containsKey(accountId)) return;
+        if (_perAccountStores.containsKey(accountId)) return;
+
+        await updateRealmData(
+          accountId,
+          realmName: serverSettings.realmName,
+          realmIcon: serverSettings.realmIcon);
+      }());
+    }
+  }
+
   /// Update an account in the underlying data store.
   Future<void> doUpdateAccount(int accountId, AccountsCompanion data);
 
@@ -423,9 +489,14 @@ abstract class PerAccountStoreBase {
   /// Always equal to `account.realmUrl` and `connection.realmUrl`.
   Uri get realmUrl => connection.realmUrl;
 
-  String? get realmName => account.realmName;
+  /// Always equal to `account.realmName`.
+  String get realmName => account.realmName!;
 
-  Uri? get realmIcon => account.realmIcon;
+  /// The full, resolved URL for the Zulip realm icon.
+  ///
+  /// Returned URL is derived by resolving [account.realmIcon] (relative) URL
+  /// against the base [realmUrl].
+  Uri get resolvedRealmIcon => realmUrl.resolveUri(account.realmIcon!);
 
   /// Resolve [reference] as a URL relative to [realmUrl].
   ///
@@ -507,6 +578,8 @@ class PerAccountStore extends PerAccountStoreBase with
     assert(account.zulipVersion == initialSnapshot.zulipVersion
       && account.zulipMergeBase == initialSnapshot.zulipMergeBase
       && account.zulipFeatureLevel == initialSnapshot.zulipFeatureLevel);
+    assert(account.realmName == initialSnapshot.realmName
+      && account.realmIcon == initialSnapshot.realmIconUrl);
 
     connection ??= globalStore.apiConnectionFromAccount(account);
     assert(connection.zulipFeatureLevel == account.zulipFeatureLevel);
@@ -564,7 +637,9 @@ class PerAccountStore extends PerAccountStoreBase with
       presence: Presence(realm: realm,
         initial: initialSnapshot.presences),
       channels: channels,
-      messages: MessageStoreImpl(channels: channels),
+      topics: Topics(core: core),
+      messages: MessageStoreImpl(channels: channels,
+        initialStarredMessages: initialSnapshot.starredMessages),
       unreads: Unreads(core: core, channelStore: channels,
         initial: initialSnapshot.unreadMsgs),
       recentDmConversationsView: RecentDmConversationsView(core: core,
@@ -586,6 +661,7 @@ class PerAccountStore extends PerAccountStoreBase with
     required this.typingStatus,
     required this.presence,
     required ChannelStoreImpl channels,
+    required this.topics,
     required MessageStoreImpl messages,
     required this.unreads,
     required this.recentDmConversationsView,
@@ -678,6 +754,8 @@ class PerAccountStore extends PerAccountStoreBase with
   @override
   ChannelStore get channelStore => _channels;
   final ChannelStoreImpl _channels;
+
+  final Topics topics;
 
   //|//////////////////////////////
   // Messages, and summaries of messages.
@@ -776,6 +854,8 @@ class PerAccountStore extends PerAccountStoreBase with
         switch (event.property!) {
           case UserSettingName.twentyFourHourTime:
             userSettings.twentyFourHourTime        = event.value as TwentyFourHourTimeMode;
+          case UserSettingName.starredMessageCounts:
+            userSettings.starredMessageCounts      = event.value as bool;
           case UserSettingName.displayEmojiReactionUsers:
             userSettings.displayEmojiReactionUsers = event.value as bool;
           case UserSettingName.emojiset:
@@ -793,6 +873,11 @@ class PerAccountStore extends PerAccountStoreBase with
       case UserGroupEvent():
         assert(debugLog("server event: user_group/${event.op}"));
         _groups.handleUserGroupEvent(event);
+        if (event is UserGroupRemoveEvent) {
+          autocompleteViewManager.handleUserGroupRemoveEvent(event);
+        } else if (event is UserGroupUpdateEvent) {
+          autocompleteViewManager.handleUserGroupUpdateEvent(event);
+        }
         notifyListeners();
 
       case RealmUserAddEvent():
@@ -825,6 +910,11 @@ class PerAccountStore extends PerAccountStoreBase with
           _messages.handleChannelDeleteEvent(event);
         }
         _channels.handleChannelEvent(event);
+        if (event is ChannelDeleteEvent) {
+          autocompleteViewManager.handleChannelDeleteEvent(event);
+        } else if (event is ChannelUpdateEvent) {
+          autocompleteViewManager.handleChannelUpdateEvent(event);
+        }
         notifyListeners();
 
       case SubscriptionEvent():
@@ -862,6 +952,7 @@ class PerAccountStore extends PerAccountStoreBase with
         unreads.handleMessageEvent(event);
         recentDmConversationsView.handleMessageEvent(event);
         recentSenders.handleMessage(event.message); // TODO(#824)
+        topics.handleMessageEvent(event);
         // When adding anything here (to handle [MessageEvent]),
         // it probably belongs in [reconcileMessages] too.
 
@@ -869,21 +960,26 @@ class PerAccountStore extends PerAccountStoreBase with
         assert(debugLog("server event: update_message ${event.messageId}"));
         _messages.handleUpdateMessageEvent(event);
         unreads.handleUpdateMessageEvent(event);
+        topics.handleUpdateMessageEvent(event);
 
       case DeleteMessageEvent():
         assert(debugLog("server event: delete_message ${event.messageIds}"));
+        bool shouldNotify = false;
         // This should be called before [_messages.handleDeleteMessageEvent(event)],
         // as we need to know about each message for [event.messageIds],
         // specifically, their `senderId`s. By calling this after the
         // aforementioned line, we'll lose reference to those messages.
         recentSenders.handleDeleteMessageEvent(event, messages);
-        _messages.handleDeleteMessageEvent(event);
+        shouldNotify |= _messages.handleDeleteMessageEvent(event);
         unreads.handleDeleteMessageEvent(event);
+        if (shouldNotify) notifyListeners();
 
       case UpdateMessageFlagsEvent():
         assert(debugLog("server event: update_message_flags/${event.op} ${event.flag.toJson()}"));
-        _messages.handleUpdateMessageFlagsEvent(event);
+        bool shouldNotify = false;
+        shouldNotify |= _messages.handleUpdateMessageFlagsEvent(event);
         unreads.handleUpdateMessageFlagsEvent(event);
+        if (shouldNotify) notifyListeners();
 
       case SubmessageEvent():
         assert(debugLog("server event: submessage ${event.content}"));

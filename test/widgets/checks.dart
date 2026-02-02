@@ -12,12 +12,13 @@ import 'package:zulip/widgets/compose_box.dart';
 import 'package:zulip/widgets/emoji.dart';
 import 'package:zulip/widgets/emoji_reaction.dart';
 import 'package:zulip/widgets/image.dart';
+import 'package:zulip/widgets/lightbox.dart';
 import 'package:zulip/widgets/login.dart';
 import 'package:zulip/widgets/message_list.dart';
 import 'package:zulip/widgets/page.dart';
 import 'package:zulip/widgets/profile.dart';
 import 'package:zulip/widgets/store.dart';
-import 'package:zulip/widgets/unread_count_badge.dart';
+import 'package:zulip/widgets/counter_badge.dart';
 import 'package:zulip/widgets/user.dart';
 
 extension ChannelColorSwatchChecks on Subject<ChannelColorSwatch> {
@@ -92,7 +93,7 @@ extension PerAccountStoreWidgetChecks on Subject<PerAccountStoreWidget> {
   Subject<Widget> get child => has((x) => x.child, 'child');
 }
 
-extension UnreadCountBadgeChecks on Subject<UnreadCountBadge> {
+extension CounterBadgeChecks on Subject<CounterBadge> {
   Subject<int> get count => has((b) => b.count, 'count');
   Subject<int?> get channelIdForBackground => has((b) => b.channelIdForBackground, 'channelIdForBackground');
 }
@@ -111,4 +112,9 @@ extension AllChannelsListEntryChecks on Subject<AllChannelsListEntry> {
 
 extension ToggleChecks on Subject<Toggle> {
   Subject<bool> get value => has((x) => x.value, 'value');
+}
+
+extension LightboxHeroChecks on Subject<LightboxHero> {
+  Subject<BuildContext> get messageImageContext => has((x) => x.messageImageContext, 'messageImageContext');
+  Subject<Uri> get src => has((x) => x.src, 'src');
 }

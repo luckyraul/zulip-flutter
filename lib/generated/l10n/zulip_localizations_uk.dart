@@ -41,7 +41,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get settingsPageTitle => 'Налаштування';
 
   @override
-  String get switchAccountButton => 'Змінити обліковий запис';
+  String get switchAccountButtonTooltip => 'Змінити обліковий запис';
 
   @override
   String tryAnotherAccountMessage(Object url) {
@@ -436,12 +436,24 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get successChannelLinkCopied => 'Посилання на канал скопійовано';
 
   @override
-  String get errorBannerDeactivatedDmLabel =>
+  String get composeBoxBannerLabelDeactivatedDmRecipient =>
       'Ви не можете надсилати повідомлення деактивованим користувачам.';
 
   @override
-  String get errorBannerCannotPostInChannelLabel =>
+  String get composeBoxBannerLabelUnknownDmRecipient =>
+      'You cannot send messages to unknown users.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
+      'You cannot send messages here.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendInChannel =>
       'Ви не маєте дозволу на публікацію в цьому каналі.';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribed =>
+      'Replies to your messages will not appear automatically.';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
@@ -583,6 +595,69 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   String get emptyMessageList => 'Тут немає повідомлень.';
 
   @override
+  String get emptyMessageListCombinedFeed =>
+      'У вашій об’єднаній стрічці немає повідомлень.';
+
+  @override
+  String get emptyMessageListChannelWithoutContentAccess =>
+      'У вас немає <z-link>доступу до контенту</z-link> цього каналу.';
+
+  @override
+  String get emptyMessageListChannelUnavailable =>
+      'Цього каналу не існує, або вам заборонено його переглядати.';
+
+  @override
+  String get emptyMessageListSelfDmHeader =>
+      'Ви ще не надіслали жодного особистого повідомлення самому собі!';
+
+  @override
+  String get emptyMessageListSelfDmMessage =>
+      'Використовуйте цей простір для особистих нотаток або для тестування функцій Zulip.';
+
+  @override
+  String emptyMessageListDm(String person) {
+    return 'У вас ще немає прямих повідомлень з $person.';
+  }
+
+  @override
+  String emptyMessageListDmDeactivatedUser(String person) {
+    return 'У вас немає прямих повідомлень з $person.';
+  }
+
+  @override
+  String get emptyMessageListDmUnknownUser =>
+      'У вас немає прямих повідомлень із цим користувачем.';
+
+  @override
+  String get emptyMessageListGroupDm =>
+      'У вас ще немає прямих повідомлень з цими користувачами.';
+
+  @override
+  String get emptyMessageListGroupDmDeactivatedUser =>
+      'У вас немає прямих повідомлень з цими користувачами.';
+
+  @override
+  String get emptyMessageListDmStartConversation =>
+      'Чому б не розпочати розмову?';
+
+  @override
+  String get emptyMessageListMentionsHeader =>
+      'У цьому режимі перегляду будуть відображатися повідомлення, де вас <z-link>згадують</z-link>.';
+
+  @override
+  String get emptyMessageListMentionsMessage =>
+      'Щоб привернути увагу до повідомлення, ви можете згадати користувача, групу, учасників теми або всіх підписників каналу. Введіть @ у полі створення листа та виберіть зі списку пропозицій, кого ви хочете згадати.';
+
+  @override
+  String get emptyMessageListStarredHeader =>
+      'У вас немає повідомлень із зірочкою.';
+
+  @override
+  String emptyMessageListStarredMessage(String button) {
+    return '<z-link>Позначення зірочкою</z-link> – це гарний спосіб відстежувати важливі повідомлення, такі як завдання, до яких потрібно повернутися, або корисні посилання. Щоб позначити повідомлення зірочкою, довго натисніть на нього та натисніть «$button»';
+  }
+
+  @override
   String get emptyMessageListSearch => 'Немає результатів пошуку.';
 
   @override
@@ -641,6 +716,9 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get loginMethodDivider => 'АБО';
+
+  @override
+  String get loginMethodDividerSemanticLabel => 'Альтернативні способи входу';
 
   @override
   String signInWithFoo(String method) {
@@ -790,6 +868,28 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   @override
   String get errorMarkAsUnreadFailedTitle =>
       'Не вдалося позначити як непрочитане';
+
+  @override
+  String markAllAsReadConfirmationDialogTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mark $count+ messages as read?',
+      one: 'Mark $count+ messages as read?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get markAllAsReadConfirmationDialogTitleNoCount =>
+      'Mark messages as read?';
+
+  @override
+  String get markAllAsReadConfirmationDialogMessage =>
+      'Messages in multiple conversations may be affected.';
+
+  @override
+  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
 
   @override
   String get today => 'Сьогодні';
@@ -978,7 +1078,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
   }
 
   @override
-  String get sharePageTitle => 'Поділитися';
+  String get shareChooseAccountModalTitle => 'Виберіть обліковий запис';
 
   @override
   String get mainMenuMyProfile => 'Мій профіль';
@@ -1070,6 +1170,9 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'Повідомити канал';
+
+  @override
+  String get navBarMenuLabel => 'Меню';
 
   @override
   String get messageIsEditedLabel => 'РЕДАГОВАНО';
@@ -1198,4 +1301,7 @@ class ZulipLocalizationsUk extends ZulipLocalizations {
 
   @override
   String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get topicListEmptyPlaceholderHeader => 'Тут ще немає тем.';
 }

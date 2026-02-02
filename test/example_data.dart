@@ -471,6 +471,7 @@ ZulipStream stream({
   GroupSettingValue? canDeleteOwnMessageGroup,
   GroupSettingValue? canSendMessageGroup,
   GroupSettingValue? canSubscribeGroup,
+  bool? isRecentlyActive,
   int? streamWeeklyTraffic,
 }) {
   if (channelPostPolicy == null) {
@@ -503,14 +504,15 @@ ZulipStream stream({
     canDeleteOwnMessageGroup: canDeleteOwnMessageGroup ?? GroupSettingValueNamed(nobodyGroup.id),
     canSendMessageGroup: canSendMessageGroup,
     canSubscribeGroup: canSubscribeGroup ?? GroupSettingValueNamed(nobodyGroup.id),
+    isRecentlyActive: isRecentlyActive ?? true,
     streamWeeklyTraffic: streamWeeklyTraffic,
   );
 }
 const _stream = stream;
 
-GetStreamTopicsEntry getStreamTopicsEntry({int? maxId, String? name}) {
+GetChannelTopicsEntry getChannelTopicsEntry({int? maxId, String? name}) {
   maxId ??= 123;
-  return GetStreamTopicsEntry(maxId: maxId,
+  return GetChannelTopicsEntry(maxId: maxId,
     name: TopicName(name ?? 'Test Topic #$maxId'));
 }
 
@@ -548,6 +550,7 @@ Subscription subscription(
     canDeleteOwnMessageGroup: stream.canDeleteOwnMessageGroup,
     canSendMessageGroup: stream.canSendMessageGroup,
     canSubscribeGroup: stream.canSubscribeGroup,
+    isRecentlyActive: stream.isRecentlyActive,
     streamWeeklyTraffic: stream.streamWeeklyTraffic,
     desktopNotifications: desktopNotifications ?? false,
     emailNotifications: emailNotifications ?? false,
@@ -1271,6 +1274,8 @@ ChannelUpdateEvent channelUpdateEvent(
     case ChannelPropertyName.canSendMessageGroup:
     case ChannelPropertyName.canSubscribeGroup:
       assert(value is GroupSettingValue);
+    case ChannelPropertyName.isRecentlyActive:
+      assert(value is bool);
     case ChannelPropertyName.streamWeeklyTraffic:
       assert(value is int?);
   }
@@ -1304,6 +1309,22 @@ const _globalStore = globalStore;
 
 const String defaultRealmEmptyTopicDisplayName = 'test general chat';
 
+UserSettings userSettings({
+  TwentyFourHourTimeMode? twentyFourHourTime,
+  bool? displayEmojiReactionUsers,
+  Emojiset? emojiset,
+  bool? presenceEnabled,
+}) {
+  return UserSettings(
+    twentyFourHourTime: twentyFourHourTime ?? TwentyFourHourTimeMode.twelveHour,
+    starredMessageCounts: true,
+    displayEmojiReactionUsers: displayEmojiReactionUsers ?? true,
+    emojiset: emojiset ?? Emojiset.google,
+    presenceEnabled: presenceEnabled ?? true,
+  );
+}
+const _userSettings = userSettings;
+
 InitialSnapshot initialSnapshot({
   String? queueId,
   int? lastEventId,
@@ -1312,6 +1333,7 @@ InitialSnapshot initialSnapshot({
   String? zulipMergeBase,
   List<String>? alertWords,
   List<CustomProfileField>? customProfileFields,
+  int? maxChannelNameLength,
   int? maxTopicLength,
   int? serverPresencePingIntervalSeconds,
   int? serverPresenceOfflineThresholdSeconds,
@@ -1327,6 +1349,7 @@ InitialSnapshot initialSnapshot({
   List<Subscription>? subscriptions,
   List<ChannelFolder>? channelFolders,
   UnreadMessagesSnapshot? unreadMsgs,
+  List<int>? starredMessages,
   List<ZulipStream>? streams,
   Map<int, UserStatusChange>? userStatuses,
   UserSettings? userSettings,
@@ -1346,6 +1369,7 @@ InitialSnapshot initialSnapshot({
   bool? realmPresenceDisabled,
   Map<String, RealmDefaultExternalAccount>? realmDefaultExternalAccounts,
   int? maxFileUploadSizeMib,
+  List<ThumbnailFormat>? serverThumbnailFormats,
   Uri? serverEmojiDataUrl,
   String? realmEmptyTopicDisplayName,
   List<User>? realmUsers,
@@ -1367,6 +1391,7 @@ InitialSnapshot initialSnapshot({
     zulipMergeBase: zulipMergeBase ?? recentZulipVersion,
     alertWords: alertWords ?? ['klaxon'],
     customProfileFields: customProfileFields ?? [],
+    maxChannelNameLength: maxChannelNameLength ?? 60,
     maxTopicLength: maxTopicLength ?? 60,
     serverPresencePingIntervalSeconds: serverPresencePingIntervalSeconds ?? 60,
     serverPresenceOfflineThresholdSeconds: serverPresenceOfflineThresholdSeconds ?? 140,
@@ -1385,14 +1410,10 @@ InitialSnapshot initialSnapshot({
     subscriptions: subscriptions ?? [], // TODO add subscriptions to default
     channelFolders: channelFolders ?? [],
     unreadMsgs: unreadMsgs ?? _unreadMsgs(),
+    starredMessages: starredMessages ?? [],
     streams: streams ?? [], // TODO add streams to default
     userStatuses: userStatuses ?? {},
-    userSettings: userSettings ?? UserSettings(
-      twentyFourHourTime: TwentyFourHourTimeMode.twelveHour,
-      displayEmojiReactionUsers: true,
-      emojiset: Emojiset.google,
-      presenceEnabled: true,
-    ),
+    userSettings: userSettings ?? _userSettings(),
     userTopics: userTopics ?? [],
     // no default; allow `null` to simulate servers without this
     realmCanDeleteAnyMessageGroup: realmCanDeleteAnyMessageGroup,
@@ -1410,6 +1431,7 @@ InitialSnapshot initialSnapshot({
     realmPresenceDisabled: realmPresenceDisabled ?? false,
     realmDefaultExternalAccounts: realmDefaultExternalAccounts ?? {},
     maxFileUploadSizeMib: maxFileUploadSizeMib ?? 25,
+    serverThumbnailFormats: serverThumbnailFormats ?? [],
     serverEmojiDataUrl: serverEmojiDataUrl
       ?? realmUrl.replace(path: '/static/emoji.json'),
     realmEmptyTopicDisplayName: realmEmptyTopicDisplayName ?? defaultRealmEmptyTopicDisplayName,

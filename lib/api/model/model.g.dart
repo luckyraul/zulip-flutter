@@ -267,6 +267,7 @@ ZulipStream _$ZulipStreamFromJson(Map<String, dynamic> json) => ZulipStream(
   canSubscribeGroup: json['can_subscribe_group'] == null
       ? null
       : GroupSettingValue.fromJson(json['can_subscribe_group']),
+  isRecentlyActive: json['is_recently_active'] as bool?,
   streamWeeklyTraffic: (json['stream_weekly_traffic'] as num?)?.toInt(),
 );
 
@@ -290,6 +291,7 @@ Map<String, dynamic> _$ZulipStreamToJson(ZulipStream instance) =>
       'can_delete_own_message_group': instance.canDeleteOwnMessageGroup,
       'can_send_message_group': instance.canSendMessageGroup,
       'can_subscribe_group': instance.canSubscribeGroup,
+      'is_recently_active': instance.isRecentlyActive,
       'stream_weekly_traffic': instance.streamWeeklyTraffic,
     };
 
@@ -333,6 +335,7 @@ Subscription _$SubscriptionFromJson(Map<String, dynamic> json) => Subscription(
   canSubscribeGroup: json['can_subscribe_group'] == null
       ? null
       : GroupSettingValue.fromJson(json['can_subscribe_group']),
+  isRecentlyActive: json['is_recently_active'] as bool?,
   streamWeeklyTraffic: (json['stream_weekly_traffic'] as num?)?.toInt(),
   desktopNotifications: json['desktop_notifications'] as bool?,
   emailNotifications: json['email_notifications'] as bool?,
@@ -364,6 +367,7 @@ Map<String, dynamic> _$SubscriptionToJson(Subscription instance) =>
       'can_delete_own_message_group': instance.canDeleteOwnMessageGroup,
       'can_send_message_group': instance.canSendMessageGroup,
       'can_subscribe_group': instance.canSubscribeGroup,
+      'is_recently_active': instance.isRecentlyActive,
       'stream_weekly_traffic': instance.streamWeeklyTraffic,
       'desktop_notifications': instance.desktopNotifications,
       'email_notifications': instance.emailNotifications,
@@ -523,6 +527,7 @@ Map<String, dynamic> _$DmMessageToJson(DmMessage instance) => <String, dynamic>{
 
 const _$UserSettingNameEnumMap = {
   UserSettingName.twentyFourHourTime: 'twenty_four_hour_time',
+  UserSettingName.starredMessageCounts: 'starred_message_counts',
   UserSettingName.displayEmojiReactionUsers: 'display_emoji_reaction_users',
   UserSettingName.emojiset: 'emojiset',
   UserSettingName.presenceEnabled: 'presence_enabled',
@@ -533,6 +538,7 @@ const _$EmojisetEnumMap = {
   Emojiset.googleBlob: 'google-blob',
   Emojiset.twitter: 'twitter',
   Emojiset.text: 'text',
+  Emojiset.unknown: 'unknown',
 };
 
 const _$PresenceStatusEnumMap = {
@@ -554,6 +560,7 @@ const _$ChannelPropertyNameEnumMap = {
   ChannelPropertyName.canDeleteOwnMessageGroup: 'can_delete_own_message_group',
   ChannelPropertyName.canSendMessageGroup: 'can_send_message_group',
   ChannelPropertyName.canSubscribeGroup: 'can_subscribe_group',
+  ChannelPropertyName.isRecentlyActive: 'is_recently_active',
   ChannelPropertyName.streamWeeklyTraffic: 'stream_weekly_traffic',
 };
 

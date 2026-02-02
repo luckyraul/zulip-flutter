@@ -24,6 +24,8 @@ class InitialSnapshot {
 
   final List<CustomProfileField> customProfileFields;
 
+  @JsonKey(name: 'max_stream_name_length')
+  final int maxChannelNameLength;
   final int maxTopicLength;
 
   final int serverPresencePingIntervalSeconds;
@@ -57,6 +59,8 @@ class InitialSnapshot {
   final List<ChannelFolder>? channelFolders; // TODO(server-11)
 
   final UnreadMessagesSnapshot unreadMsgs;
+
+  final List<int> starredMessages;
 
   final List<ZulipStream> streams;
 
@@ -117,6 +121,9 @@ class InitialSnapshot {
 
   final int maxFileUploadSizeMib;
 
+  @JsonKey(defaultValue: []) // TODO(server-9) remove default value
+  final List<ThumbnailFormat> serverThumbnailFormats;
+
   final Uri serverEmojiDataUrl;
 
   final String? realmEmptyTopicDisplayName; // TODO(server-10)
@@ -160,6 +167,7 @@ class InitialSnapshot {
     required this.zulipMergeBase,
     required this.alertWords,
     required this.customProfileFields,
+    required this.maxChannelNameLength,
     required this.maxTopicLength,
     required this.serverPresencePingIntervalSeconds,
     required this.serverPresenceOfflineThresholdSeconds,
@@ -175,6 +183,7 @@ class InitialSnapshot {
     required this.subscriptions,
     required this.channelFolders,
     required this.unreadMsgs,
+    required this.starredMessages,
     required this.streams,
     required this.userStatuses,
     required this.userSettings,
@@ -194,6 +203,7 @@ class InitialSnapshot {
     required this.realmPresenceDisabled,
     required this.realmDefaultExternalAccounts,
     required this.maxFileUploadSizeMib,
+    required this.serverThumbnailFormats,
     required this.serverEmojiDataUrl,
     required this.realmEmptyTopicDisplayName,
     required this.realmUsers,
@@ -262,6 +272,32 @@ class RealmDefaultExternalAccount {
   Map<String, dynamic> toJson() => _$RealmDefaultExternalAccountToJson(this);
 }
 
+/// An item in `server_thumbnail_formats`.
+///
+/// For docs, search for "server_thumbnail_formats:"
+/// in <https://zulip.com/api/register-queue>.
+@JsonSerializable(fieldRename: FieldRename.snake)
+class ThumbnailFormat {
+  ThumbnailFormat({
+    required this.name,
+    required this.maxWidth,
+    required this.maxHeight,
+    required this.animated,
+    required this.format,
+  });
+
+  final String name;
+  final int maxWidth;
+  final int maxHeight;
+  final bool animated;
+  final String format;
+
+  factory ThumbnailFormat.fromJson(Map<String, dynamic> json) =>
+    _$ThumbnailFormatFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ThumbnailFormatToJson(this);
+}
+
 /// An item in `recent_private_conversations`.
 ///
 /// For docs, search for "recent_private_conversations:"
@@ -294,7 +330,9 @@ class UserSettings {
   )
   TwentyFourHourTimeMode twentyFourHourTime;
 
+  bool starredMessageCounts;
   bool displayEmojiReactionUsers;
+  @JsonKey(unknownEnumValue: Emojiset.unknown)
   Emojiset emojiset;
   bool presenceEnabled;
 
@@ -306,6 +344,7 @@ class UserSettings {
 
   UserSettings({
     required this.twentyFourHourTime,
+    required this.starredMessageCounts,
     required this.displayEmojiReactionUsers,
     required this.emojiset,
     required this.presenceEnabled,

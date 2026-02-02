@@ -82,6 +82,9 @@ Future<void> setupToMessageActionSheet(WidgetTester tester, {
   await testBinding.globalStore.add(
     selfAccount,
     eg.initialSnapshot(
+      starredMessages: [
+        if (message.flags.contains(MessageFlag.starred)) message.id,
+      ],
       realmUsers: [selfUser],
       realmAllowMessageEditing: realmAllowMessageEditing,
       realmMessageContentEditLimitSeconds: realmMessageContentEditLimitSeconds,
@@ -222,12 +225,19 @@ void main() {
       channel ??= someChannel;
 
       connection.prepare(json: eg.newestGetMessagesResult(
-        foundOldest: true, messages: []).toJson());
-      if (narrow case ChannelNarrow()) {
-        // We auto-focus the topic input when there are no messages;
-        // this is for topic autocomplete.
-        connection.prepare(json: GetStreamTopicsResult(topics: []).toJson());
-      }
+        foundOldest: true,
+        messages: narrow is ChannelNarrow
+          ? () {
+              assert(channel != null && channel.streamId == narrow.streamId);
+              // Include one message so that we don't auto-focus the topic input,
+              // which would trigger a topic-list fetch for topic autocomplete.
+              // That's helpful for the test that opens the topic-list page.
+              // With the topic-list fetch deferred until that page is opened,
+              // the test can prepare the fetch response as it chooses.
+              return [eg.streamMessage(stream: channel)];
+            }()
+          : [],
+      ).toJson());
       await tester.pumpWidget(TestZulipApp(
         accountId: eg.selfAccount.id,
         child: MessageListPage(
@@ -261,7 +271,7 @@ void main() {
       streamId ??= someChannel.streamId;
       final transitionDurationObserver = TransitionDurationObserver();
 
-      connection.prepare(json: GetStreamTopicsResult(topics: []).toJson());
+      connection.prepare(json: GetChannelTopicsResult(topics: []).toJson());
       await tester.pumpWidget(TestZulipApp(
         navigatorObservers: [transitionDurationObserver],
         accountId: eg.selfAccount.id,
@@ -341,7 +351,8 @@ void main() {
 
         testWidgets('unknown channel', (tester) async {
           await prepare();
-          await store.handleEvent(ChannelDeleteEvent(id: 1, streams: [someChannel]));
+          await store.handleEvent(ChannelDeleteEvent(id: 1,
+            channelIds: [someChannel.streamId]));
           check(store.streams[someChannel.streamId]).isNull();
           await showFromTopicListAppBar(tester);
           check(findInHeader(find.byType(Icon))).findsNothing();
@@ -471,6 +482,8 @@ void main() {
       }
 
       testWidgets('happy path from inbox', (tester) async {
+        final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+
         await prepare();
         final message = eg.streamMessage(stream: someChannel, topic: someTopic);
         await store.addMessage(message);
@@ -480,17 +493,35 @@ void main() {
           firstProcessedId: message.id, lastProcessedId: message.id,
           foundOldest: true, foundNewest: true).toJson());
         await tester.tap(findButtonForLabel('Mark channel as read'));
+        await tester.pump();
+        await tester.pump();
+        final (confirmButton, _) = checkSuggestedActionDialog(tester,
+          expectedTitle: zulipLocalizations.markAllAsReadConfirmationDialogTitleNoCount,
+          expectedMessage: zulipLocalizations.markAllAsReadConfirmationDialogMessage,
+          expectedActionButtonText: zulipLocalizations.markAllAsReadConfirmationDialogConfirmButton);
+        await tester.tap(find.byWidget(confirmButton));
         await tester.pumpAndSettle();
+
         checkRequest(someChannel.streamId);
         checkNoDialog(tester);
       });
 
       testWidgets('request fails', (tester) async {
+        final zulipLocalizations = GlobalLocalizations.zulipLocalizations;
+
         await prepare();
         await showFromInbox(tester);
         connection.prepare(httpException: http.ClientException('Oops'));
         await tester.tap(findButtonForLabel('Mark channel as read'));
+        await tester.pump();
+        await tester.pump();
+        final (confirmButton, _) = checkSuggestedActionDialog(tester,
+          expectedTitle: zulipLocalizations.markAllAsReadConfirmationDialogTitleNoCount,
+          expectedMessage: zulipLocalizations.markAllAsReadConfirmationDialogMessage,
+          expectedActionButtonText: zulipLocalizations.markAllAsReadConfirmationDialogConfirmButton);
+        await tester.tap(find.byWidget(confirmButton));
         await tester.pumpAndSettle();
+
         checkRequest(someChannel.streamId);
         checkErrorDialog(tester,
           expectedTitle: "Mark as read failed");
@@ -509,8 +540,8 @@ void main() {
         await showFromMsglistAppBar(tester,
           narrow: ChannelNarrow(someChannel.streamId));
 
-        connection.prepare(json: GetStreamTopicsResult(topics: [
-          eg.getStreamTopicsEntry(name: 'some topic foo'),
+        connection.prepare(json: GetChannelTopicsResult(topics: [
+          eg.getChannelTopicsEntry(name: 'some topic foo'),
         ]).toJson());
         await tester.tap(findButtonForLabel('List of topics'));
         await tester.pumpAndSettle();
@@ -564,7 +595,7 @@ void main() {
         connection.prepare(json: eg.newestGetMessagesResult(
           foundOldest: true, messages: []).toJson());
         // for topic autocomplete
-        connection.prepare(json: GetStreamTopicsResult(topics: []).toJson());
+        connection.prepare(json: GetChannelTopicsResult(topics: []).toJson());
         await tapButtonAndPump(tester);
         await transitionDurationObserver.pumpPastTransition(tester);
 
@@ -1650,7 +1681,7 @@ void main() {
         required TextEditingValue valueBefore,
         required Message message,
       }) {
-        check(contentController).value.equals((ComposeContentController()
+        check(contentController).value.equals((ComposeContentController(store: store)
           ..value = valueBefore
           ..insertPadded(quoteAndReplyPlaceholder(
               GlobalLocalizations.zulipLocalizations, store, message: message))
@@ -1663,7 +1694,7 @@ void main() {
         required Message message,
         required String rawContent,
       }) {
-        final builder = ComposeContentController()
+        final builder = ComposeContentController(store: store)
           ..value = valueBefore
           ..insertPadded(quoteAndReply(store, message: message, rawContent: rawContent));
         if (!valueBefore.selection.isValid) {
@@ -1684,7 +1715,7 @@ void main() {
 
         // Ensure channel-topics are loaded before testing quote & reply behavior
         connection.prepare(body:
-          jsonEncode(GetStreamTopicsResult(topics: [eg.getStreamTopicsEntry()]).toJson()));
+          jsonEncode(GetChannelTopicsResult(topics: [eg.getChannelTopicsEntry()]).toJson()));
         final topicController = composeBoxController.topic;
         topicController.value = TextEditingValue(text: 'other topic');
 
@@ -1709,7 +1740,7 @@ void main() {
 
         // Ensure channel-topics are loaded before testing quote & reply behavior
         connection.prepare(body:
-          jsonEncode(GetStreamTopicsResult(topics: [eg.getStreamTopicsEntry()]).toJson()));
+          jsonEncode(GetChannelTopicsResult(topics: [eg.getChannelTopicsEntry()]).toJson()));
         final topicController = composeBoxController.topic;
         topicController.value = const TextEditingValue(text: '');
 
@@ -1845,7 +1876,9 @@ void main() {
 
       testWidgets('not offered in StarredMessagesNarrow (composing to reply is not yet supported)', (tester) async {
         final message = eg.streamMessage(flags: [MessageFlag.starred]);
-        await setupToMessageActionSheet(tester, message: message, narrow: const StarredMessagesNarrow());
+        await setupToMessageActionSheet(tester,
+          message: message,
+          narrow: const StarredMessagesNarrow());
         check(findQuoteAndReplyButton(tester)).isNull();
       });
 
@@ -1921,15 +1954,13 @@ void main() {
 
           final newStream = eg.stream();
           const newTopic = 'other topic';
-          // This result isn't quite realistic for this request: it should get
-          // the updated channel/stream ID and topic, because we don't even
-          // start the request until after we get the move event.
-          // But constructing the right result is annoying at the moment, and
-          // it doesn't matter anyway: [MessageStoreImpl.reconcileMessages] will
-          // keep the version updated by the event.  If that somehow changes in
-          // some future refactor, it'll cause this test to fail.
           connection.prepare(json: eg.newestGetMessagesResult(
-            foundOldest: true, messages: [message]).toJson());
+            foundOldest: true,
+            messages: [
+              Message.fromJson(deepToJson(message) as Map<String, dynamic>
+                                 ..['stream_id'] = newStream.streamId
+                                 ..['subject'] = newTopic)
+            ]).toJson());
           await store.handleEvent(eg.updateMessageEventMoveFrom(
             newStreamId: newStream.streamId, newTopicStr: newTopic,
             propagateMode: PropagateMode.changeAll,

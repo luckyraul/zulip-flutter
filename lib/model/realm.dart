@@ -32,6 +32,16 @@ mixin RealmStore on PerAccountStoreBase, UserGroupStore {
   Duration get serverTypingStartedWaitPeriod => Duration(milliseconds: serverTypingStartedWaitPeriodMilliseconds);
   int get serverTypingStartedWaitPeriodMilliseconds;
 
+  List<ThumbnailFormat> get serverThumbnailFormats;
+  /// A digest of [serverThumbnailFormats]:
+  /// sorted by max-width plus max-height, ascending,
+  /// and filtered to those with `animated: true`.
+  List<ThumbnailFormat> get sortedAnimatedThumbnailFormats;
+  /// A digest of [serverThumbnailFormats]:
+  /// sorted by max-width plus max-height, ascending,
+  /// and filtered to those with `animated: false`.
+  List<ThumbnailFormat> get sortedStillThumbnailFormats;
+
   //|//////////////////////////////////////////////////////////////
   // Realm settings.
 
@@ -76,6 +86,7 @@ mixin RealmStore on PerAccountStoreBase, UserGroupStore {
 
   Map<String, RealmDefaultExternalAccount> get realmDefaultExternalAccounts;
 
+  int get maxChannelNameLength;
   int get maxTopicLength;
 
   //|//////////////////////////////
@@ -166,6 +177,12 @@ mixin ProxyRealmStore on RealmStore {
   @override
   int get serverTypingStartedWaitPeriodMilliseconds => realmStore.serverTypingStartedWaitPeriodMilliseconds;
   @override
+  List<ThumbnailFormat> get serverThumbnailFormats => realmStore.serverThumbnailFormats;
+  @override
+  List<ThumbnailFormat> get sortedAnimatedThumbnailFormats => realmStore.sortedAnimatedThumbnailFormats;
+  @override
+  List<ThumbnailFormat> get sortedStillThumbnailFormats => realmStore.sortedStillThumbnailFormats;
+  @override
   bool get realmAllowMessageEditing => realmStore.realmAllowMessageEditing;
   @override
   GroupSettingValue? get realmCanDeleteAnyMessageGroup => realmStore.realmCanDeleteAnyMessageGroup;
@@ -193,6 +210,8 @@ mixin ProxyRealmStore on RealmStore {
   String get realmEmptyTopicDisplayName => realmStore.realmEmptyTopicDisplayName;
   @override
   Map<String, RealmDefaultExternalAccount> get realmDefaultExternalAccounts => realmStore.realmDefaultExternalAccounts;
+  @override
+  int get maxChannelNameLength => realmStore.maxChannelNameLength;
   @override
   int get maxTopicLength => realmStore.maxTopicLength;
   @override
@@ -230,6 +249,11 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
     serverTypingStartedExpiryPeriodMilliseconds = initialSnapshot.serverTypingStartedExpiryPeriodMilliseconds,
     serverTypingStoppedWaitPeriodMilliseconds = initialSnapshot.serverTypingStoppedWaitPeriodMilliseconds,
     serverTypingStartedWaitPeriodMilliseconds = initialSnapshot.serverTypingStartedWaitPeriodMilliseconds,
+    serverThumbnailFormats = initialSnapshot.serverThumbnailFormats,
+    _sortedAnimatedThumbnailFormats = _filterAndSortThumbnailFormats(
+      initialSnapshot.serverThumbnailFormats, animated: true),
+    _sortedStillThumbnailFormats = _filterAndSortThumbnailFormats(
+      initialSnapshot.serverThumbnailFormats, animated: false),
     realmAllowMessageEditing = initialSnapshot.realmAllowMessageEditing,
     realmCanDeleteAnyMessageGroup = initialSnapshot.realmCanDeleteAnyMessageGroup,
     realmCanDeleteOwnMessageGroup = initialSnapshot.realmCanDeleteOwnMessageGroup,
@@ -244,6 +268,7 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
     realmDeleteOwnMessagePolicy = initialSnapshot.realmDeleteOwnMessagePolicy,
     _realmEmptyTopicDisplayName = initialSnapshot.realmEmptyTopicDisplayName,
     realmDefaultExternalAccounts = initialSnapshot.realmDefaultExternalAccounts,
+    maxChannelNameLength = initialSnapshot.maxChannelNameLength,
     maxTopicLength = initialSnapshot.maxTopicLength,
     customProfileFields = _sortCustomProfileFields(initialSnapshot.customProfileFields);
 
@@ -375,6 +400,15 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
   final int serverTypingStartedWaitPeriodMilliseconds;
 
   @override
+  final List<ThumbnailFormat> serverThumbnailFormats;
+  @override
+  List<ThumbnailFormat> get sortedAnimatedThumbnailFormats => _sortedAnimatedThumbnailFormats;
+  final List<ThumbnailFormat> _sortedAnimatedThumbnailFormats;
+  @override
+  List<ThumbnailFormat> get sortedStillThumbnailFormats => _sortedStillThumbnailFormats;
+  final List<ThumbnailFormat> _sortedStillThumbnailFormats;
+
+  @override
   final bool realmAllowMessageEditing;
   @override
   final GroupSettingValue? realmCanDeleteAnyMessageGroup;
@@ -412,6 +446,8 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
   final Map<String, RealmDefaultExternalAccount> realmDefaultExternalAccounts;
 
   @override
+  final int maxChannelNameLength;
+  @override
   final int maxTopicLength;
 
   @override
@@ -430,6 +466,23 @@ class RealmStoreImpl extends HasUserGroupStore with RealmStore {
     final displayFields = initialCustomProfileFields.where((e) => e.displayInProfileSummary == true);
     final nonDisplayFields = initialCustomProfileFields.where((e) => e.displayInProfileSummary != true);
     return displayFields.followedBy(nonDisplayFields).toList();
+  }
+
+  static List<ThumbnailFormat> _filterAndSortThumbnailFormats(
+    List<ThumbnailFormat> initialServerThumbnailFormats, {
+    required bool animated,
+  }) {
+    return initialServerThumbnailFormats
+      .where((format) => format.animated == animated)
+      .toList()
+      ..sort(_compareThumbnailFormats);
+  }
+
+  /// A comparator to sort formats by max-width plus max-height, ascending.
+  static int _compareThumbnailFormats(ThumbnailFormat a, ThumbnailFormat b) {
+    final aValue = a.maxWidth + a.maxHeight;
+    final bValue = b.maxWidth + b.maxHeight;
+    return aValue.compareTo(bValue);
   }
 
   void handleCustomProfileFieldsEvent(CustomProfileFieldsEvent event) {

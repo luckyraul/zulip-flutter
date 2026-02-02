@@ -16,6 +16,7 @@ import 'message_list.dart';
 import 'page.dart';
 import 'store.dart';
 import 'user.dart';
+import 'icons.dart';
 
 /// Identifies which [LightboxHero]s should match up with each other
 /// to produce a hero animation.
@@ -104,7 +105,7 @@ class _CopyLinkButton extends StatelessWidget {
     final zulipLocalizations = ZulipLocalizations.of(context);
     return IconButton(
       tooltip: zulipLocalizations.lightboxCopyLinkTooltip,
-      icon: const Icon(Icons.copy),
+      icon: const Icon(ZulipIcons.copy),
       onPressed: () async {
         PlatformActions.copyWithPopup(context: context,
           successContent: Text(zulipLocalizations.successLinkCopied),
@@ -254,8 +255,10 @@ class _LightboxPageLayoutState extends State<_LightboxPageLayout> {
   }
 }
 
-class _ImageLightboxPage extends StatefulWidget {
-  const _ImageLightboxPage({
+@visibleForTesting
+class ImageLightboxPage extends StatefulWidget {
+  const ImageLightboxPage({
+    super.key,
     required this.routeEntranceAnimation,
     required this.message,
     required this.messageImageContext,
@@ -274,10 +277,10 @@ class _ImageLightboxPage extends StatefulWidget {
   final double? originalHeight;
 
   @override
-  State<_ImageLightboxPage> createState() => _ImageLightboxPageState();
+  State<ImageLightboxPage> createState() => _ImageLightboxPageState();
 }
 
-class _ImageLightboxPageState extends State<_ImageLightboxPage> {
+class _ImageLightboxPageState extends State<ImageLightboxPage> {
   double? _loadingProgress;
 
   PreferredSizeWidget? _buildAppBarBottom(BuildContext context) {
@@ -644,7 +647,7 @@ Route<void> getImageLightboxRoute({
     accountId: accountId,
     context: context,
     pageBuilder: (context, animation, secondaryAnimation) {
-      return _ImageLightboxPage(
+      return ImageLightboxPage(
         routeEntranceAnimation: animation,
         message: message,
         messageImageContext: messageImageContext,

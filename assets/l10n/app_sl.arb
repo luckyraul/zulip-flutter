@@ -321,10 +321,10 @@
   "@errorAccountLoggedInTitle": {
     "description": "Error title on attempting to log into an account that's already logged in."
   },
-  "@errorBannerCannotPostInChannelLabel": {
+  "@composeBoxBannerLabelCannotSendInChannel": {
     "description": "Error-banner text replacing the compose box when you do not have permission to send a message to the channel."
   },
-  "@errorBannerDeactivatedDmLabel": {
+  "@composeBoxBannerLabelDeactivatedDmRecipient": {
     "description": "Label text for error banner when sending a message to one or multiple deactivated users."
   },
   "@errorConnectingToServerDetails": {
@@ -991,9 +991,6 @@
   "@settingsPageTitle": {
     "description": "Title for the settings page."
   },
-  "@sharePageTitle": {
-    "description": "Title for the page about sharing content received from other apps."
-  },
   "@signInWithFoo": {
     "description": "Button to use {method} to sign in to the app.",
     "placeholders": {
@@ -1045,8 +1042,8 @@
   "@successTopicLinkCopied": {
     "description": "Message when link of a topic was copied to the user's system clipboard."
   },
-  "@switchAccountButton": {
-    "description": "Label for main-menu button leading to the choose-account page."
+  "@switchAccountButtonTooltip": {
+    "description": "Tooltip message for main-menu button leading to the choose-account page."
   },
   "@themeSettingDark": {
     "description": "Label for dark theme setting."
@@ -1351,8 +1348,8 @@
   "emptyMessageListSearch": "Ni zadetkov iskanja.",
   "errorAccountLoggedIn": "Račun {email} na {server} je že na vašem seznamu računov.",
   "errorAccountLoggedInTitle": "Račun je že prijavljen",
-  "errorBannerCannotPostInChannelLabel": "Nimate dovoljenja za objavljanje v tem kanalu.",
-  "errorBannerDeactivatedDmLabel": "Deaktiviranim uporabnikom ne morete pošiljati sporočil.",
+  "composeBoxBannerLabelCannotSendInChannel": "Nimate dovoljenja za objavljanje v tem kanalu.",
+  "composeBoxBannerLabelDeactivatedDmRecipient": "Deaktiviranim uporabnikom ne morete pošiljati sporočil.",
   "errorConnectingToServerDetails": "Napaka pri povezovanju z Zulipom na {serverUrl}. Poskusili bomo znova:\n\n{error}",
   "errorConnectingToServerShort": "Napaka pri povezovanju z Zulipom. Poskušamo znova…",
   "errorContentNotInsertedTitle": "Vsebina ni vstavljena",
@@ -1507,7 +1504,6 @@
   "serverUrlValidationErrorUnsupportedScheme": "URL strežnika se mora začeti s http:// ali https://.",
   "setStatusPageTitle": "Nastavi status",
   "settingsPageTitle": "Nastavitve",
-  "sharePageTitle": "Deli",
   "signInWithFoo": "Prijava z {method}",
   "snackBarDetails": "Podrobnosti",
   "spoilerDefaultHeaderText": "Skrito",
@@ -1523,7 +1519,7 @@
   "successMessageLinkCopied": "Povezava do sporočila je bila kopirana",
   "successMessageTextCopied": "Besedilo sporočila je bilo kopirano",
   "successTopicLinkCopied": "Povezava do teme kopirana",
-  "switchAccountButton": "Preklopi račun",
+  "switchAccountButtonTooltip": "Preklopi račun",
   "themeSettingDark": "Temna",
   "themeSettingLight": "Svetla",
   "themeSettingSystem": "Sistemska",

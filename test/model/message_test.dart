@@ -38,29 +38,41 @@ void main() {
   // Each test case calls [prepare] to initialize them.
   late Subscription? subscription;
   late PerAccountStore store;
+  late int perAccountStoreNotifiedCount;
+
   late FakeApiConnection connection;
+
   // [messageList] is here only for the sake of checking when it notifies.
   // For anything deeper than that, use `message_list_test.dart`.
   late MessageListView messageList;
-  late int notifiedCount;
+  late int msglistNotifiedCount;
 
-  void checkNotified({required int count}) {
-    check(notifiedCount).equals(count);
-    notifiedCount = 0;
+  void checkNotified({required int count, int storeCount = 0}) {
+    check(because: 'checking number of MessageListView.notifyListeners calls',
+      msglistNotifiedCount).equals(count);
+    msglistNotifiedCount = 0;
+    check(because: 'checking number of PerAccountStore.notifyListeners calls',
+      perAccountStoreNotifiedCount).equals(storeCount);
+    perAccountStoreNotifiedCount = 0;
   }
   void checkNotNotified() => checkNotified(count: 0);
   void checkNotifiedOnce() => checkNotified(count: 1);
 
   /// Initialize [store] and the rest of the test state.
   Future<void> prepare({
+    Narrow narrow = const CombinedFeedNarrow(),
     ZulipStream? stream,
     bool isChannelSubscribed = true,
+    List<int>? starredMessages = const [],
     int? zulipFeatureLevel,
   }) async {
     stream ??= eg.stream(streamId: eg.defaultStreamMessageStreamId);
     final selfAccount = eg.selfAccount.copyWith(zulipFeatureLevel: zulipFeatureLevel);
+
     store = eg.store(account: selfAccount,
-      initialSnapshot: eg.initialSnapshot(zulipFeatureLevel: zulipFeatureLevel));
+      initialSnapshot: eg.initialSnapshot(
+        starredMessages: starredMessages,
+        zulipFeatureLevel: zulipFeatureLevel));
     await store.addStream(stream);
     if (isChannelSubscribed) {
       subscription = eg.subscription(stream);
@@ -68,13 +80,19 @@ void main() {
     } else {
       subscription = null;
     }
+    perAccountStoreNotifiedCount = 0;
+    store.addListener(() {
+      perAccountStoreNotifiedCount++;
+    });
+
     connection = store.connection as FakeApiConnection;
-    notifiedCount = 0;
+
+    msglistNotifiedCount = 0;
     messageList = MessageListView.init(store: store,
-        narrow: const CombinedFeedNarrow(),
+        narrow: narrow,
         anchor: AnchorCode.newest)
       ..addListener(() {
-        notifiedCount++;
+        msglistNotifiedCount++;
       });
     addTearDown(messageList.dispose);
     check(messageList).fetched.isFalse();
@@ -126,10 +144,13 @@ void main() {
 
   group('sendMessage', () {
     test('smoke', () async {
+      final stream = eg.stream();
+      final subscription = eg.subscription(stream);
       final store = eg.store(initialSnapshot: eg.initialSnapshot(
         queueId: 'fb67bf8a-c031-47cc-84cf-ed80accacda8'));
+      await store.addStream(stream);
+      await store.addSubscription(subscription);
       final connection = store.connection as FakeApiConnection;
-      final stream = eg.stream();
       connection.prepare(json: SendMessageResult(id: 12345).toJson());
       await store.sendMessage(
         destination: StreamDestination(stream.streamId, eg.t('world')),
@@ -169,11 +190,17 @@ void main() {
       check(store.outboxMessages).values.single.state;
 
     Future<void> prepareOutboxMessage({
+      Narrow narrow = const CombinedFeedNarrow(),
       MessageDestination? destination,
+      bool isChannelSubscribed = true,
       int? zulipFeatureLevel,
     }) async {
       message = eg.streamMessage(stream: stream);
-      await prepare(stream: stream, zulipFeatureLevel: zulipFeatureLevel);
+      await prepare(
+        narrow: narrow,
+        stream: stream,
+        isChannelSubscribed: isChannelSubscribed,
+        zulipFeatureLevel: zulipFeatureLevel);
       await prepareMessages([eg.streamMessage(stream: stream)]);
       connection.prepare(json: SendMessageResult(id: 1).toJson());
       await store.sendMessage(
@@ -365,6 +392,16 @@ void main() {
         checkNotNotified();
       }));
 
+      test('hidden -> (delete) because send succeeded in unsubscribed channel', () => awaitFakeAsync((async) async {
+        await prepareOutboxMessage(
+          // Not CombinedFeedNarrow,
+          // which always hides outbox messages in unsubscribed channels.
+          narrow: ChannelNarrow(stream.streamId),
+          isChannelSubscribed: false);
+        check(store.outboxMessages).isEmpty();
+        checkNotNotified();
+      }));
+
       test('waiting -> (delete) because event received', () => awaitFakeAsync((async) async {
         await prepareOutboxMessage();
         async.elapse(kLocalEchoDebounceDuration);
@@ -395,6 +432,28 @@ void main() {
         // in the store any more.
         await check(outboxMessageFailFuture).completes();
         checkNotNotified();
+      }));
+
+      test('waiting -> (delete) because send succeeded in unsubscribed channel', () => awaitFakeAsync((async) async {
+        await prepare(
+          // Not CombinedFeedNarrow,
+          // which always hides outbox messages in unsubscribed channels.
+          narrow: ChannelNarrow(stream.streamId),
+          stream: stream,
+          isChannelSubscribed: false);
+        await prepareMessages([eg.streamMessage(stream: stream)]);
+        connection.prepare(json: SendMessageResult(id: 1).toJson(),
+          delay: kLocalEchoDebounceDuration + Duration(seconds: 1));
+        final future = store.sendMessage(
+          destination: streamDestination, content: 'content');
+        async.elapse(kLocalEchoDebounceDuration);
+        checkState().equals(OutboxMessageState.waiting);
+        checkNotifiedOnce();
+
+        async.elapse(Duration(seconds: 1));
+        await check(future).completes();
+        check(store.outboxMessages).isEmpty();
+        checkNotifiedOnce();
       }));
 
       test('waitPeriodExpired -> (delete) when event arrives before send request fails', () => awaitFakeAsync((async) async {
@@ -428,6 +487,27 @@ void main() {
         checkNotified(count: 2);
 
         store.takeOutboxMessage(store.outboxMessages.keys.single);
+        check(store.outboxMessages).isEmpty();
+        checkNotifiedOnce();
+      }));
+
+      test('waitPeriodExpired -> (delete) because send succeeded in unsubscribed channel', () => awaitFakeAsync((async) async {
+        await prepare(
+          // Not CombinedFeedNarrow,
+          // which always hides outbox messages in unsubscribed channels.
+          narrow: ChannelNarrow(stream.streamId),
+          isChannelSubscribed: false);
+        await prepareMessages([eg.streamMessage(stream: stream)]);
+        connection.prepare(json: SendMessageResult(id: 1).toJson(),
+          delay: kSendMessageOfferRestoreWaitPeriod + Duration(seconds: 1));
+        final future = store.sendMessage(
+          destination: streamDestination, content: 'content');
+        async.elapse(kSendMessageOfferRestoreWaitPeriod);
+        checkState().equals(OutboxMessageState.waitPeriodExpired);
+        checkNotified(count: 2);
+
+        async.elapse(Duration(seconds: 1));
+        await check(future).completes();
         check(store.outboxMessages).isEmpty();
         checkNotifiedOnce();
       }));
@@ -634,7 +714,7 @@ void main() {
           // Subscribe, to mark message as not-stale, setting up another check…
           await store.addSubscription(eg.subscription(otherChannel));
 
-          await store.handleEvent(ChannelDeleteEvent(id: 1, streams: [otherChannel]));
+          await store.handleEvent(ChannelDeleteEvent(id: 1, channelIds: [otherChannel.streamId]));
           // Message was in a channel that became unknown, so clobber.
           checkClobber();
         });
@@ -989,6 +1069,30 @@ void main() {
       // Request success
       check(store.getEditMessageErrorStatus(message.id)).isNull();
       checkNotNotified();
+    }));
+
+    test('request succeeds, in unsubscribed channel', () => awaitFakeAsync((async) async {
+      final channel = eg.stream();
+      message = eg.streamMessage(stream: channel, sender: eg.selfUser);
+      await prepare(
+        narrow: ChannelNarrow(channel.streamId),
+        stream: channel,
+        isChannelSubscribed: false,
+      );
+      await prepareMessages([message]);
+      check(connection.takeRequests()).length.equals(1); // message-list fetchInitial
+
+      connection.prepare(
+        json: UpdateMessageResult().toJson(), delay: Duration(seconds: 1));
+      unawaited(store.editMessage(messageId: message.id,
+        originalRawContent: 'old content', newContent: 'new content'));
+      checkRequest(message.id, prevContent: 'old content', content: 'new content');
+      checkNotifiedOnce();
+
+      async.elapse(Duration(seconds: 1));
+      // Outbox status cleared already (we don't expect an edit-message event).
+      check(store.getEditMessageErrorStatus(message.id)).isNull();
+      checkNotifiedOnce();
     }));
   });
 
@@ -1437,7 +1541,7 @@ void main() {
       final originalMessage = eg.streamMessage(
         content: "<p>Hello, world</p>");
       final updateEvent = eg.updateMessageEditEvent(originalMessage,
-        flags: [MessageFlag.starred],
+        flags: [MessageFlag.hasAlertWord],
         renderedContent: "<p>Hello, edited</p>",
         editTimestamp: 99999,
         isMeMessage: true,
@@ -1634,6 +1738,20 @@ void main() {
       checkNotifiedOnce();
       check(store).messages.values.single.id.equals(message1.id);
     });
+
+    test('delete a starred message', () async {
+      final message = eg.streamMessage(flags: [MessageFlag.starred]);
+      await prepare(starredMessages: [message.id]);
+
+      // The actual message hasn't been fetched by a message list;
+      // we want to test [MessageStore.starredMessages] in isolation.
+      await prepareMessages([]);
+
+      check(store).starredMessages.single.equals(message.id);
+      await store.handleEvent(eg.deleteMessageEvent([message]));
+      checkNotified(count: 0, storeCount: 1);
+      check(store).starredMessages.isEmpty();
+    });
   });
 
   group('handleUpdateMessageFlagsEvent', () {
@@ -1695,12 +1813,49 @@ void main() {
 
       test('other flags not clobbered', () async {
         final message = eg.streamMessage(flags: [MessageFlag.starred]);
-        await prepare();
+        await prepare(starredMessages: [message.id]);
         await prepareMessages([message]);
         await store.handleEvent(mkAddEvent(MessageFlag.read, [message.id]));
         checkNotifiedOnce();
         check(store).messages.values
           .single.flags.deepEquals([MessageFlag.starred, MessageFlag.read]);
+      });
+
+      test('add to starredMessages', () async {
+        final message1 = eg.streamMessage(flags: []);
+        final message2 = eg.streamMessage(flags: []);
+        await prepare(starredMessages: []);
+        await prepareMessages([message2]);
+        check(store).starredMessages.isEmpty();
+        await store.handleEvent(
+          mkAddEvent(MessageFlag.starred, [message1.id, message2.id]));
+        checkNotified(count: 1, storeCount: 1);
+        check(store).starredMessages.deepEquals([message1.id, message2.id]);
+      });
+
+      test('prevent duplicate flags, when all: false', () async {
+        // Regression test for https://github.com/zulip/zulip-flutter/issues/1986
+        await prepare();
+        final message = eg.streamMessage(flags: [MessageFlag.read]);
+        await prepareMessages([message]);
+
+        await store.handleEvent(mkAddEvent(MessageFlag.read, [message.id]));
+        checkNotifiedOnce();
+        check(store).messages[message.id].flags.deepEquals([MessageFlag.read]);
+      });
+
+      test('prevent duplicate flags, when all: true', () async {
+        // Regression test for https://github.com/zulip/zulip-flutter/issues/1986
+        await prepare();
+        final message1 = eg.streamMessage(flags: [MessageFlag.read]);
+        final message2 = eg.streamMessage(flags: []);
+        await prepareMessages([message1, message2]);
+
+        await store.handleEvent(mkAddEvent(MessageFlag.read, [], all: true));
+        checkNotifiedOnce();
+        check(store).messages
+          ..[message1.id].flags.deepEquals([MessageFlag.read])
+          ..[message2.id].flags.deepEquals([MessageFlag.read]);
       });
     });
 
@@ -1730,12 +1885,24 @@ void main() {
 
       test('other flags not affected', () async {
         final message = eg.streamMessage(flags: [MessageFlag.starred, MessageFlag.read]);
-        await prepare();
+        await prepare(starredMessages: [message.id]);
         await prepareMessages([message]);
         await store.handleEvent(mkRemoveEvent(MessageFlag.read, [message]));
         checkNotifiedOnce();
         check(store).messages.values
           .single.flags.deepEquals([MessageFlag.starred]);
+      });
+
+      test('remove from starredMessages', () async {
+        final message1 = eg.streamMessage(flags: [MessageFlag.starred]);
+        final message2 = eg.streamMessage(flags: [MessageFlag.starred]);
+        await prepare(starredMessages: [message1.id, message2.id]);
+        await prepareMessages([message2]);
+        check(store).starredMessages.deepEquals([message1.id, message2.id]);
+        await store.handleEvent(
+          mkRemoveEvent(MessageFlag.starred, [message1, message2]));
+        checkNotified(count: 1, storeCount: 1);
+        check(store).starredMessages.isEmpty();
       });
     });
   });

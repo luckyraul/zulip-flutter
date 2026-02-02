@@ -40,7 +40,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get settingsPageTitle => '設定';
 
   @override
-  String get switchAccountButton => 'アカウントを切り替える';
+  String get switchAccountButtonTooltip => 'アカウントを切り替える';
 
   @override
   String tryAnotherAccountMessage(Object url) {
@@ -67,14 +67,14 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get chooseAccountButtonAddAnAccount => '新しいアカウントを追加';
 
   @override
-  String get navButtonAllChannels => 'All channels';
+  String get navButtonAllChannels => '全てのチャンネル';
 
   @override
-  String get allChannelsPageTitle => 'All channels';
+  String get allChannelsPageTitle => '全てのチャンネル';
 
   @override
   String get allChannelsEmptyPlaceholderHeader =>
-      'There are no channels you can view in this organization.';
+      'この組織には、あなたが閲覧できるチャンネルはありません。';
 
   @override
   String get profileButtonSendDirectMessage => 'ダイレクトメッセージを送信';
@@ -124,7 +124,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get unsubscribeConfirmationDialogMessageCannotResubscribe =>
-      'Once you leave this channel, you will not be able to rejoin.';
+      'このチャンネルを退出すると、再参加できなくなります。';
 
   @override
   String get unsubscribeConfirmationDialogConfirmButton => 'チャンネルから退出';
@@ -234,20 +234,20 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get actionSheetOptionEditMessage => 'メッセージを編集';
 
   @override
-  String get actionSheetOptionDeleteMessage => 'Delete message';
+  String get actionSheetOptionDeleteMessage => 'メッセージを削除';
 
   @override
-  String get deleteMessageConfirmationDialogTitle => 'Delete message?';
+  String get deleteMessageConfirmationDialogTitle => 'メッセージを削除しますか？';
 
   @override
   String get deleteMessageConfirmationDialogMessage =>
-      'Deleting a message permanently removes it for everyone.';
+      'メッセージを削除すると、全ユーザーから完全に削除されます。';
 
   @override
-  String get deleteMessageConfirmationDialogConfirmButton => 'Delete';
+  String get deleteMessageConfirmationDialogConfirmButton => '削除';
 
   @override
-  String get errorDeleteMessageFailedTitle => 'Failed to delete message';
+  String get errorDeleteMessageFailedTitle => 'メッセージの削除に失敗しました';
 
   @override
   String get actionSheetOptionMarkTopicAsRead => 'トピックを既読にする';
@@ -274,7 +274,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get errorCouldNotAccessUploadedFileTitle =>
-      'Could not access uploaded file';
+      'アップロードされたファイルにアクセスできませんでした';
 
   @override
   String get errorCopyingFailed => 'コピーに失敗しました';
@@ -414,20 +414,34 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get successChannelLinkCopied => 'チャンネルのリンクをコピーしました';
 
   @override
-  String get errorBannerDeactivatedDmLabel => '無効化されたユーザーにはメッセージを送信できません。';
+  String get composeBoxBannerLabelDeactivatedDmRecipient =>
+      '無効化されたユーザーにはメッセージを送信できません。';
 
   @override
-  String get errorBannerCannotPostInChannelLabel => 'このチャンネルに投稿する権限がありません。';
+  String get composeBoxBannerLabelUnknownDmRecipient =>
+      'You cannot send messages to unknown users.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
+      'You cannot send messages here.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendInChannel =>
+      'このチャンネルに投稿する権限がありません。';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribed =>
+      'Replies to your messages will not appear automatically.';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
-      'New messages will not appear automatically.';
+      '新しいメッセージは自動的に表示されません。';
 
   @override
-  String get composeBoxBannerButtonRefresh => 'Refresh';
+  String get composeBoxBannerButtonRefresh => '更新';
 
   @override
-  String get composeBoxBannerButtonSubscribe => 'Subscribe';
+  String get composeBoxBannerButtonSubscribe => '購読する';
 
   @override
   String get composeBoxBannerLabelEditMessage => 'メッセージを編集';
@@ -503,7 +517,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get composeBoxGroupDmContentHint => 'グループにメッセージ';
 
   @override
-  String get composeBoxSelfDmContentHint => 'メモを書き留める';
+  String get composeBoxSelfDmContentHint => '自分宛てにメモを書く';
 
   @override
   String composeBoxChannelContentHint(String destination) {
@@ -555,6 +569,63 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get emptyMessageList => 'ここにはメッセージがありません。';
+
+  @override
+  String get emptyMessageListCombinedFeed => '統合フィードにメッセージはありません。';
+
+  @override
+  String get emptyMessageListChannelWithoutContentAccess =>
+      'このチャンネルに対する<z-link>コンテンツへのアクセス権</z-link>がありません。';
+
+  @override
+  String get emptyMessageListChannelUnavailable =>
+      'このチャンネルは存在しないか、または閲覧する権限がありません。';
+
+  @override
+  String get emptyMessageListSelfDmHeader => '自分宛のダイレクトメッセージはまだありません！';
+
+  @override
+  String get emptyMessageListSelfDmMessage =>
+      'このスペースは、自分用のメモやZulipの機能を試すために活用してください。';
+
+  @override
+  String emptyMessageListDm(String person) {
+    return '$person さんとのダイレクトメッセージはまだありません。';
+  }
+
+  @override
+  String emptyMessageListDmDeactivatedUser(String person) {
+    return '$person さんとのダイレクトメッセージはありません。';
+  }
+
+  @override
+  String get emptyMessageListDmUnknownUser => 'このユーザーとのダイレクトメッセージはありません。';
+
+  @override
+  String get emptyMessageListGroupDm => 'これらのユーザーとのダイレクトメッセージはまだありません。';
+
+  @override
+  String get emptyMessageListGroupDmDeactivatedUser =>
+      'これらのユーザーとのダイレクトメッセージはありません。';
+
+  @override
+  String get emptyMessageListDmStartConversation => '会話を始めてみませんか？';
+
+  @override
+  String get emptyMessageListMentionsHeader =>
+      'このビューには、あなたが<z-link>メンション</z-link>されたメッセージが表示されます。';
+
+  @override
+  String get emptyMessageListMentionsMessage =>
+      'メッセージに注目してほしいときは、ユーザー、グループ、トピックの参加者、またはチャンネルの全購読者をメンションできます。メッセージ作成ボックスで「@」を入力し、候補リストからメンションしたい相手を選んでください。';
+
+  @override
+  String get emptyMessageListStarredHeader => 'スター付きメッセージはありません。';
+
+  @override
+  String emptyMessageListStarredMessage(String button) {
+    return '<z-link>スター</z-link>を付けると、後で見返したいタスクや役立つ参考資料など、重要なメッセージを管理するのに便利です。メッセージにスターを付けるには、メッセージを長押しして「$button」をタップしてください。';
+  }
 
   @override
   String get emptyMessageListSearch => '検索結果はありません。';
@@ -615,6 +686,9 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get loginMethodDivider => 'または';
 
   @override
+  String get loginMethodDividerSemanticLabel => '他のログイン方法';
+
+  @override
   String signInWithFoo(String method) {
     return '$methodでログイン';
   }
@@ -648,7 +722,13 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String topicValidationErrorTooLong(int maxLength) {
-    return 'トピックは60文字以内で入力してください。';
+    String _temp0 = intl.Intl.pluralLogic(
+      maxLength,
+      locale: localeName,
+      other: '$maxLength 文字',
+      one: '1 文字',
+    );
+    return 'トピックの長さは$_temp0 以内にしてください。';
   }
 
   @override
@@ -751,6 +831,28 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get errorMarkAsUnreadFailedTitle => '未読にできませんでした';
+
+  @override
+  String markAllAsReadConfirmationDialogTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mark $count+ messages as read?',
+      one: 'Mark $count+ messages as read?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get markAllAsReadConfirmationDialogTitleNoCount =>
+      'Mark messages as read?';
+
+  @override
+  String get markAllAsReadConfirmationDialogMessage =>
+      'Messages in multiple conversations may be affected.';
+
+  @override
+  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
 
   @override
   String get today => '今日';
@@ -893,12 +995,11 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get inboxPageTitle => '受信箱';
 
   @override
-  String get inboxEmptyPlaceholderHeader =>
-      'There are no unread messages in your inbox.';
+  String get inboxEmptyPlaceholderHeader => '受信箱に未読メッセージはありません。';
 
   @override
   String get inboxEmptyPlaceholderMessage =>
-      'Use the buttons below to view the combined feed or list of channels.';
+      '下のボタンを使用して、統合フィードまたはチャンネル一覧を表示します。';
 
   @override
   String get recentDmConversationsPageTitle => 'ダイレクトメッセージ';
@@ -908,11 +1009,10 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get recentDmConversationsEmptyPlaceholderHeader =>
-      'You have no direct messages yet!';
+      'ダイレクトメッセージはまだありません！';
 
   @override
-  String get recentDmConversationsEmptyPlaceholderMessage =>
-      'Why not start a conversation?';
+  String get recentDmConversationsEmptyPlaceholderMessage => '会話を始めてみませんか？';
 
   @override
   String get combinedFeedPageTitle => '統合フィード';
@@ -927,16 +1027,15 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get channelsPageTitle => 'チャンネル';
 
   @override
-  String get channelsEmptyPlaceholderHeader =>
-      'You’re not subscribed to any channels yet.';
+  String get channelsEmptyPlaceholderHeader => 'まだどのチャンネルも購読していません。';
 
   @override
   String channelsEmptyPlaceholderMessage(String allChannelsPageTitle) {
-    return 'Try going to <z-link>$allChannelsPageTitle</z-link> and joining some of them.';
+    return '<z-link>$allChannelsPageTitle</z-link> に移動して、いくつか参加してみましょう。';
   }
 
   @override
-  String get sharePageTitle => '共有';
+  String get shareChooseAccountModalTitle => 'アカウントを選択';
 
   @override
   String get mainMenuMyProfile => '自分のプロフィール';
@@ -1028,6 +1127,9 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'トピック参加者に通知';
+
+  @override
+  String get navBarMenuLabel => 'メニュー';
 
   @override
   String get messageIsEditedLabel => '編集済み';
@@ -1151,4 +1253,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get topicListEmptyPlaceholderHeader => 'トピックはまだありません。';
 }

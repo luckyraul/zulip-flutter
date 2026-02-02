@@ -41,7 +41,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get settingsPageTitle => 'Настройки';
 
   @override
-  String get switchAccountButton => 'Сменить учетную запись';
+  String get switchAccountButtonTooltip => 'Сменить учетную запись';
 
   @override
   String tryAnotherAccountMessage(Object url) {
@@ -102,7 +102,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get actionSheetOptionSubscribe => 'Подписаться';
 
   @override
-  String get subscribeFailedTitle => 'Подписаться не удалось';
+  String get subscribeFailedTitle => 'Не удалось подписаться';
 
   @override
   String get actionSheetOptionMarkChannelAsRead =>
@@ -151,7 +151,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get actionSheetOptionResolveTopic => 'Поставить отметку \"решено\"';
 
   @override
-  String get actionSheetOptionUnresolveTopic => 'Снять отметку \"решено\"';
+  String get actionSheetOptionUnresolveTopic => 'Пометить как нерешённое';
 
   @override
   String get errorResolveTopicFailedTitle =>
@@ -436,12 +436,24 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get successChannelLinkCopied => 'Ссылка на канал скопирована';
 
   @override
-  String get errorBannerDeactivatedDmLabel =>
+  String get composeBoxBannerLabelDeactivatedDmRecipient =>
       'Нельзя отправить сообщение отключенным пользователям.';
 
   @override
-  String get errorBannerCannotPostInChannelLabel =>
+  String get composeBoxBannerLabelUnknownDmRecipient =>
+      'You cannot send messages to unknown users.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
+      'You cannot send messages here.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendInChannel =>
       'У вас нет права писать в этом канале.';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribed =>
+      'Replies to your messages will not appear automatically.';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
@@ -583,6 +595,68 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get emptyMessageList => 'Здесь нет сообщений.';
 
   @override
+  String get emptyMessageListCombinedFeed =>
+      'В вашей объединенной ленте нет сообщений.';
+
+  @override
+  String get emptyMessageListChannelWithoutContentAccess =>
+      'У вас нет <z-link>доступа к содержимому</z-link> данного канала.';
+
+  @override
+  String get emptyMessageListChannelUnavailable =>
+      'Этого канала нет, или у вас нет к нему доступа.';
+
+  @override
+  String get emptyMessageListSelfDmHeader =>
+      'Вы еще не отправляли себе личные сообщения!';
+
+  @override
+  String get emptyMessageListSelfDmMessage =>
+      'Здесь вы можете делать заметки для себя и тестировать возможности Zulip.';
+
+  @override
+  String emptyMessageListDm(String person) {
+    return 'У вас пока нет личной переписки с пользователем $person.';
+  }
+
+  @override
+  String emptyMessageListDmDeactivatedUser(String person) {
+    return 'У вас нет личной переписки с пользователем $person.';
+  }
+
+  @override
+  String get emptyMessageListDmUnknownUser =>
+      'У вас нет личной переписки с этим пользователем.';
+
+  @override
+  String get emptyMessageListGroupDm =>
+      'У вас пока нет личной переписки с этими пользователями.';
+
+  @override
+  String get emptyMessageListGroupDmDeactivatedUser =>
+      'У вас нет личной переписки с этими пользователями.';
+
+  @override
+  String get emptyMessageListDmStartConversation =>
+      'Почему бы не начать общение?';
+
+  @override
+  String get emptyMessageListMentionsHeader =>
+      'Этот вид показывает сообщения, в которых вас <z-link>упомянули</z-link>.';
+
+  @override
+  String get emptyMessageListMentionsMessage =>
+      'Чтобы привлечь внимание к сообщению, вы можете упомянуть пользователя, группу, участников темы или всех подписчиков канала. Введите @ в поле для ввода текста и выберите из списка подсказок, кого вы хотите упомянуть.';
+
+  @override
+  String get emptyMessageListStarredHeader => 'У вас нет отмеченных сообщений.';
+
+  @override
+  String emptyMessageListStarredMessage(String button) {
+    return '<z-link>Отметка</z-link> звездочкой — это хороший способ отслеживать важные сообщения, такие как задачи, к которым нужно вернуться, или полезные ссылки. Чтобы отметить сообщение, выберите его длинным нажатием, а затем нажмите «$button».';
+  }
+
+  @override
   String get emptyMessageListSearch => 'Ничего не найдено.';
 
   @override
@@ -641,6 +715,9 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get loginMethodDivider => 'ИЛИ';
+
+  @override
+  String get loginMethodDividerSemanticLabel => 'Другие варианты входа';
 
   @override
   String signInWithFoo(String method) {
@@ -794,6 +871,28 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   @override
   String get errorMarkAsUnreadFailedTitle =>
       'Не удалось снять отметку прочтения';
+
+  @override
+  String markAllAsReadConfirmationDialogTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mark $count+ messages as read?',
+      one: 'Mark $count+ messages as read?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get markAllAsReadConfirmationDialogTitleNoCount =>
+      'Mark messages as read?';
+
+  @override
+  String get markAllAsReadConfirmationDialogMessage =>
+      'Messages in multiple conversations may be affected.';
+
+  @override
+  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
 
   @override
   String get today => 'Сегодня';
@@ -988,7 +1087,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   }
 
   @override
-  String get sharePageTitle => 'Поделиться';
+  String get shareChooseAccountModalTitle => 'Выберите учетную запись';
 
   @override
   String get mainMenuMyProfile => 'Мой профиль';
@@ -1082,6 +1181,9 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'Оповестить тему';
+
+  @override
+  String get navBarMenuLabel => 'Меню';
 
   @override
   String get messageIsEditedLabel => 'ИЗМЕНЕНО';
@@ -1209,4 +1311,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get topicListEmptyPlaceholderHeader => 'Здесь пока нет тем.';
 }

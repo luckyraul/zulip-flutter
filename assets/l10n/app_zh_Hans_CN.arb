@@ -297,10 +297,10 @@
   "@errorAccountLoggedInTitle": {
     "description": "Error title on attempting to log into an account that's already logged in."
   },
-  "@errorBannerCannotPostInChannelLabel": {
+  "@composeBoxBannerLabelCannotSendInChannel": {
     "description": "Error-banner text replacing the compose box when you do not have permission to send a message to the channel."
   },
-  "@errorBannerDeactivatedDmLabel": {
+  "@composeBoxBannerLabelDeactivatedDmRecipient": {
     "description": "Label text for error banner when sending a message to one or multiple deactivated users."
   },
   "@errorConnectingToServerDetails": {
@@ -950,9 +950,6 @@
     "description": "Title for the 'Set status' page."
   },
   "@settingsPageTitle": {},
-  "@sharePageTitle": {
-    "description": "Title for the page about sharing content received from other apps."
-  },
   "@signInWithFoo": {
     "description": "Button to use {method} to sign in to the app.",
     "placeholders": {
@@ -1004,8 +1001,8 @@
   "@successTopicLinkCopied": {
     "description": "Message when link of a topic was copied to the user's system clipboard."
   },
-  "@switchAccountButton": {
-    "description": "Label for main-menu button leading to the choose-account page."
+  "@switchAccountButtonTooltip": {
+    "description": "Tooltip message for main-menu button leading to the choose-account page."
   },
   "@themeSettingDark": {
     "description": "Label for dark theme setting."
@@ -1301,8 +1298,8 @@
   "emptyMessageListSearch": "没有搜索结果。",
   "errorAccountLoggedIn": "在 {server} 的账号 {email} 已经在您的账号列表了。",
   "errorAccountLoggedInTitle": "已经登入该账号",
-  "errorBannerCannotPostInChannelLabel": "您没有足够的权限在此频道发送消息。",
-  "errorBannerDeactivatedDmLabel": "您不能向被停用的用户发送消息。",
+  "composeBoxBannerLabelCannotSendInChannel": "您没有足够的权限在此频道发送消息。",
+  "composeBoxBannerLabelDeactivatedDmRecipient": "您不能向被停用的用户发送消息。",
   "errorConnectingToServerDetails": "未能连接到在 {serverUrl} 的 Zulip 服务器。即将重连：\n\n{error}",
   "errorConnectingToServerShort": "未能连接到 Zulip. 重试中…",
   "errorContentNotInsertedTitle": "未插入内容",
@@ -1452,7 +1449,6 @@
   "serverUrlValidationErrorUnsupportedScheme": "服务器网址必须以 http:// 或 https:// 开头。",
   "setStatusPageTitle": "设定状态",
   "settingsPageTitle": "设置",
-  "sharePageTitle": "分享",
   "signInWithFoo": "使用{method}登入",
   "snackBarDetails": "详情",
   "spoilerDefaultHeaderText": "剧透",
@@ -1468,7 +1464,7 @@
   "successMessageLinkCopied": "已复制消息链接",
   "successMessageTextCopied": "已复制消息文本",
   "successTopicLinkCopied": "话题链接已复制",
-  "switchAccountButton": "切换账号",
+  "switchAccountButtonTooltip": "切换账号",
   "themeSettingDark": "暗色模式",
   "themeSettingLight": "浅色模式",
   "themeSettingSystem": "跟随系统",

@@ -3,6 +3,142 @@
 ## Unreleased
 
 
+## 30.0.270 (2026-01-26)
+
+### Highlights for users
+
+* Support inline images in message paragraphs, new in Zulip
+  Server 12. (#1913)
+* Dedupe message-list pages on opening a notification. (#1852)
+* Topic-list page stays up to date when a topic is resolved or
+  moved. (#1499)
+* Confirm before marking read across multiple conversations. (#1858)
+* (Android) Allow selecting account when sharing to Zulip. (#1779)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* Merge log: PRs, with fixed issues and user-visible changes.
+  * #2048
+  * #2020
+  * #2038.  Fix RTL layout of date in recipient header.
+  * #1951: fix #2060, fix #1499.  Fixed extra recipient header on case
+    change within topic narrow.  Topic-list page stays up to date when
+    a topic is resolved or moved.
+  * #2051
+  * #1987: fix #1936.  Disable image-preview animations when requested
+    in device settings.
+  * #2063.  Fix RTL layout of scroll-to-bottom button.
+  * #1994: fix #1587.  Fix cramped layout of emoji picker in
+    "plain text" emoji theme.
+  * #2034: fix part of #1798.  Clarify behavior on sending or editing
+    in unsubscribed channel.
+  * #1999.  Show starred-message count in main menu.
+  * #2059: fix #1852.  Dedupe message-list pages on opening a
+    notification.
+  * #1883: fix #1779.  Allow selecting account when sharing to Zulip
+    (on Android).
+  * #2053
+  * #2074.  Accept more modern/future notif format.
+  * #2068.  Flutter upgrade.
+  * #2091: fix #2082.  (Dev-only change.)
+  * #2077.
+  * #2069.  (Relates to RTL layout, but NFC.)
+  * #2033: fix #1986.  Fix bug that could cause a message marked
+    unread to appear read.
+  * #2084: fix #1798.  Further clarify behavior on sending or editing
+    in unsubscribed channel.
+  * #2099.
+  * #2100.
+  * #2067: fix #1913.  Support inline images in message paragraphs,
+    new in Zulip Server 12.
+  * #2101.  Update translations.
+  * #2006: fix #1858.  Confirm before marking read across multiple
+    conversations.
+
+
+## 30.0.269 (2025-12-22)
+
+### Highlights for users (since last general release, v30.0.267)
+
+* Clearer navigation on opening a notification in a different
+  account. (#1210)
+* Autocomplete mentioning a channel, with "#". (PR #1902, toward #124)
+* Show current organization's name and icon atop main menu. (#1037)
+* Many small fixes for layout with right-to-left scripts.
+  (#1245, PR #2005, PR #2007, PR #2010, #1907)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* Merge log: PRs, with fixed issues and user-visible changes.
+  * #2050: fix #2049.  Revert the Flutter upgrade from #2009.
+
+
+## 30.0.268 (2025-12-19)
+
+This was an alpha-only, Android-only release.
+
+An iOS release from this version was impossible: #2049.
+
+
+### Highlights for users
+
+* Clearer navigation on opening a notification in a different
+  account. (#1210)
+* Autocomplete mentioning a channel, with "#". (PR #1902, toward #124)
+* Show current organization's name and icon atop main menu. (#1037)
+* Many small fixes for layout with right-to-left scripts.
+  (#1245, PR #2005, PR #2007, PR #2010, #1907)
+* Too many other improvements and fixes to describe them all here.
+
+
+### Highlights for developers
+
+* New changelog format.  See commit 2b7ab49ff.
+
+* Merge log: PRs, with fixed issues and user-visible changes.
+  * #1976
+  * #1978
+  * #1979.  Fix a small memory leak.
+  * #2001: fix #2000.  Also Flutter upgrades.
+  * #1991: fix #1245.  Fix RTL layout for unread-message marker.
+  * #1879: fix #1857, fix #1960.  Labels and semantics for the
+    main-tabs icons.
+  * #1993: fix #1210.  Clearer navigation on opening a notification in
+    a different account.
+  * #1937: fix #1037.  Show current organization's name and icon atop
+    main menu.
+  * #1997: fix #2026, fix part of #1088.  Fix mismatch in mentions
+    narrow between mark-read button and message list.  Show unread
+    counts in main menu.
+  * #1988
+  * #2024
+  * #2023
+  * #2009.  Flutter and package upgrades.
+  * #1983: fix #1981.  Accept unknown/future "emojiset" setting values
+    from server.
+  * #2005.  Fix RTL layout of block quotes.
+  * #2007.  Fix RTL layout of inline message media.
+  * #1947.  Friendlier placeholder text in msglist when no messages.
+  * #2016.  Use Zulip's own "copy" icon for "copy link" button.
+  * #2010.  Fix RTL layout in reaction buttons.
+  * #1880: fix #1685.  Very slightly lighter background color in dark
+    theme.
+  * #1370: fix #1179.  Make whole channel side of recipient header lead
+    to channel on tap.
+  * #2015: fix #1907.  Flip certain icons in RTL layouts.
+  * #1902: fix part of #124.  Autocomplete mentioning a channel, with
+    "#".
+  * #1968: fix #1961.  Clarify semantics on login options.
+  * #2027: fix #2003.  Show placeholder on topic-list page when no
+    topics.
+  * #1998.  Tweak design of main-menu buttons.
+  * #2044.  Update translations.
+
+
 ## 30.0.267 (2025-11-06)
 
 ### Highlights for users

@@ -41,7 +41,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get settingsPageTitle => 'Settings';
 
   @override
-  String get switchAccountButton => 'Switch account';
+  String get switchAccountButtonTooltip => 'Switch account';
 
   @override
   String tryAnotherAccountMessage(Object url) {
@@ -422,12 +422,24 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get successChannelLinkCopied => 'Channel link copied';
 
   @override
-  String get errorBannerDeactivatedDmLabel =>
+  String get composeBoxBannerLabelDeactivatedDmRecipient =>
       'You cannot send messages to deactivated users.';
 
   @override
-  String get errorBannerCannotPostInChannelLabel =>
+  String get composeBoxBannerLabelUnknownDmRecipient =>
+      'You cannot send messages to unknown users.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
+      'You cannot send messages here.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendInChannel =>
       'You do not have permission to post in this channel.';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribed =>
+      'Replies to your messages will not appear automatically.';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
@@ -569,6 +581,68 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get emptyMessageList => 'There are no messages here.';
 
   @override
+  String get emptyMessageListCombinedFeed =>
+      'There are no messages in your combined feed.';
+
+  @override
+  String get emptyMessageListChannelWithoutContentAccess =>
+      'You don’t have <z-link>content access</z-link> to this channel.';
+
+  @override
+  String get emptyMessageListChannelUnavailable =>
+      'This channel doesn’t exist, or you are not allowed to view it.';
+
+  @override
+  String get emptyMessageListSelfDmHeader =>
+      'You have not sent any direct messages to yourself yet!';
+
+  @override
+  String get emptyMessageListSelfDmMessage =>
+      'Use this space for personal notes, or to test out Zulip features.';
+
+  @override
+  String emptyMessageListDm(String person) {
+    return 'You have no direct messages with $person yet.';
+  }
+
+  @override
+  String emptyMessageListDmDeactivatedUser(String person) {
+    return 'You have no direct messages with $person.';
+  }
+
+  @override
+  String get emptyMessageListDmUnknownUser =>
+      'You have no direct messages with this user.';
+
+  @override
+  String get emptyMessageListGroupDm =>
+      'You have no direct messages with these users yet.';
+
+  @override
+  String get emptyMessageListGroupDmDeactivatedUser =>
+      'You have no direct messages with these users.';
+
+  @override
+  String get emptyMessageListDmStartConversation =>
+      'Why not start the conversation?';
+
+  @override
+  String get emptyMessageListMentionsHeader =>
+      'This view will show messages where you are <z-link>mentioned</z-link>.';
+
+  @override
+  String get emptyMessageListMentionsMessage =>
+      'To call attention to a message, you can mention a user, a group, topic participants, or all subscribers to a channel. Type @ in the compose box, and choose who you’d like to mention from the list of suggestions.';
+
+  @override
+  String get emptyMessageListStarredHeader => 'You have no starred messages.';
+
+  @override
+  String emptyMessageListStarredMessage(String button) {
+    return '<z-link>Starring</z-link> is a good way to keep track of important messages, such as tasks you need to go back to, or useful references. To star a message, long-press it and tap “$button.”';
+  }
+
+  @override
   String get emptyMessageListSearch => 'No search results.';
 
   @override
@@ -627,6 +701,9 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get loginMethodDivider => 'OR';
+
+  @override
+  String get loginMethodDividerSemanticLabel => 'Log-in alternatives';
 
   @override
   String signInWithFoo(String method) {
@@ -773,6 +850,28 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get errorMarkAsUnreadFailedTitle => 'Mark as unread failed';
+
+  @override
+  String markAllAsReadConfirmationDialogTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mark $count+ messages as read?',
+      one: 'Mark $count+ messages as read?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get markAllAsReadConfirmationDialogTitleNoCount =>
+      'Mark messages as read?';
+
+  @override
+  String get markAllAsReadConfirmationDialogMessage =>
+      'Messages in multiple conversations may be affected.';
+
+  @override
+  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
 
   @override
   String get today => 'Today';
@@ -961,7 +1060,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   }
 
   @override
-  String get sharePageTitle => 'Share';
+  String get shareChooseAccountModalTitle => 'Choose an account';
 
   @override
   String get mainMenuMyProfile => 'My profile';
@@ -1053,6 +1152,9 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'Notify topic';
+
+  @override
+  String get navBarMenuLabel => 'Menu';
 
   @override
   String get messageIsEditedLabel => 'EDITED';
@@ -1177,6 +1279,9 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get topicListEmptyPlaceholderHeader => 'There are no topics here yet.';
 }
 
 /// The translations for Chinese, as used in China, using the Han script (`zh_Hans_CN`).
@@ -1214,7 +1319,7 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get settingsPageTitle => '设置';
 
   @override
-  String get switchAccountButton => '切换账号';
+  String get switchAccountButtonTooltip => '切换账号';
 
   @override
   String tryAnotherAccountMessage(Object url) {
@@ -1572,10 +1677,10 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get successChannelLinkCopied => '频道链接已复制';
 
   @override
-  String get errorBannerDeactivatedDmLabel => '您不能向被停用的用户发送消息。';
+  String get composeBoxBannerLabelDeactivatedDmRecipient => '您不能向被停用的用户发送消息。';
 
   @override
-  String get errorBannerCannotPostInChannelLabel => '您没有足够的权限在此频道发送消息。';
+  String get composeBoxBannerLabelCannotSendInChannel => '您没有足够的权限在此频道发送消息。';
 
   @override
   String get composeBoxBannerLabelEditMessage => '编辑消息';
@@ -2055,9 +2160,6 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get channelsPageTitle => '频道';
 
   @override
-  String get sharePageTitle => '分享';
-
-  @override
   String get mainMenuMyProfile => '个人资料';
 
   @override
@@ -2302,7 +2404,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get settingsPageTitle => '設定';
 
   @override
-  String get switchAccountButton => '切換帳號';
+  String get switchAccountButtonTooltip => '切換帳號';
 
   @override
   String tryAnotherAccountMessage(Object url) {
@@ -2333,6 +2435,9 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
 
   @override
   String get allChannelsPageTitle => '所有頻道';
+
+  @override
+  String get allChannelsEmptyPlaceholderHeader => '在此組織中沒有您可以查看的頻道。';
 
   @override
   String get profileButtonSendDirectMessage => '發送私訊';
@@ -2366,7 +2471,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get actionSheetOptionCopyChannelLink => '複製頻道連結';
 
   @override
-  String get actionSheetOptionListOfTopics => '議題列表';
+  String get actionSheetOptionListOfTopics => '話題列表';
 
   @override
   String get actionSheetOptionChannelFeed => '頻道動態';
@@ -2509,7 +2614,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get actionSheetOptionMarkTopicAsRead => '標註話題為已讀';
 
   @override
-  String get actionSheetOptionCopyTopicLink => '複製議題的連結';
+  String get actionSheetOptionCopyTopicLink => '複製話題的連結';
 
   @override
   String get errorWebAuthOperationalErrorTitle => '出錯了';
@@ -2663,16 +2768,16 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get successMessageLinkCopied => '已複製訊息連結';
 
   @override
-  String get successTopicLinkCopied => '議題連結已複製';
+  String get successTopicLinkCopied => '話題連結已複製';
 
   @override
   String get successChannelLinkCopied => '頻道連結已複製';
 
   @override
-  String get errorBannerDeactivatedDmLabel => '您無法向已停用的使用者發送訊息。';
+  String get composeBoxBannerLabelDeactivatedDmRecipient => '您無法向已停用的使用者發送訊息。';
 
   @override
-  String get errorBannerCannotPostInChannelLabel => '您沒有權限在此頻道發佈訊息。';
+  String get composeBoxBannerLabelCannotSendInChannel => '您沒有權限在此頻道發佈訊息。';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend => '新訊息將不會自動顯示。';
@@ -2774,11 +2879,11 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get unknownChannelName => '(未知頻道)';
 
   @override
-  String get composeBoxTopicHintText => '議題';
+  String get composeBoxTopicHintText => '話題';
 
   @override
   String composeBoxEnterTopicOrSkipHintText(String defaultTopicName) {
-    return '輸入議題（留空則使用「$defaultTopicName」）';
+    return '輸入話題（留空則使用「$defaultTopicName」）';
   }
 
   @override
@@ -3145,10 +3250,22 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get inboxPageTitle => '收件匣';
 
   @override
+  String get inboxEmptyPlaceholderHeader => '您的收件匣中沒有未讀訊息。';
+
+  @override
+  String get inboxEmptyPlaceholderMessage => '請使用下方按鈕查看綜合動態或頻道清單。';
+
+  @override
   String get recentDmConversationsPageTitle => '私人訊息';
 
   @override
   String get recentDmConversationsSectionHeader => '私人訊息';
+
+  @override
+  String get recentDmConversationsEmptyPlaceholderHeader => '您尚未有任何私人訊息！';
+
+  @override
+  String get recentDmConversationsEmptyPlaceholderMessage => '要不要開始一段對話呢？';
 
   @override
   String get combinedFeedPageTitle => '綜合饋給';
@@ -3163,7 +3280,12 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get channelsPageTitle => '頻道';
 
   @override
-  String get sharePageTitle => '分享';
+  String get channelsEmptyPlaceholderHeader => '您尚未訂閱任何頻道。';
+
+  @override
+  String channelsEmptyPlaceholderMessage(String allChannelsPageTitle) {
+    return '試著前往 <z-link>$allChannelsPageTitle</z-link>，加入一些頻道吧。';
+  }
 
   @override
   String get mainMenuMyProfile => '我的設定檔';
@@ -3242,7 +3364,7 @@ class ZulipLocalizationsZhHantTw extends ZulipLocalizationsZh {
   String get wildcardMentionStream => '串流';
 
   @override
-  String get wildcardMentionTopic => '議題';
+  String get wildcardMentionTopic => '話題';
 
   @override
   String get wildcardMentionChannelDescription => '通知頻道';

@@ -468,12 +468,12 @@ class Quotation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 10),
+      padding: const EdgeInsetsDirectional.only(start: 10),
       child: Container(
-        padding: const EdgeInsets.only(left: 5),
+        padding: const EdgeInsetsDirectional.only(start: 5),
         decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
+          border: BorderDirectional(
+            start: BorderSide(
               width: 5,
               // Web has the same color in light and dark mode.
               color: const HSLColor.fromAHSL(1, 0, 0, 0.87).toColor()))),
@@ -606,7 +606,7 @@ class _SpoilerState extends State<Spoiler> with TickerProviderStateMixin {
               SizeTransition(
                 sizeFactor: _animation,
                 axis: Axis.vertical,
-                axisAlignment: -1,
+                alignment: AlignmentDirectional.topStart,
                 child: Padding(
                   padding: const EdgeInsets.all(5),
                   child: BlockContentList(nodes: widget.node.content))),
@@ -633,37 +633,10 @@ class MessageImagePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = InheritedMessage.of(context);
-
-    // TODO image hover animation
-    final srcUrl = node.srcUrl;
-    final thumbnailUrl = node.thumbnailUrl;
-    final store = PerAccountStoreWidget.of(context);
-    final resolvedSrcUrl = store.tryResolveUrl(srcUrl);
-    final resolvedThumbnailUrl = thumbnailUrl == null
-      ? null : store.tryResolveUrl(thumbnailUrl);
-
-    // TODO if src fails to parse, show an explicit "broken image"
-
-    return MessageMediaContainer(
-      onTap: resolvedSrcUrl == null ? null : () { // TODO(log)
-        Navigator.of(context).push(getImageLightboxRoute(
-          context: context,
-          message: message,
-          messageImageContext: context,
-          src: resolvedSrcUrl,
-          thumbnailUrl: resolvedThumbnailUrl,
-          originalWidth: node.originalWidth,
-          originalHeight: node.originalHeight));
-      },
-      child: node.loading
-        ? const CupertinoActivityIndicator()
-        : resolvedSrcUrl == null ? null : LightboxHero(
-            messageImageContext: context,
-            src: resolvedSrcUrl,
-            child: RealmContentNetworkImage(
-              resolvedThumbnailUrl ?? resolvedSrcUrl,
-              filterQuality: FilterQuality.medium)));
+    return _Image(node: node, size: MessageMediaContainer.size,
+      buildContainer: (onTap, child) {
+        return MessageMediaContainer(onTap: onTap, child: child);
+      });
   }
 }
 
@@ -736,23 +709,25 @@ class MessageMediaContainer extends StatelessWidget {
   final void Function()? onTap;
   final Widget? child;
 
+  /// The container's size, in logical pixels.
+  static const size = Size(150, 100);
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: UnconstrainedBox(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Padding(
           // TODO clean up this padding by imitating web less precisely;
           //   in particular, avoid adding loose whitespace at end of message.
-          padding: const EdgeInsets.only(right: 5, bottom: 5),
+          padding: const EdgeInsetsDirectional.only(end: 5, bottom: 5),
           child: ColoredBox(
             color: ContentTheme.of(context).colorMessageMediaContainerBackground,
             child: Padding(
               padding: const EdgeInsets.all(1),
-              child: SizedBox(
-                height: 100,
-                width: 150,
+              child: SizedBox.fromSize(
+                size: size,
                 child: child))))));
   }
 }
@@ -1133,6 +1108,10 @@ class _InlineContentBuilder {
         return WidgetSpan(alignment: PlaceholderAlignment.middle,
           child: MessageImageEmoji(node: node));
 
+      case InlineImageNode():
+        return WidgetSpan(alignment: PlaceholderAlignment.middle,
+          child: InlineImage(node: node, ambientTextStyle: widget.style));
+
       case MathInlineNode():
         final nodes = node.nodes;
         return nodes == null
@@ -1215,7 +1194,15 @@ class UserMention extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
     final contentTheme = ContentTheme.of(context);
+    var nodes = node.nodes;
+    if (node.userId case final userId?) {
+      final user = store.getUser(userId);
+      if (user case User(:final fullName)) {
+        nodes = [TextNode(node.isSilent ? fullName : '@$fullName')];
+      }
+    }
     return Container(
       decoration: BoxDecoration(
         // TODO(#646) different for wildcard mentions
@@ -1234,7 +1221,7 @@ class UserMention extends StatelessWidget {
         //   distinguish font color between direct and wildcard mentions
         style: ambientTextStyle,
 
-        nodes: node.nodes));
+        nodes: nodes));
   }
 
 // This is a more literal translation of Zulip web's CSS.
@@ -1287,6 +1274,61 @@ class MessageImageEmoji extends StatelessWidget {
                 height: size,
               )),
       ]);
+  }
+}
+
+class InlineImage extends StatelessWidget {
+  const InlineImage({
+    super.key,
+    required this.node,
+    required this.ambientTextStyle,
+  });
+
+  final InlineImageNode node;
+  final TextStyle ambientTextStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+
+    // Follow web's max-height behavior (10em);
+    // see image_box_em in web/src/postprocess_content.ts.
+    final maxHeight = ambientTextStyle.fontSize! * 10;
+
+    final imageSize = (node.originalWidth != null && node.originalHeight != null)
+      ? Size(node.originalWidth!, node.originalHeight!) / devicePixelRatio
+      // Layout plan when original dimensions are unknown:
+      // a [MessageMediaContainer]-sized and -colored rectangle.
+      : MessageMediaContainer.size;
+
+    // (a) Don't let tall, thin images take up too much vertical space,
+    //     which could be annoying to scroll through. And:
+    // (b) Don't let small images grow to occupy more physical pixels
+    //     than they have data for.
+    //     It looks like web has code for this in web/src/postprocess_content.ts
+    //     but it doesn't account for the device pixel ratio, in 2026-01.
+    //     So in web, small images do get blown up and blurry on modern devices:
+    //       https://chat.zulip.org/#narrow/channel/101-design/topic/Inline.20images.20blown.20up.20and.20blurry/near/2346831
+    final size = BoxConstraints(maxHeight: maxHeight)
+      .constrainSizeAndAttemptToPreserveAspectRatio(imageSize);
+
+    Widget child = _Image(node: node, size: size,
+      buildContainer: (onTap, child) {
+        if (onTap == null) return child;
+        return GestureDetector(onTap: onTap, child: child);
+      });
+
+    return Padding(
+      // Separate images vertically when they flow onto separate lines.
+      // (3px follows web; see web/styles/rendered_markdown.css.)
+      padding: const EdgeInsets.only(top: 3),
+      child: ConstrainedBox(
+        constraints: BoxConstraints.loose(size),
+        child: AspectRatio(
+          aspectRatio: size.aspectRatio,
+          child: ColoredBox(
+            color: ContentTheme.of(context).colorMessageMediaContainerBackground,
+            child: child))));
   }
 }
 
@@ -1413,6 +1455,93 @@ class MessageTableCell extends StatelessWidget {
                 : DefaultTextStyle.of(context).style
                     .merge(weightVariableTextStyle(context, wght: 700))),
       ));
+  }
+}
+
+typedef _ImageContainerBuilder = Widget Function(VoidCallback? onTap, Widget child);
+
+/// A helper widget to deduplicate much of the logic in common
+/// between image previews and inline images.
+class _Image extends StatelessWidget {
+  const _Image({
+    required this.node,
+    required this.size,
+    required this.buildContainer,
+  });
+
+  final ImageNode node;
+  final Size size;
+  final _ImageContainerBuilder buildContainer;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = PerAccountStoreWidget.of(context);
+    final message = InheritedMessage.of(context);
+
+    final resolvedSrc = switch (node.src) {
+      ImageNodeSrcThumbnail(:final value) => value.resolve(context,
+        width: size.width,
+        height: size.height,
+        animationMode: .animateConditionally),
+      ImageNodeSrcOther(:final value) => store.tryResolveUrl(value),
+    };
+    final resolvedOriginalSrc = node.originalSrc == null ? null
+      : store.tryResolveUrl(node.originalSrc!);
+
+    Widget child = switch ((node.loading, resolvedSrc)) {
+      // resolvedSrc would be a "spinner" image URL.
+      // Use our own progress indicator instead.
+      (true, _) => const CupertinoActivityIndicator(),
+
+      // TODO(#265) use an error-case placeholder
+      // TODO(log)
+      (false, null) => SizedBox.shrink(),
+
+      (false, Uri()) => RealmContentNetworkImage(
+        // TODO(#265) use an error-case placeholder for `errorBuilder`
+        filterQuality: FilterQuality.medium,
+        semanticLabel: node.alt,
+        resolvedSrc!),
+    };
+
+    if (node.alt != null) {
+      child = Tooltip(
+        message: node.alt,
+        // (Instead of setting a semantics label here,
+        // we give the alt text to [RealmContentNetworkImage].)
+        excludeFromSemantics: true,
+        child: child);
+    }
+
+    final lightboxDisplayUrl = (node.loading || node.src is ImageNodeSrcThumbnail)
+      ? resolvedOriginalSrc
+      : resolvedSrc;
+    if (lightboxDisplayUrl == null) {
+      // TODO(log)
+      return buildContainer(null, child);
+    }
+
+    return buildContainer(
+      () {
+        Navigator.of(context).push(getImageLightboxRoute(
+          context: context,
+          message: message,
+          messageImageContext: context,
+          src: lightboxDisplayUrl,
+          thumbnailUrl: node.src is ImageNodeSrcThumbnail
+            ? node.loading
+              // (Image thumbnail is loading; don't show hard-coded spinner image
+              // even if that happens to be a thumbnail URL.)
+              ? null
+              : resolvedSrc
+            : null,
+          originalWidth: node.originalWidth,
+          originalHeight: node.originalHeight));
+      },
+      LightboxHero(
+        messageImageContext: context,
+        src: lightboxDisplayUrl,
+        child: child));
   }
 }
 
