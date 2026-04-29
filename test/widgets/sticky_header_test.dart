@@ -123,7 +123,7 @@ void main() {
       return Directionality(textDirection: TextDirection.ltr,
         child: StickyHeaderListView.builder(
           dragStartBehavior: DragStartBehavior.down,
-          cacheExtent: 0,
+          scrollCacheExtent: const .pixels(0),
           itemCount: 10, itemBuilder: itemBuilder));
     }
 
@@ -496,7 +496,7 @@ abstract class _SelectItemFinder extends FinderBase<Element> with ChainedFinderM
         resultWidget = widget;
       }
     }
-    return [if (result != null) result];
+    return [?result];
   }
 }
 

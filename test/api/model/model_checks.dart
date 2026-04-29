@@ -59,6 +59,10 @@ extension ZulipStreamChecks on Subject<ZulipStream> {
   Subject<bool> get isWebPublic => has((x) => x.isWebPublic, 'isWebPublic');
 }
 
+extension SubscriptionChecks on Subject<Subscription> {
+  Subject<bool> get pinToTop => has((x) => x.pinToTop, 'pinToTop');
+}
+
 extension ChannelFolderChecks on Subject<ChannelFolder> {
   Subject<int> get id => has((x) => x.id, 'id');
   Subject<String> get name => has((x) => x.name, 'name');
@@ -101,7 +105,6 @@ extension MessageChecks on Subject<Message> {
   Subject<int?> get lastEditTimestamp => has((e) => e.lastEditTimestamp, 'lastEditTimestamp');
   Subject<MessageEditState> get editState => has((e) => e.editState, 'editState');
   Subject<Reactions?> get reactions => has((e) => e.reactions, 'reactions');
-  Subject<int> get recipientId => has((e) => e.recipientId, 'recipientId');
   Subject<String> get senderEmail => has((e) => e.senderEmail, 'senderEmail');
   Subject<String> get senderFullName => has((e) => e.senderFullName, 'senderFullName');
   Subject<String> get senderRealmStr => has((e) => e.senderRealmStr, 'senderRealmStr');

@@ -407,6 +407,28 @@ enum Emojiset {
   String toJson() => _$EmojisetEnumMap[this]!;
 }
 
+@JsonSerializable(fieldRename: FieldRename.snake)
+class ClientDevice {
+  int? pushKeyId;
+  String? pushTokenId;
+  String? pendingPushTokenId;
+  int? pushTokenLastUpdatedTimestamp;
+  String? pushRegistrationErrorCode;
+
+  ClientDevice({
+    required this.pushKeyId,
+    required this.pushTokenId,
+    required this.pendingPushTokenId,
+    required this.pushTokenLastUpdatedTimestamp,
+    required this.pushRegistrationErrorCode,
+  });
+
+  factory ClientDevice.fromJson(Map<String, dynamic> json) =>
+    _$ClientDeviceFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ClientDeviceToJson(this);
+}
+
 /// As in [InitialSnapshot.realmUserGroups] or [UserGroupAddEvent].
 @JsonSerializable(fieldRename: FieldRename.snake)
 class UserGroup {
@@ -862,6 +884,38 @@ class Subscription extends ZulipStream {
   Map<String, dynamic> toJson() => _$SubscriptionToJson(this);
 }
 
+/// The name of a property in [Subscription].
+///
+/// Used in describing [updateSubscriptionSettings] and [SubscriptionUpdateEvent].
+@JsonEnum(fieldRename: FieldRename.snake, alwaysCreate: true)
+enum SubscriptionProperty {
+  /// As an int that dart:ui's Color constructor will take:
+  ///   <https://api.flutter.dev/flutter/dart-ui/Color/Color.html>
+  color,
+
+  isMuted,
+  pinToTop,
+  desktopNotifications,
+  audibleNotifications,
+  pushNotifications,
+  emailNotifications,
+  wildcardMentionsNotify,
+
+  /// A new, unrecognized property, or a deprecated one we don't use.
+  ///
+  /// Could be `in_home_view`, deprecated in FL 139 (Server 6) but still sent
+  /// as of CZO on 2025-10-03.
+  // TODO(server-future) Remove `in_home_view` comment once it stops being sent.
+  unknown;
+
+  String toJson() => _$SubscriptionPropertyEnumMap[this]!;
+
+  static SubscriptionProperty fromRawString(String raw) => _byRawString[raw] ?? unknown;
+
+  static final _byRawString = _$SubscriptionPropertyEnumMap
+    .map((key, value) => MapEntry(value, key));
+}
+
 /// As in `channel_folders` in the initial snapshot.
 ///
 /// For docs, search for "channel_folders:"
@@ -1119,7 +1173,12 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
   @JsonKey(fromJson: _reactionsFromJson, toJson: _reactionsToJson)
   Reactions? reactions; // null is equivalent to an empty [Reactions]
 
-  final int recipientId;
+  // The `recipient_id` field in the API doesn't add any information,
+  // so we ignore it.  It's not clear it belongs in the API in the first place:
+  //   https://chat.zulip.org/#narrow/channel/19-documentation/topic/recipient_id/near/1203219
+  //   https://chat.zulip.org/#narrow/channel/378-api-design/topic/recipient_id.20and.20sender_id/near/1211949
+  // final int recipientId;  // ignored
+
   final String senderEmail;
   final String senderFullName;
   final String senderRealmStr;
@@ -1174,7 +1233,6 @@ sealed class Message<T extends Conversation> extends MessageBase<T> {
     required this.isMeMessage,
     required this.lastEditTimestamp,
     required this.reactions,
-    required this.recipientId,
     required this.senderEmail,
     required this.senderFullName,
     required super.senderId,
@@ -1204,7 +1262,9 @@ enum MessageFlag {
   starred,
   collapsed,
   mentioned,
-  wildcardMentioned,
+  topicWildcardMentioned,
+  streamWildcardMentioned,
+  wildcardMentioned, // TODO(server-8) Remove deprecated flag.
   hasAlertWord,
   historical,
   unknown;
@@ -1214,13 +1274,31 @@ enum MessageFlag {
   /// Will be [MessageFlag.unknown] if we don't recognize the string.
   ///
   /// Example:
-  ///   'wildcard_mentioned' -> Flag.wildcardMentioned
+  ///   'topic_wildcard_mentioned' -> Flag.topicWildcardMentioned
   static MessageFlag fromRawString(String raw) => _byRawString[raw] ?? unknown;
 
   // _$…EnumMap is thanks to `alwaysCreate: true` and `fieldRename: FieldRename.snake`
   static final _byRawString = _$MessageFlagEnumMap.map((key, value) => MapEntry(value, key));
 
   String toJson() => _$MessageFlagEnumMap[this]!;
+
+  bool get isMentionFlag {
+    switch (this) {
+      case MessageFlag.mentioned:
+      case MessageFlag.topicWildcardMentioned:
+      case MessageFlag.streamWildcardMentioned:
+      case MessageFlag.wildcardMentioned:
+        return true;
+
+      case MessageFlag.read:
+      case MessageFlag.starred:
+      case MessageFlag.collapsed:
+      case MessageFlag.hasAlertWord:
+      case MessageFlag.historical:
+      case MessageFlag.unknown:
+        return false;
+    }
+  }
 }
 
 @JsonSerializable(fieldRename: FieldRename.snake)
@@ -1259,7 +1337,6 @@ class StreamMessage extends Message<StreamConversation> {
     required super.isMeMessage,
     required super.lastEditTimestamp,
     required super.reactions,
-    required super.recipientId,
     required super.senderEmail,
     required super.senderFullName,
     required super.senderId,
@@ -1321,7 +1398,6 @@ class DmMessage extends Message<DmConversation> {
     required super.isMeMessage,
     required super.lastEditTimestamp,
     required super.reactions,
-    required super.recipientId,
     required super.senderEmail,
     required super.senderFullName,
     required super.senderId,
@@ -1432,4 +1508,12 @@ enum PropagateMode {
   // _$…EnumMap is thanks to `alwaysCreate: true` and `fieldRename: FieldRename.snake`
   static final _byRawString = _$PropagateModeEnumMap
     .map((key, value) => MapEntry(value, key));
+}
+
+/// The [DateTime] corresponding to a UNIX timestamp, in UTC seconds.
+///
+/// The input format here is the form typically used in the Zulip API
+/// for representing a timestamp.
+DateTime dateTimeFromTimestamp(int timestamp) {
+  return DateTime.fromMillisecondsSinceEpoch(1000 * timestamp);
 }

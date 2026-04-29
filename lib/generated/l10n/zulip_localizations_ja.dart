@@ -133,6 +133,18 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get unsubscribeFailedTitle => 'チャンネルからの退出に失敗しました';
 
   @override
+  String get actionSheetOptionPinChannel => '上部に固定';
+
+  @override
+  String get actionSheetOptionUnpinChannel => '上部に固定を解除';
+
+  @override
+  String get errorPinChannelFailedTitle => 'チャンネルの固定に失敗しました';
+
+  @override
+  String get errorUnpinChannelFailedTitle => 'チャンネルの固定解除に失敗しました';
+
+  @override
   String get actionSheetOptionMuteTopic => 'トピックをミュート';
 
   @override
@@ -194,8 +206,8 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'このメッセージは <z-link>$count 人</z-link>に読まれています:',
-      one: 'このメッセージは <z-link>$count 人</z-link>に読まれています:',
+      other: ' このメッセージは <z-link>$count 人</z-link> に読まれています:',
+      one: ' このメッセージは <z-link>$count 人</z-link> に読まれています:',
     );
     return '$_temp0';
   }
@@ -254,6 +266,24 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get actionSheetOptionCopyTopicLink => 'トピックのリンクをコピー';
+
+  @override
+  String actionSheetTitleDm(String user) {
+    return 'DMs with $user';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => 'DMs with yourself';
+
+  @override
+  String get actionSheetTitleGroupDm => 'Group DM';
+
+  @override
+  String get actionSheetOptionViewProfile => 'View profile';
+
+  @override
+  String get actionSheetOptionMarkDmConversationAsRead =>
+      'Mark conversation as read';
 
   @override
   String get errorWebAuthOperationalErrorTitle => '問題が発生しました';
@@ -419,11 +449,11 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get composeBoxBannerLabelUnknownDmRecipient =>
-      'You cannot send messages to unknown users.';
+      '不明なユーザーにメッセージを送信することはできません。';
 
   @override
   String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
-      'You cannot send messages here.';
+      'ここではメッセージを送信できません。';
 
   @override
   String get composeBoxBannerLabelCannotSendInChannel =>
@@ -431,7 +461,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get composeBoxBannerLabelUnsubscribed =>
-      'Replies to your messages will not appear automatically.';
+      'あなたのメッセージへの返信は、自動的には表示されません。';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
@@ -575,7 +605,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get emptyMessageListChannelWithoutContentAccess =>
-      'このチャンネルに対する<z-link>コンテンツへのアクセス権</z-link>がありません。';
+      'このチャンネルの <z-link>コンテンツへのアクセス権</z-link> がありません。';
 
   @override
   String get emptyMessageListChannelUnavailable =>
@@ -613,7 +643,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get emptyMessageListMentionsHeader =>
-      'このビューには、あなたが<z-link>メンション</z-link>されたメッセージが表示されます。';
+      'このビューには、あなたが <z-link>メンション</z-link> されたメッセージが表示されます。';
 
   @override
   String get emptyMessageListMentionsMessage =>
@@ -624,7 +654,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String emptyMessageListStarredMessage(String button) {
-    return '<z-link>スター</z-link>を付けると、後で見返したいタスクや役立つ参考資料など、重要なメッセージを管理するのに便利です。メッセージにスターを付けるには、メッセージを長押しして「$button」をタップしてください。';
+    return '<z-link>スター</z-link> は、後で見返したいタスクや便利な参照資料など、重要なメッセージを記録しておくのに最適な方法です。メッセージにスターを付けるには、メッセージを長押しして「$button」をタップしてください。';
   }
 
   @override
@@ -697,7 +727,7 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'アカウントを追加';
 
   @override
-  String get loginServerUrlLabel => 'Zulip サーバーのURL';
+  String get loginRealmUrlLabel => 'Your Zulip organization URL';
 
   @override
   String get loginHidePassword => 'パスワードを非表示';
@@ -741,13 +771,29 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
   String get errorContentToInsertIsEmpty => '挿入しようとしたファイルが空、またはアクセスできません。';
 
   @override
-  String errorServerVersionUnsupportedMessage(
+  String errorServerVersionNotAllowedMessage(
     String url,
     String zulipVersion,
-    String minSupportedZulipVersion,
+    String minAllowedZulipVersion,
   ) {
-    return '$url で動作している Zulip Server $zulipVersion はサポート対象外です。サポートされる最小バージョンは Zulip Server $minSupportedZulipVersion です。';
+    return '$url で動作している Zulip Server $zulipVersion はサポート対象外です。サポートされる最小バージョンは Zulip Server $minAllowedZulipVersion です。';
   }
+
+  @override
+  String serverCompatBannerAdminMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please upgrade your server as soon as possible.';
+  }
+
+  @override
+  String serverCompatBannerUserMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please contact your server administrator about upgrading.';
+  }
+
+  @override
+  String get serverCompatBannerDismissLabel => 'Dismiss';
+
+  @override
+  String get serverCompatBannerLearnMoreLabel => 'Learn more';
 
   @override
   String errorInvalidApiKeyMessage(String url) {
@@ -837,22 +883,21 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Mark $count+ messages as read?',
-      one: 'Mark $count+ messages as read?',
+      other: '$count 件以上のメッセージを既読にしますか？',
+      one: '$count 件以上のメッセージを既読にしますか？',
     );
     return '$_temp0';
   }
 
   @override
-  String get markAllAsReadConfirmationDialogTitleNoCount =>
-      'Mark messages as read?';
+  String get markAllAsReadConfirmationDialogTitleNoCount => 'メッセージを既読にしますか？';
 
   @override
   String get markAllAsReadConfirmationDialogMessage =>
-      'Messages in multiple conversations may be affected.';
+      '複数の会話内のメッセージが影響を受ける可能性があります。';
 
   @override
-  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
+  String get markAllAsReadConfirmationDialogConfirmButton => '既読にする';
 
   @override
   String get today => '今日';
@@ -1002,7 +1047,16 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
       '下のボタンを使用して、統合フィードまたはチャンネル一覧を表示します。';
 
   @override
+  String get pinnedChannelsFolderName => 'Pinned channels';
+
+  @override
+  String get otherChannelsFolderName => 'Other channels';
+
+  @override
   String get recentDmConversationsPageTitle => 'ダイレクトメッセージ';
+
+  @override
+  String get recentDmConversationsPageShortLabel => 'DM';
 
   @override
   String get recentDmConversationsSectionHeader => 'ダイレクトメッセージ';
@@ -1127,6 +1181,33 @@ class ZulipLocalizationsJa extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'トピック参加者に通知';
+
+  @override
+  String get systemGroupNameEveryoneOnInternet => 'インターネット上の全員';
+
+  @override
+  String get systemGroupNameEveryone => 'ゲストを含む全員';
+
+  @override
+  String get systemGroupNameMembers => 'ゲストを除く全員';
+
+  @override
+  String get systemGroupNameFullMembers => 'フルメンバー';
+
+  @override
+  String get systemGroupNameModerators => 'モデレーター';
+
+  @override
+  String get systemGroupNameAdministrators => '管理者';
+
+  @override
+  String get systemGroupNameOwners => 'オーナー';
+
+  @override
+  String get systemGroupNameNobody => 'なし';
+
+  @override
+  String get navBarFeedLabel => 'フィード';
 
   @override
   String get navBarMenuLabel => 'メニュー';

@@ -82,14 +82,13 @@ void main() {
     addTearDown(testBinding.reset);
     streams ??= subscriptions ??= [eg.subscription(eg.stream(streamId: eg.defaultStreamMessageStreamId))];
     zulipFeatureLevel ??= eg.recentZulipFeatureLevel;
-    final selfAccount = eg.selfAccount.copyWith(zulipFeatureLevel: zulipFeatureLevel);
-    await testBinding.globalStore.add(selfAccount, eg.initialSnapshot(
+    await testBinding.globalStore.add(eg.selfAccount, eg.initialSnapshot(
       zulipFeatureLevel: zulipFeatureLevel,
       streams: streams,
       subscriptions: subscriptions,
       unreadMsgs: unreadMsgs,
       starredMessages: starredMessages));
-    store = await testBinding.globalStore.perAccount(selfAccount.id);
+    store = await testBinding.globalStore.perAccount(eg.selfAccount.id);
     connection = store.connection as FakeApiConnection;
 
     // prepare message list data
@@ -110,7 +109,7 @@ void main() {
     }
     connection.prepare(json: fetchResult.toJson());
 
-    await tester.pumpWidget(TestZulipApp(accountId: selfAccount.id,
+    await tester.pumpWidget(TestZulipApp(accountId: eg.selfAccount.id,
       skipAssertAccountExists: skipAssertAccountExists,
       navigatorObservers: navObservers,
       child: MessageListPage(initNarrow: narrow)));
@@ -371,6 +370,38 @@ void main() {
       );
 
       check(find.text('DMs with Muted user, User 2, Muted user')).findsOne();
+    });
+
+    testWidgets('search button on combined feed navigates to search page', (tester) async {
+      final pushedRoutes = <Route<dynamic>>[];
+      final testNavObserver = TestNavigatorObserver()
+        ..onPushed = (route, prevRoute) => pushedRoutes.add(route);
+
+      await setupMessageListPage(tester,
+        narrow: const CombinedFeedNarrow(),
+        messages: [],
+        navObservers: [testNavObserver]);
+      pushedRoutes.clear();
+
+      connection.prepare(json: eg.newestGetMessagesResult(
+        foundOldest: true, messages: []).toJson());
+
+      await tester.tap(find.descendant(of: find.byType(ZulipAppBar),
+        matching: find.byIcon(ZulipIcons.search)));
+      await tester.pump();
+
+      check(pushedRoutes).single.isA<WidgetRoute>().page
+        .isA<MessageListPage>()
+        .initNarrow.equals(KeywordSearchNarrow(''));
+    });
+
+    testWidgets('no search button in channel narrow', (tester) async {
+      await setupMessageListPage(tester,
+        narrow: const ChannelNarrow(1), messages: []);
+
+      check(find.descendant(of: find.byType(ZulipAppBar),
+        matching: find.byIcon(ZulipIcons.search))
+      ).findsNothing();
     });
   });
 
@@ -2146,16 +2177,16 @@ void main() {
               ("2023-01-11 00:00", "Jan 11, 2023", "Jan 11, 2023"),
             ]);
         case MessageTimestampStyle.timeOnly:
-          doTests(style, [('2023-01-10 12:00', '12:00 PM', '12:00')]);
+          doTests(style, [('2023-01-10 12:00', '12:00\u{202F}PM', '12:00')]);
         case MessageTimestampStyle.lightbox:
           doTests(style,
             [('2023-01-10 12:00',
-              'Jan 10, 2023 12:00:00 PM',
+              'Jan 10, 2023 12:00:00\u{202F}PM',
               'Jan 10, 2023 12:00:00')]);
         case MessageTimestampStyle.full:
           doTests(style,
             [('2023-01-10 12:00',
-              'Jan 10, 2023 12:00 PM',
+              'Jan 10, 2023 12:00\u{202F}PM',
               'Jan 10, 2023 12:00')]);
       }
     }

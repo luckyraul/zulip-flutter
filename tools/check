@@ -18,11 +18,14 @@ set -euo pipefail
 
 this_dir=${BASH_SOURCE[0]%/*}
 
-# shellcheck source=tools/lib/ensure-coreutils.sh
-. "${this_dir}"/lib/ensure-coreutils.sh
+# shellcheck source=tools/lib/ensure-shell-deps.sh
+. "${this_dir}"/lib/ensure-shell-deps.sh
 
 # shellcheck source=tools/lib/git.sh
 . "${this_dir}"/lib/git.sh
+
+# shellcheck source=tools/lib/deps.sh
+. "${this_dir}"/lib/deps.sh
 
 
 ## CLI PARSING
@@ -62,42 +65,92 @@ What tests to run:
               \`git help revisions\` for many more ways to name a commit.)
   --all       In the given suites, run on all files. If no list of suites
               was specified, run all suites.
+  --exclude SUITE
+              Don't run the given suite, despite \`--all\`
+              or the suite appearing as a positional argument.
 
-Extra things to do:
+Extra things to do, or skip doing:
   --fix       Fix issues found, where possible.
+  --no-pub    Tell \`flutter test\` et al. to skip \`flutter pub get\`.
 
 Modifying this script's output:
-  --verbose   Print more details about everything.
+  --output STYLE
+              Print output in the given style.  Styles are:
+                default    The default style.
+                verbose    More details about everything.
+                ci         Like verbose, but adapted to a log
+                           rather than a terminal.
+  --verbose   Equivalent to \`--output verbose\`.
 EOF
     exit 2
+}
+
+all_suites=( "${default_suites[@]}" "${extra_suites[@]}" )
+
+# usage: is_suite PUTATIVE_SUITE
+#
+# Succeeds just if the given argument is the name of a suite.
+is_suite() {
+    needle="$1"
+    # This logic relies on the fact that the suite names have no spaces.
+
+    ! [[ "${needle}" =~ " " ]] \
+    || return
+
+    # shellcheck disable=SC2076  # matching literally is the point
+    [[ " ${all_suites[*]} " =~ " ${needle} " ]]
 }
 
 orig_cmdline="$0 $*"
 
 opt_files=branch
 opt_all=
+opt_exclude=()
 opt_fix=
-opt_verbose=
+opt_no_pub=
+opt_output=default
 opt_suites=()
 while (( $# )); do
     case "$1" in
         --diff) shift; opt_files=diff:"$1"; shift;;
         --all-files) opt_files=all; shift;;
         --all) opt_files=all; opt_all=1; shift;;
+        --exclude) shift; if ! is_suite "$1"; then usage; else
+            opt_exclude+=("$1"); shift; fi;;
         --fix) opt_fix=1; shift;;
-        --verbose) opt_verbose=1; shift;;
-        analyze|test|flutter_version|build_runner|l10n|drift|pigeon|icons|android|shellcheck)
-            opt_suites+=("$1"); shift;;
-        *) usage;;
+        --no-pub) opt_no_pub=1; shift;;
+        --output) shift; opt_output="$1"; shift;;
+        --verbose) opt_output=verbose; shift;;
+        *) if ! is_suite "$1"; then usage; else
+            opt_suites+=("$1"); shift; fi;;
     esac
 done
 
+opt_verbose=
+case "${opt_output}" in
+    default) ;;
+    verbose) opt_verbose=1;;
+    ci) opt_verbose=1;;
+    *) usage;;
+esac
+
 if (( ! "${#opt_suites[@]}" )); then
     if [ -n "${opt_all}" ]; then
-        opt_suites=( "${default_suites[@]}" "${extra_suites[@]}" )
+        opt_suites=( "${all_suites[@]}" )
     else
         opt_suites=( "${default_suites[@]}" )
     fi
+fi
+
+if (( "${#opt_exclude[@]}" )); then
+    # This logic relies on suite names having no spaces nor glob characters.
+    suites_str=" ${opt_suites[*]} "
+    for suite in "${opt_exclude[@]}"; do
+        suites_str="${suites_str/ "$suite" / }"
+    done
+    # shellcheck disable=SC2206  # see comment at top of block
+    opt_suites=( ${suites_str} )
+    (( "${#opt_suites[@]}" )) || usage
 fi
 
 files_base_commit=
@@ -126,6 +179,21 @@ if_verbose() {
   if [ -n "${opt_verbose}" ]; then
     "$@"
   fi
+}
+
+# usage: maybe_time LABEL COMMAND...
+#
+# Run the given command.
+# Then if $opt_verbose, print the command's elapsed time,
+# including the given label.
+maybe_time() {
+    label="$1"; shift
+    if [ -z "${opt_verbose}" ]; then
+       "$@"
+    else
+        local TIMEFORMAT=$'\n'$"${label} elapsed time: %1lR"
+        time "$@"
+    fi
 }
 
 # usage: grep_quiet_hungry GREP_ARGUMENTS...
@@ -214,12 +282,20 @@ check_no_changes() {
 
 run_analyze() {
     # no `flutter analyze --verbose` even when $opt_verbose; it's *very* verbose
-    flutter analyze
+    flutter analyze ${opt_no_pub:+--no-pub}
 }
 
 run_test() {
+    local options=(
+        ${opt_no_pub:+--no-pub}
+    )
+
+    if [ "${opt_output}" = ci ]; then
+        options+=( -r failures-only )
+    fi
+
     # no `flutter test --verbose` even when $opt_verbose; it's *very* verbose
-    flutter test
+    flutter test "${options[@]}"
 }
 
 # Check the Flutter version in pubspec.yaml is commented with a commit ID,
@@ -232,22 +308,10 @@ run_flutter_version() {
 
     local flutter_tree flutter_git
     flutter_tree=$(flutter_tree)
-    flutter_git=( git --git-dir="${flutter_tree}"/.git )
+    flutter_git=( git -C "${flutter_tree}" )
 
-    # Parse our Flutter version spec and its commit-ID comment.
-    local parsed flutter_version flutter_commit
-    # shellcheck disable=SC2207 # output has controlled whitespace
-    parsed=( $(
-        perl <pubspec.yaml -0ne '
-             print "$1 $2" if (
-                 /^  sdk: .*\n  flutter: '\''>=(\S+)'\''\s*# ([0-9a-f]{40})$/m)'
-    ) ) || return
-    if (( ! "${#parsed[@]}" )); then
-        echo >&2 "error: Flutter version spec not recognized in pubspec.yaml"
-        return 1
-    fi
-    flutter_version="${parsed[0]}"
-    flutter_commit="${parsed[1]}"
+    local flutter_version flutter_commit
+    pubspec_flutter_version || return 1
 
     # TODO(#1851) Add the updated Flutter version name check
 
@@ -484,11 +548,11 @@ EOF
 }
 
 describe_git_head() {
-    local name="$1" repo_path="$2"
+    local name="$1" worktree_path="$2"
     local commit_data
     commit_data=$(
         TZ=UTC \
-        git --git-dir "${repo_path}" \
+        git -C "${worktree_path}" \
             log -1 --format="%h • %cd" \
             --abbrev=9 --date=iso8601-local
     )
@@ -500,12 +564,12 @@ print_header() {
 
     echo "Time now: $(date --utc +'%F %T %z')"
 
-    describe_git_head "zulip-flutter" .git/
+    describe_git_head "zulip-flutter" .
 
     # We avoid `flutter --version` because, weirdly, when run in a
     # GitHub Actions step it takes about 30 seconds.  (The first time;
     # it's fast subsequent times.)  That's even after `flutter precache`.
-    describe_git_head "flutter/flutter" "$(flutter_tree)"/.git
+    describe_git_head "flutter/flutter" "$(flutter_tree)"
 
     dart --version
 }
@@ -516,16 +580,17 @@ for suite in "${opt_suites[@]}"; do
     if_verbose echo "${divider_line}"
     echo "Running $suite..."
     case "$suite" in
-        analyze)      run_analyze ;;
-        test)         run_test ;;
-        flutter_version) run_flutter_version ;;
-        build_runner) run_build_runner ;;
-        l10n)         run_l10n ;;
-        drift)        run_drift ;;
-        pigeon)       run_pigeon ;;
-        icons)        run_icons ;;
-        android)      run_android ;;
-        shellcheck)   run_shellcheck ;;
+        analyze)      maybe_time "$suite" run_analyze ;;
+        test)         maybe_time "$suite" run_test ;;
+        flutter_version)
+                      maybe_time "$suite" run_flutter_version ;;
+        build_runner) maybe_time "$suite" run_build_runner ;;
+        l10n)         maybe_time "$suite" run_l10n ;;
+        drift)        maybe_time "$suite" run_drift ;;
+        pigeon)       maybe_time "$suite" run_pigeon ;;
+        icons)        maybe_time "$suite" run_icons ;;
+        android)      maybe_time "$suite" run_android ;;
+        shellcheck)   maybe_time "$suite" run_shellcheck ;;
         *)            echo >&2 "Internal error: unknown suite $suite" ;;
     esac || failed+=( "$suite" )
 done

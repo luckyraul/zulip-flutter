@@ -136,10 +136,22 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get unsubscribeFailedTitle => 'Не удалось отписаться';
 
   @override
+  String get actionSheetOptionPinChannel => 'Закрепить';
+
+  @override
+  String get actionSheetOptionUnpinChannel => 'Открепить';
+
+  @override
+  String get errorPinChannelFailedTitle => 'Не удалось закрепить канал';
+
+  @override
+  String get errorUnpinChannelFailedTitle => 'Не удалось открепить канал';
+
+  @override
   String get actionSheetOptionMuteTopic => 'Заглушить тему';
 
   @override
-  String get actionSheetOptionUnmuteTopic => 'Включить оповещения темы';
+  String get actionSheetOptionUnmuteTopic => 'Снять глушение темы';
 
   @override
   String get actionSheetOptionFollowTopic => 'Отслеживать тему';
@@ -272,6 +284,24 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get actionSheetOptionCopyTopicLink => 'Скопировать ссылку на тему';
 
   @override
+  String actionSheetTitleDm(String user) {
+    return 'ЛС с $user';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => 'ЛС с собой';
+
+  @override
+  String get actionSheetTitleGroupDm => 'Групповые ЛС';
+
+  @override
+  String get actionSheetOptionViewProfile => 'Просмотр профиля';
+
+  @override
+  String get actionSheetOptionMarkDmConversationAsRead =>
+      'Отметить беседу как прочитанную';
+
+  @override
   String get errorWebAuthOperationalErrorTitle => 'Что-то пошло не так';
 
   @override
@@ -398,7 +428,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get errorMuteTopicFailed => 'Не удалось заглушить тему';
 
   @override
-  String get errorUnmuteTopicFailed => 'Не удалось включить оповещения темы';
+  String get errorUnmuteTopicFailed => 'Не удалось снять глушение темы';
 
   @override
   String get errorFollowTopicFailed => 'Не удалось начать отслеживать тему';
@@ -441,11 +471,11 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get composeBoxBannerLabelUnknownDmRecipient =>
-      'You cannot send messages to unknown users.';
+      'Вы не можете отправлять сообщения неизвестным пользователям.';
 
   @override
   String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
-      'You cannot send messages here.';
+      'Здесь вы не можете отправить сообщение.';
 
   @override
   String get composeBoxBannerLabelCannotSendInChannel =>
@@ -453,7 +483,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get composeBoxBannerLabelUnsubscribed =>
-      'Replies to your messages will not appear automatically.';
+      'Ответы на ваши сообщения не появятся автоматически.';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
@@ -728,7 +758,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Добавление учетной записи';
 
   @override
-  String get loginServerUrlLabel => 'URL вашего сервера Zulip';
+  String get loginRealmUrlLabel => 'URL вашей организации Zulip';
 
   @override
   String get loginHidePassword => 'Скрыть пароль';
@@ -778,13 +808,29 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
       'Файл для вставки пустой, или к нему нет доступа.';
 
   @override
-  String errorServerVersionUnsupportedMessage(
+  String errorServerVersionNotAllowedMessage(
     String url,
     String zulipVersion,
-    String minSupportedZulipVersion,
+    String minAllowedZulipVersion,
   ) {
-    return '$url использует Zulip Server $zulipVersion, который не поддерживается. Минимальная поддерживаемая версия — Zulip Server $minSupportedZulipVersion.';
+    return '$url использует Zulip Server $zulipVersion, который не поддерживается. Минимальная поддерживаемая версия — Zulip Server $minAllowedZulipVersion.';
   }
+
+  @override
+  String serverCompatBannerAdminMessage(String url, String zulipVersion) {
+    return '$url использует версию сервера Zulip $zulipVersion, которая снята с поддержки. Обновите сервер Zulip как можно скорее.';
+  }
+
+  @override
+  String serverCompatBannerUserMessage(String url, String zulipVersion) {
+    return '$url использует версию сервера Zulip $zulipVersion, которая снята с поддержки. Свяжитесь с администратором сервера для обновления.';
+  }
+
+  @override
+  String get serverCompatBannerDismissLabel => 'Закрыть';
+
+  @override
+  String get serverCompatBannerLearnMoreLabel => 'Узнать больше';
 
   @override
   String errorInvalidApiKeyMessage(String url) {
@@ -877,22 +923,23 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Mark $count+ messages as read?',
-      one: 'Mark $count+ messages as read?',
+      other: 'Отметить $count+ сообщений как прочитанные?',
+      one: 'Отметить $count+ сообщений как прочитанные?',
     );
     return '$_temp0';
   }
 
   @override
   String get markAllAsReadConfirmationDialogTitleNoCount =>
-      'Mark messages as read?';
+      'Отметить сообщения как прочитанные?';
 
   @override
   String get markAllAsReadConfirmationDialogMessage =>
-      'Messages in multiple conversations may be affected.';
+      'Это может отразиться на сообщениях во многих беседах.';
 
   @override
-  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
+  String get markAllAsReadConfirmationDialogConfirmButton =>
+      'Отметить как прочитанные';
 
   @override
   String get today => 'Сегодня';
@@ -1052,7 +1099,16 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
       'Используйте кнопки внизу для просмотра объединенной ленты или списка каналов.';
 
   @override
+  String get pinnedChannelsFolderName => 'Закрепленные каналы';
+
+  @override
+  String get otherChannelsFolderName => 'Другие каналы';
+
+  @override
   String get recentDmConversationsPageTitle => 'Личные сообщения';
+
+  @override
+  String get recentDmConversationsPageShortLabel => 'ЛС';
 
   @override
   String get recentDmConversationsSectionHeader => 'Личные сообщения';
@@ -1183,6 +1239,33 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get wildcardMentionTopicDescription => 'Оповестить тему';
 
   @override
+  String get systemGroupNameEveryoneOnInternet => 'Все пользователи интернета';
+
+  @override
+  String get systemGroupNameEveryone => 'Все, включая гостей';
+
+  @override
+  String get systemGroupNameMembers => 'Все, кроме гостей';
+
+  @override
+  String get systemGroupNameFullMembers => 'Полноправные участники';
+
+  @override
+  String get systemGroupNameModerators => 'Модераторы';
+
+  @override
+  String get systemGroupNameAdministrators => 'Администраторы';
+
+  @override
+  String get systemGroupNameOwners => 'Владельцы';
+
+  @override
+  String get systemGroupNameNobody => 'Никто';
+
+  @override
+  String get navBarFeedLabel => 'Лента';
+
+  @override
   String get navBarMenuLabel => 'Меню';
 
   @override
@@ -1304,7 +1387,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get mutedUser => 'Заглушенный пользователь';
 
   @override
-  String get scrollToBottomTooltip => 'Пролистать вниз';
+  String get scrollToBottomTooltip => 'Прокрутить вниз';
 
   @override
   String get appVersionUnknownPlaceholder => '(…)';

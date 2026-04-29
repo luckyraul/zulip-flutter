@@ -70,10 +70,10 @@ void main() {
   }) async {
     streams ??= subscriptions;
 
-    if (narrow case ChannelNarrow(:var streamId) || TopicNarrow(: var streamId)) {
-      final channel = streams.firstWhereOrNull((s) => s.streamId == streamId);
+    if (narrow case ChannelNarrow(:var channelId) || TopicNarrow(:var channelId)) {
+      final channel = streams.firstWhereOrNull((s) => s.streamId == channelId);
       assert(channel != null,
-        'Add a channel with "streamId" the same as of $narrow.streamId to the store.');
+        'Add a channel with "streamId" the same as of $narrow.channelId to the store.');
       if (narrow is ChannelNarrow) {
         // By default, bypass the complexity where the topic input is autofocused
         // on an empty fetch, by making the fetch not empty. (In particular that
@@ -85,7 +85,7 @@ void main() {
     messages ??= [];
     selfUser ??= eg.selfUser;
     zulipFeatureLevel ??= eg.futureZulipFeatureLevel;
-    final selfAccount = eg.account(user: selfUser, zulipFeatureLevel: zulipFeatureLevel);
+    final selfAccount = eg.account(user: selfUser);
     await testBinding.globalStore.add(selfAccount, eg.initialSnapshot(
       realmUsers: [selfUser, ...otherUsers],
       streams: streams,
@@ -132,7 +132,7 @@ void main() {
     await tester.enterText(topicInputFinder, topic);
     check(connection.takeRequests()).single
       ..method.equals('GET')
-      ..url.path.equals('/api/v1/users/me/${narrow.streamId}/topics');
+      ..url.path.equals('/api/v1/users/me/${narrow.channelId}/topics');
   }
 
   /// A [Finder] for the content input.
@@ -798,7 +798,7 @@ void main() {
 
     testWidgets('smoke ChannelNarrow', (tester) async {
       final narrow = ChannelNarrow(channel.streamId);
-      final destinationNarrow = eg.topicNarrow(narrow.streamId, 'test topic');
+      final destinationNarrow = eg.topicNarrow(narrow.channelId, 'test topic');
       await prepareComposeBox(tester,
         narrow: narrow, subscriptions: [eg.subscription(channel)]);
       await enterTopic(tester, narrow: narrow, topic: 'test topic');
@@ -870,7 +870,7 @@ void main() {
 
     testWidgets('for content input, unfocusing sends a "typing stopped" notice', (tester) async {
       final narrow = ChannelNarrow(channel.streamId);
-      final destinationNarrow = eg.topicNarrow(narrow.streamId, 'test topic');
+      final destinationNarrow = eg.topicNarrow(narrow.channelId, 'test topic');
       await prepareComposeBox(tester,
         narrow: narrow, subscriptions: [eg.subscription(channel)]);
       await enterTopic(tester, narrow: narrow, topic: 'test topic');
@@ -1708,13 +1708,22 @@ void main() {
 
   group('ComposeBox content input scaling', () {
     const verticalPadding = 8;
+    const lineHeight = 22.0; // _fontSize * _lineHeightRatio
     final stream = eg.stream();
     final narrow = eg.topicNarrow(stream.streamId, 'foo');
 
+    /// Adds lines of content until the input stops getting taller,
+    /// then checks the height against [maxHeight] and the
+    /// number of visible lines against [maxVisibleLines].
+    ///
+    /// In the [maxVisibleLines] check, the partly-visible line at the bottom
+    /// is considered visible.
     Future<void> checkContentInputMaxHeight(WidgetTester tester, {
-      required double maxHeight,
+      required double scaleFactor,
       required int maxVisibleLines,
     }) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scaleFactor;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       TypingNotifier.debugEnable = false;
       addTearDown(TypingNotifier.debugReset);
 
@@ -1725,13 +1734,17 @@ void main() {
         final content = List.generate(numLines, (_) => 'foo').join('\n');
         await enterContent(tester, content);
         await tester.pump();
-        final newHeight = tester.getRect(contentInputFinder).height;
+        final newHeight = tester.getRect(contentInputFinder).height
+          // max-height is applied to the Padding around the content-input field
+          + 2 * verticalPadding;
         if (newHeight == height) {
           break;
         }
         height = newHeight;
       }
-      check(height).isNotNull().isCloseTo(maxHeight, 0.5);
+      final expectedMaxHeight =
+        verticalPadding + scaleFactor * (maxVisibleLines - 0.273) * lineHeight;
+      check(height).isNotNull().isCloseTo(expectedMaxHeight, 0.5);
       // The last line added did not stretch the content input,
       // so only the lines before it are at least partially visible.
       check(numLines - 1).equals(maxVisibleLines);
@@ -1742,34 +1755,28 @@ void main() {
         narrow: narrow, subscriptions: [eg.subscription(stream)]);
 
       await checkContentInputMaxHeight(tester,
-        maxHeight: verticalPadding + 170, maxVisibleLines: 8);
+        scaleFactor: 1.0, maxVisibleLines: 8);
     });
 
     testWidgets('lower text scale factor', (tester) async {
-      tester.platformDispatcher.textScaleFactorTestValue = 0.8;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await prepareComposeBox(tester,
         narrow: narrow, subscriptions: [eg.subscription(stream)]);
       await checkContentInputMaxHeight(tester,
-        maxHeight: verticalPadding + 170 * 0.8, maxVisibleLines: 8);
+        scaleFactor: 0.8, maxVisibleLines: 9);
     });
 
     testWidgets('higher text scale factor', (tester) async {
-      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await prepareComposeBox(tester,
         narrow: narrow, subscriptions: [eg.subscription(stream)]);
       await checkContentInputMaxHeight(tester,
-        maxHeight: verticalPadding + 170 * 1.5, maxVisibleLines: 8);
+        scaleFactor: 1.5, maxVisibleLines: 8);
     });
 
-    testWidgets('higher text scale factor exceeding threshold', (tester) async {
-      tester.platformDispatcher.textScaleFactorTestValue = 2;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    testWidgets('higher text scale factor exceeding 1.5x threshold', (tester) async {
       await prepareComposeBox(tester,
         narrow: narrow, subscriptions: [eg.subscription(stream)]);
       await checkContentInputMaxHeight(tester,
-        maxHeight: verticalPadding + 170 * 1.5, maxVisibleLines: 6);
+        scaleFactor: 2.0, maxVisibleLines: 6);
     });
   });
 

@@ -6,7 +6,7 @@ import 'package:pigeon/pigeon.dart';
   dartOut: 'lib/host/android_intents.g.dart',
   kotlinOut: 'android/app/src/main/kotlin/com/zulip/flutter/AndroidIntents.g.kt',
   kotlinOptions: KotlinOptions(
-    package: 'com.mygento.zulip,
+    package: 'com.mygento.zulip',
     // One error class is already generated in AndroidNotifications.g.kt ,
     // so avoid generating another one, preventing duplicate classes under
     // the same namespace.

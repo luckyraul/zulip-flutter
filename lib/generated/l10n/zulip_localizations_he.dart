@@ -12,7 +12,7 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
   String get aboutPageTitle => 'About Zulip';
 
   @override
-  String get aboutPageAppVersion => 'App version';
+  String get aboutPageAppVersion => 'גרסת ישום';
 
   @override
   String get aboutPageOpenSourceLicenses => 'רישיונות קוד פתוח';
@@ -87,7 +87,7 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
   String get permissionsNeededTitle => 'Permissions needed';
 
   @override
-  String get permissionsNeededOpenSettings => 'Open settings';
+  String get permissionsNeededOpenSettings => 'פתח הגדרות';
 
   @override
   String get permissionsDeniedCameraAccess =>
@@ -98,10 +98,10 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
       'To upload files, please grant Zulip additional permissions in Settings.';
 
   @override
-  String get actionSheetOptionSubscribe => 'Subscribe';
+  String get actionSheetOptionSubscribe => 'הרשם';
 
   @override
-  String get subscribeFailedTitle => 'Failed to subscribe';
+  String get subscribeFailedTitle => 'הרישום נכשל';
 
   @override
   String get actionSheetOptionMarkChannelAsRead => 'Mark channel as read';
@@ -116,22 +116,34 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
   String get actionSheetOptionChannelFeed => 'Channel feed';
 
   @override
-  String get actionSheetOptionUnsubscribe => 'Unsubscribe';
+  String get actionSheetOptionUnsubscribe => 'בטל רישום';
 
   @override
   String unsubscribeConfirmationDialogTitle(String channelName) {
-    return 'Unsubscribe from $channelName?';
+    return 'בטל רישום ל־$channelName?';
   }
 
   @override
   String get unsubscribeConfirmationDialogMessageCannotResubscribe =>
-      'Once you leave this channel, you will not be able to rejoin.';
+      'לאחר היציאה מהערוץ, לא תתאפשר הצטרפות מחדש.';
 
   @override
-  String get unsubscribeConfirmationDialogConfirmButton => 'Unsubscribe';
+  String get unsubscribeConfirmationDialogConfirmButton => 'בטל רישום';
 
   @override
-  String get unsubscribeFailedTitle => 'Failed to unsubscribe';
+  String get unsubscribeFailedTitle => 'ביטול הרישום נכשל';
+
+  @override
+  String get actionSheetOptionPinChannel => 'Pin to top';
+
+  @override
+  String get actionSheetOptionUnpinChannel => 'Unpin from top';
+
+  @override
+  String get errorPinChannelFailedTitle => 'Failed to pin channel';
+
+  @override
+  String get errorUnpinChannelFailedTitle => 'Failed to unpin channel';
 
   @override
   String get actionSheetOptionMuteTopic => 'השתקת נושא';
@@ -159,7 +171,7 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
       'Failed to mark topic as unresolved';
 
   @override
-  String get actionSheetOptionSeeWhoReacted => 'See who reacted';
+  String get actionSheetOptionSeeWhoReacted => 'הצג מי הגיב';
 
   @override
   String get seeWhoReactedSheetNoReactions => 'להודעה זו אין תגובות.';
@@ -223,41 +235,59 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
   String get actionSheetOptionHideMutedMessage => 'Hide muted message again';
 
   @override
-  String get actionSheetOptionShare => 'Share';
+  String get actionSheetOptionShare => 'שתף';
 
   @override
-  String get actionSheetOptionQuoteMessage => 'Quote message';
+  String get actionSheetOptionQuoteMessage => 'צטט הודעה';
 
   @override
-  String get actionSheetOptionStarMessage => 'Star message';
+  String get actionSheetOptionStarMessage => 'סמן הודעה בכוכב';
 
   @override
-  String get actionSheetOptionUnstarMessage => 'Unstar message';
+  String get actionSheetOptionUnstarMessage => 'בטל את סימון הודעה';
 
   @override
-  String get actionSheetOptionEditMessage => 'Edit message';
+  String get actionSheetOptionEditMessage => 'ערוך הודעה';
 
   @override
-  String get actionSheetOptionDeleteMessage => 'Delete message';
+  String get actionSheetOptionDeleteMessage => 'מחק הודעה';
 
   @override
-  String get deleteMessageConfirmationDialogTitle => 'Delete message?';
+  String get deleteMessageConfirmationDialogTitle => 'האם למחוק את ההודעה?';
 
   @override
   String get deleteMessageConfirmationDialogMessage =>
-      'Deleting a message permanently removes it for everyone.';
+      'מחיקת הודעה מסירה את ההודעה עבור כולם לאלתר.';
 
   @override
-  String get deleteMessageConfirmationDialogConfirmButton => 'Delete';
+  String get deleteMessageConfirmationDialogConfirmButton => 'מחק';
 
   @override
-  String get errorDeleteMessageFailedTitle => 'Failed to delete message';
+  String get errorDeleteMessageFailedTitle => 'מחיקת ההודעה נכשלה';
 
   @override
   String get actionSheetOptionMarkTopicAsRead => 'Mark topic as read';
 
   @override
   String get actionSheetOptionCopyTopicLink => 'Copy link to topic';
+
+  @override
+  String actionSheetTitleDm(String user) {
+    return 'DMs with $user';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => 'DMs with yourself';
+
+  @override
+  String get actionSheetTitleGroupDm => 'Group DM';
+
+  @override
+  String get actionSheetOptionViewProfile => 'View profile';
+
+  @override
+  String get actionSheetOptionMarkDmConversationAsRead =>
+      'Mark conversation as read';
 
   @override
   String get errorWebAuthOperationalErrorTitle => 'Something went wrong';
@@ -282,7 +312,7 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
       'Could not access uploaded file';
 
   @override
-  String get errorCopyingFailed => 'Copying failed';
+  String get errorCopyingFailed => 'העתקה נכשלה';
 
   @override
   String errorFailedToUploadFileTitle(String filename) {
@@ -321,7 +351,7 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
   }
 
   @override
-  String get errorLoginInvalidInputTitle => 'Invalid input';
+  String get errorLoginInvalidInputTitle => 'קלט לא תקין';
 
   @override
   String get errorLoginFailedTitle => 'Login failed';
@@ -714,7 +744,7 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Add an account';
 
   @override
-  String get loginServerUrlLabel => 'Your Zulip server URL';
+  String get loginRealmUrlLabel => 'Your Zulip organization URL';
 
   @override
   String get loginHidePassword => 'Hide password';
@@ -760,13 +790,29 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
       'The file to be inserted is empty or cannot be accessed.';
 
   @override
-  String errorServerVersionUnsupportedMessage(
+  String errorServerVersionNotAllowedMessage(
     String url,
     String zulipVersion,
-    String minSupportedZulipVersion,
+    String minAllowedZulipVersion,
   ) {
-    return '$url is running Zulip Server $zulipVersion, which is unsupported. The minimum supported version is Zulip Server $minSupportedZulipVersion.';
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. The minimum supported version is Zulip Server $minAllowedZulipVersion.';
   }
+
+  @override
+  String serverCompatBannerAdminMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please upgrade your server as soon as possible.';
+  }
+
+  @override
+  String serverCompatBannerUserMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please contact your server administrator about upgrading.';
+  }
+
+  @override
+  String get serverCompatBannerDismissLabel => 'Dismiss';
+
+  @override
+  String get serverCompatBannerLearnMoreLabel => 'Learn more';
 
   @override
   String errorInvalidApiKeyMessage(String url) {
@@ -1025,7 +1071,16 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
       'Use the buttons below to view the combined feed or list of channels.';
 
   @override
+  String get pinnedChannelsFolderName => 'Pinned channels';
+
+  @override
+  String get otherChannelsFolderName => 'Other channels';
+
+  @override
   String get recentDmConversationsPageTitle => 'Direct messages';
+
+  @override
+  String get recentDmConversationsPageShortLabel => 'DMs';
 
   @override
   String get recentDmConversationsSectionHeader => 'Direct messages';
@@ -1152,6 +1207,33 @@ class ZulipLocalizationsHe extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'Notify topic';
+
+  @override
+  String get systemGroupNameEveryoneOnInternet => 'Everyone on the internet';
+
+  @override
+  String get systemGroupNameEveryone => 'Everyone including guests';
+
+  @override
+  String get systemGroupNameMembers => 'Everyone except guests';
+
+  @override
+  String get systemGroupNameFullMembers => 'Full members';
+
+  @override
+  String get systemGroupNameModerators => 'Moderators';
+
+  @override
+  String get systemGroupNameAdministrators => 'Administrators';
+
+  @override
+  String get systemGroupNameOwners => 'Owners';
+
+  @override
+  String get systemGroupNameNobody => 'Nobody';
+
+  @override
+  String get navBarFeedLabel => 'Feed';
 
   @override
   String get navBarMenuLabel => 'Menu';

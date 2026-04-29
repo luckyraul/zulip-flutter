@@ -28,6 +28,9 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
+# Claude Code related
+/.claude/settings.local.json
+
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
@@ -39,6 +42,10 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+
+# Patrol
+.patrol.env
+patrol_test/test_bundle.dart
 
 # Symbolication related
 app.*.symbols

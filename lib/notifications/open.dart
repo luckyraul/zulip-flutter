@@ -50,14 +50,18 @@ class NotificationOpenService {
     try {
       switch (defaultTargetPlatform) {
         case TargetPlatform.iOS:
+          // On iOS, the notification tap that causes a launch of the app is
+          // handled a bit differently than on Android where all types of
+          // notification tap events are served via the
+          // `notificationTapEventsStream`.
           _notifDataFromLaunch = await _notifPigeonApi.getNotificationDataFromLaunch();
+
           _notifPigeonApi.notificationTapEventsStream()
             .listen(_navigateForNotification);
 
         case TargetPlatform.android:
-          // Do nothing; we do notification routing differently on Android.
-          // TODO migrate Android to use the new Pigeon API.
-          break;
+          _notifPigeonApi.notificationTapEventsStream()
+            .listen(_navigateForNotification);
 
         case TargetPlatform.fuchsia:
         case TargetPlatform.linux:
@@ -149,7 +153,10 @@ class NotificationOpenService {
     if (currentPageRoute is MaterialAccountWidgetRoute
         && currentPageRoute.accountId == account.id
         && currentPageRoute.page is MessageListPage
-        && MessageListPage.currentNarrow(currentPageRoute) == data.narrow
+        && switch (MessageListPage.currentNarrow(currentPageRoute)) {
+             TopicNarrow narrow => narrow.isSameAs(data.narrow),
+             Narrow      narrow => narrow == data.narrow,
+           }
     ) {
       // The current page is already a MessageListPage at the desired narrow.
       // Instead of pushing another copy of it, stay there; see #1852.
@@ -176,6 +183,15 @@ class NotificationOpenService {
   /// Navigate appropriately for opening the notification described by
   /// the given [NotificationTapEvent].
   static Future<void> _navigateForNotification(NotificationTapEvent event) async {
+    switch (event) {
+      case IosNotificationTapEvent():
+        return _navigateForNotificationIos(event);
+      case AndroidNotificationTapEvent():
+        return _navigateForNotificationAndroid(event);
+    }
+  }
+
+  static Future<void> _navigateForNotificationIos(IosNotificationTapEvent event) async {
     assert(defaultTargetPlatform == TargetPlatform.iOS);
     assert(debugLog('opened notif: ${jsonEncode(event.payload)}'));
 
@@ -189,14 +205,11 @@ class NotificationOpenService {
     _navigateForNotificationPayload(navigator, notifNavData);
   }
 
-  /// Navigate appropriately for opening the notification described by
-  /// the given `zulip://notification/…` Android intent data URL.
-  ///
-  /// The URL should have been generated with
-  /// [NotificationOpenPayload.buildAndroidNotificationUrl]
-  /// when creating the notification.
-  static Future<void> navigateForAndroidNotificationUrl(Uri url) async {
+  static Future<void> _navigateForNotificationAndroid(AndroidNotificationTapEvent event) async {
     assert(defaultTargetPlatform == TargetPlatform.android);
+
+    final url = Uri.tryParse(event.dataUrl);
+    if (url == null) return; // TODO(log)
     assert(debugLog('opened notif: url: $url'));
 
     NavigatorState navigator = await ZulipApp.navigator;
@@ -205,7 +218,7 @@ class NotificationOpenService {
     if (!context.mounted) return; // TODO(linter): this is impossible as there's no actual async gap, but the use_build_context_synchronously lint doesn't see that
 
     assert(url.scheme == 'zulip' && url.host == 'notification');
-    final data = tryParseAndroidNotificationUrl(context: context, url: url);
+    final data = _tryParseAndroidNotificationUrl(context: context, url: url);
     if (data == null) return; // TODO(log)
     _navigateForNotificationPayload(navigator, data);
   }
@@ -216,6 +229,14 @@ class NotificationOpenService {
   ) {
     try {
       return NotificationOpenPayload.parseIosApnsPayload(payload);
+    } catch (e, st) {
+      assert(debugLog('$e\n$st'));
+      // Presumably a legacy, non-E2EE payload.
+    }
+
+    // TODO(server-12) simplify by removing legacy payload case.
+    try {
+      return NotificationOpenPayload.parseLegacyIosApnsPayload(payload);
     } on FormatException catch (e, st) {
       assert(debugLog('$e\n$st'));
       final zulipLocalizations = ZulipLocalizations.of(context);
@@ -225,12 +246,12 @@ class NotificationOpenService {
     }
   }
 
-  static NotificationOpenPayload? tryParseAndroidNotificationUrl({
+  static NotificationOpenPayload? _tryParseAndroidNotificationUrl({
     required BuildContext context,
     required Uri url,
   }) {
     try {
-      return NotificationOpenPayload.parseAndroidNotificationUrl(url);
+      return NotificationOpenPayload.parseNotificationUrl(url);
     } on FormatException catch (e, st) {
       assert(debugLog('$e\n$st'));
       final zulipLocalizations = ZulipLocalizations.of(context);
@@ -254,9 +275,35 @@ class NotificationOpenPayload {
     required this.narrow,
   });
 
+  /// A key to set the notification URL (created via [buildNotificationUrl]) in
+  /// [ImprovedNotificationContent.userInfo] map, on iOS.
+  ///
+  /// We use this to determine which conversation to open by reading the
+  /// custom `userInfo` map of the tapped notification (in
+  /// [NotificationOpenService] above).
+  static const kIosNotificationUrlKey = 'notification_url';
+
   /// Parses the iOS APNs payload and retrieves the information
   /// required for navigation.
   factory NotificationOpenPayload.parseIosApnsPayload(Map<Object?, Object?> payload) {
+    if (payload case {
+      // This is an internal URL added by the IosNotificationService
+      // (see lib/notifications/ios_service.dart).
+      kIosNotificationUrlKey: final String notificationUrl,
+    }) {
+      final url = Uri.tryParse(notificationUrl);
+      if (url == null) throw const FormatException();
+
+      return NotificationOpenPayload.parseNotificationUrl(url);
+    } else {
+      // TODO(dart): simplify after https://github.com/dart-lang/language/issues/2537
+      throw const FormatException();
+    }
+  }
+
+  /// Parses the legacy iOS APNs payload and retrieves the information
+  /// required for navigation.
+  factory NotificationOpenPayload.parseLegacyIosApnsPayload(Map<Object?, Object?> payload) {
     if (payload case {
       'zulip': {
         'user_id': final int userId,
@@ -317,10 +364,10 @@ class NotificationOpenPayload {
     }
   }
 
-  /// Parses the internal Android notification url, that was created using
-  /// [buildAndroidNotificationUrl], and retrieves the information required
+  /// Parses the internal notification URL that was created using
+  /// [buildNotificationUrl], and retrieves the information required
   /// for navigation.
-  factory NotificationOpenPayload.parseAndroidNotificationUrl(Uri url) {
+  factory NotificationOpenPayload.parseNotificationUrl(Uri url) {
     if (url case Uri(
       scheme: 'zulip',
       host: 'notification',
@@ -366,7 +413,7 @@ class NotificationOpenPayload {
     }
   }
 
-  Uri buildAndroidNotificationUrl() {
+  Uri buildNotificationUrl() {
     return Uri(
       scheme: 'zulip',
       host: 'notification',
@@ -374,7 +421,7 @@ class NotificationOpenPayload {
         'realm_url': realmUrl.toString(),
         'user_id': userId.toString(),
         ...(switch (narrow) {
-          TopicNarrow(streamId: var channelId, :var topic) => {
+          TopicNarrow(:var channelId, :var topic) => {
             'narrow_type': 'topic',
             'channel_id': channelId.toString(),
             'topic': topic.apiName,

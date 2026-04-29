@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import '../api/core.dart';
+import '../api/model/model.dart';
 import '../generated/l10n/zulip_localizations.dart';
 import '../model/narrow.dart';
 import 'about_zulip.dart';
 import 'action_sheet.dart';
+import 'actions.dart';
 import 'app.dart';
 import 'app_bar.dart';
+import 'banner.dart';
 import 'button.dart';
 import 'color.dart';
 import 'icons.dart';
@@ -90,6 +94,23 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  List<Widget>? get _currentTabAppBarActions {
+    switch(_tab.value) {
+      case .inbox:
+        return [
+          IconButton(
+            icon: const Icon(ZulipIcons.search),
+            tooltip: ZulipLocalizations.of(context).searchMessagesPageTitle,
+            onPressed: () => Navigator.push(context,
+              MessageListPage.buildRoute(context: context,
+                narrow: KeywordSearchNarrow('')))),
+        ];
+      case .channels:
+      case .directMessages:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const pageBodies = [
@@ -104,17 +125,23 @@ class _HomePageState extends State<HomePage> {
         title: Semantics(
           identifier: HomePage.titleSemanticsIdentifier,
           namesRoute: true,
-          child: Text(_currentTabTitle))),
-      body: Semantics(
-        role: SemanticsRole.tabPanel,
-        identifier: HomePage.contentSemanticsIdentifier,
-        container: true,
-        explicitChildNodes: true,
-        child: Stack(
-          children: [
-            for (final (tab, body) in pageBodies)
-              Offstage(offstage: tab != _tab.value, child: body),
-          ])),
+          child: Text(_currentTabTitle)),
+        actions: _currentTabAppBarActions),
+      body: Column(
+        children: [
+          _ServerCompatBanner(),
+          Expanded(
+            child: Semantics(
+              role: SemanticsRole.tabPanel,
+              identifier: HomePage.contentSemanticsIdentifier,
+              container: true,
+              explicitChildNodes: true,
+              child: Stack(
+                children: [
+                  for (final (tab, body) in pageBodies)
+                    Offstage(offstage: tab != _tab.value, child: body),
+                ]))),
+        ]),
       bottomNavigationBar: _BottomNavBar(tabNotifier: _tab));
   }
 }
@@ -148,7 +175,7 @@ class _BottomNavBar extends StatelessWidget {
         icon: ZulipIcons.inbox,
         label: zulipLocalizations.inboxPageTitle),
       _NavigationBarButton(icon: ZulipIcons.message_feed,
-        label: zulipLocalizations.combinedFeedPageTitle,
+        label: zulipLocalizations.navBarFeedLabel,
         selected: false,
         onPressed: () => Navigator.push(context,
           MessageListPage.buildRoute(context: context,
@@ -159,7 +186,7 @@ class _BottomNavBar extends StatelessWidget {
       // TODO(#1094): Users
       _button(tab: _HomePageTab.directMessages,
         icon: ZulipIcons.two_person,
-        label: zulipLocalizations.recentDmConversationsPageTitle),
+        label: zulipLocalizations.recentDmConversationsPageShortLabel),
       _NavigationBarButton(icon: ZulipIcons.menu,
         label: zulipLocalizations.navBarMenuLabel,
         selected: false,
@@ -289,7 +316,7 @@ class _NavigationBarButton extends StatelessWidget {
     final designVariables = DesignVariables.of(context);
     final color = selected ? designVariables.iconSelected : designVariables.icon;
 
-    Widget result = AnimatedScaleOnTap(
+    Widget result = AnimatedScaleOnPress(
       scaleEnd: 0.875,
       duration: const Duration(milliseconds: 100),
       child: Material(
@@ -410,7 +437,7 @@ class _MainMenu extends StatelessWidget {
               child: Column(children: menuItems)))),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: AnimatedScaleOnTap(
+            child: AnimatedScaleOnPress(
               scaleEnd: 0.95,
               duration: Duration(milliseconds: 100),
               child: BottomSheetDismissButton(
@@ -565,7 +592,7 @@ abstract class MenuButton extends StatelessWidget {
 
     final trailing = buildTrailing(context);
 
-    return AnimatedScaleOnTap(
+    return AnimatedScaleOnPress(
       duration: const Duration(milliseconds: 100),
       scaleEnd: 0.95,
       child: TextButton(
@@ -830,5 +857,44 @@ class _AboutZulipButton extends MenuButton {
   @override
   void onPressed(BuildContext context) {
     Navigator.of(context).push(AboutZulipPage.buildRoute(context));
+  }
+}
+
+class _ServerCompatBanner extends StatelessWidget {
+  const _ServerCompatBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final globalStore = GlobalStoreWidget.of(context);
+    final store = PerAccountStoreWidget.of(context);
+    final zulipLocalizations = ZulipLocalizations.of(context);
+    final showCompatBanner =
+      store.zulipFeatureLevel < kMinSupportedZulipFeatureLevel
+      && !globalStore.getServerCompatBannerDismissed(store.accountId);
+    final isAtLeastAdmin = store.selfUser.role.isAtLeast(UserRole.administrator);
+    final label = isAtLeastAdmin
+      ? zulipLocalizations.serverCompatBannerAdminMessage(
+          store.realmUrl.toString(), store.zulipVersion)
+      : zulipLocalizations.serverCompatBannerUserMessage(
+          store.realmUrl.toString(), store.zulipVersion);
+    if (!showCompatBanner) return const SizedBox.shrink();
+    return ZulipBanner(
+      intent: .danger,
+      label: label,
+      actions: [
+        ZulipWebUiKitButton(
+          label: zulipLocalizations.serverCompatBannerLearnMoreLabel,
+          size: .small,
+          intent: .danger,
+          attention: .low,
+          onPressed: () => PlatformActions.launchUrl(context, kServerSupportDocUrl)),
+        ZulipWebUiKitButton(
+          label: zulipLocalizations.serverCompatBannerDismissLabel,
+          size: .small,
+          intent: .danger,
+          attention: .medium,
+          onPressed: () => globalStore
+            .setServerCompatBannerDismissed(store.accountId)),
+      ]);
   }
 }

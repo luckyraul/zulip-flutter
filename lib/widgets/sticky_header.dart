@@ -11,12 +11,13 @@ import 'package:flutter/widgets.dart';
 /// and is the item that the list selects for obtaining a sticky header,
 /// then this widget's [header] widget is built and used as the sticky header.
 class StickyHeaderItem extends SingleChildRenderObjectWidget {
-  const StickyHeaderItem({
+  StickyHeaderItem({
     super.key,
     this.allowOverflow = false,
-    required this.header,
+    required Widget header,
+    this.excludeHeaderFromSemantics = true,
     super.child,
-  });
+  }) : header = ExcludeSemantics(excluding: excludeHeaderFromSemantics, child: header);
 
   /// Whether to allow the sticky header to overflow the item's own bounds.
   ///
@@ -37,6 +38,11 @@ class StickyHeaderItem extends SingleChildRenderObjectWidget {
   /// will be built and laid out to display as the sticky header.
   final Widget header;
 
+  /// Whether to exclude [header] from the semantics tree.
+  ///
+  /// Defaults to true.
+  final bool excludeHeaderFromSemantics;
+
   @override
   RenderObject createRenderObject(BuildContext context) {
     return RenderStickyHeaderItem(
@@ -56,10 +62,9 @@ class StickyHeaderItem extends SingleChildRenderObjectWidget {
 /// The render object configured by a [StickyHeaderItem].
 class RenderStickyHeaderItem extends RenderProxyBox {
   RenderStickyHeaderItem({
-    required bool allowOverflow,
-    required Widget header,
-  }) : _allowOverflow = allowOverflow,
-       _header = header;
+    required this._allowOverflow,
+    required this._header,
+  });
 
   bool get allowOverflow => _allowOverflow;
   bool _allowOverflow;
@@ -126,7 +131,7 @@ class StickyHeaderListView extends BoxScrollView {
     bool addAutomaticKeepAlives = true,
     bool addRepaintBoundaries = true,
     bool addSemanticIndexes = true,
-    super.cacheExtent,
+    super.scrollCacheExtent,
     List<Widget> children = const <Widget>[],
     int? semanticChildCount,
     super.dragStartBehavior,
@@ -160,7 +165,7 @@ class StickyHeaderListView extends BoxScrollView {
     bool addAutomaticKeepAlives = true,
     bool addRepaintBoundaries = true,
     bool addSemanticIndexes = true,
-    super.cacheExtent,
+    super.scrollCacheExtent,
     int? semanticChildCount,
     super.dragStartBehavior,
     super.keyboardDismissBehavior,
@@ -198,7 +203,7 @@ class StickyHeaderListView extends BoxScrollView {
     bool addAutomaticKeepAlives = true,
     bool addRepaintBoundaries = true,
     bool addSemanticIndexes = true,
-    super.cacheExtent,
+    super.scrollCacheExtent,
     super.dragStartBehavior,
     super.keyboardDismissBehavior,
     super.restorationId,
@@ -246,7 +251,7 @@ class StickyHeaderListView extends BoxScrollView {
     super.shrinkWrap,
     super.padding,
     required this.childrenDelegate,
-    super.cacheExtent,
+    super.scrollCacheExtent,
     super.semanticChildCount,
     super.dragStartBehavior,
     super.keyboardDismissBehavior,
@@ -462,8 +467,8 @@ class _SliverStickyHeaderListElement extends RenderObjectElement {
 
 class _RenderSliverStickyHeaderList extends RenderSliver with RenderSliverHelpers {
   _RenderSliverStickyHeaderList({
-    required _SliverStickyHeaderListElement element,
-  }) : _element = element;
+    required this._element,
+  });
 
   final _SliverStickyHeaderListElement _element;
 

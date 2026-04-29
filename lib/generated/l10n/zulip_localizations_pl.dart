@@ -136,6 +136,18 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
   String get unsubscribeFailedTitle => 'Odsubskrybowanie bez powdzenia';
 
   @override
+  String get actionSheetOptionPinChannel => 'Przypnij na górze';
+
+  @override
+  String get actionSheetOptionUnpinChannel => 'Odepnij z góry';
+
+  @override
+  String get errorPinChannelFailedTitle => 'Nie udało się przypiąć kanału';
+
+  @override
+  String get errorUnpinChannelFailedTitle => 'Nie udało się odpiąć kanału';
+
+  @override
   String get actionSheetOptionMuteTopic => 'Wycisz wątek';
 
   @override
@@ -269,6 +281,24 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
 
   @override
   String get actionSheetOptionCopyTopicLink => 'Skopiuj odnośnik do wątku';
+
+  @override
+  String actionSheetTitleDm(String user) {
+    return 'DMs with $user';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => 'DMs with yourself';
+
+  @override
+  String get actionSheetTitleGroupDm => 'Group DM';
+
+  @override
+  String get actionSheetOptionViewProfile => 'View profile';
+
+  @override
+  String get actionSheetOptionMarkDmConversationAsRead =>
+      'Mark conversation as read';
 
   @override
   String get errorWebAuthOperationalErrorTitle => 'Coś poszło nie tak';
@@ -439,11 +469,11 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
 
   @override
   String get composeBoxBannerLabelUnknownDmRecipient =>
-      'You cannot send messages to unknown users.';
+      'Nie można wysłyać wiadomości do nieznanych użytkowników.';
 
   @override
   String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
-      'You cannot send messages here.';
+      'Nie możesz wysyłać tutaj wiadomości.';
 
   @override
   String get composeBoxBannerLabelCannotSendInChannel =>
@@ -451,7 +481,7 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
 
   @override
   String get composeBoxBannerLabelUnsubscribed =>
-      'Replies to your messages will not appear automatically.';
+      'Odpowiedzi na twoje wiadomości nie pojawią się automatycznie.';
 
   @override
   String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
@@ -728,7 +758,7 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Dodaj konto';
 
   @override
-  String get loginServerUrlLabel => 'URL serwera Zulip';
+  String get loginRealmUrlLabel => 'Your Zulip organization URL';
 
   @override
   String get loginHidePassword => 'Ukryj hasło';
@@ -775,13 +805,29 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
       'Plik do dodania jest pusty lub nie ma do niego dostępu.';
 
   @override
-  String errorServerVersionUnsupportedMessage(
+  String errorServerVersionNotAllowedMessage(
     String url,
     String zulipVersion,
-    String minSupportedZulipVersion,
+    String minAllowedZulipVersion,
   ) {
-    return '$url uruchamia Zulip Server $zulipVersion, który nie jest obsługiwany. Minimalna obsługiwana wersja to Zulip Server $minSupportedZulipVersion.';
+    return '$url uruchamia Zulip Server $zulipVersion, który nie jest obsługiwany. Minimalna obsługiwana wersja to Zulip Server $minAllowedZulipVersion.';
   }
+
+  @override
+  String serverCompatBannerAdminMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please upgrade your server as soon as possible.';
+  }
+
+  @override
+  String serverCompatBannerUserMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please contact your server administrator about upgrading.';
+  }
+
+  @override
+  String get serverCompatBannerDismissLabel => 'Dismiss';
+
+  @override
+  String get serverCompatBannerLearnMoreLabel => 'Learn more';
 
   @override
   String errorInvalidApiKeyMessage(String url) {
@@ -873,22 +919,23 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Mark $count+ messages as read?',
-      one: 'Mark $count+ messages as read?',
+      other: 'Oznaczyć $count+ wiadomości jako przeczytane?',
+      one: 'Oznaczyć $count+ wiadomość jako przeczytaną?',
     );
     return '$_temp0';
   }
 
   @override
   String get markAllAsReadConfirmationDialogTitleNoCount =>
-      'Mark messages as read?';
+      'Oznaczyć wiadomości jako przeczytane?';
 
   @override
   String get markAllAsReadConfirmationDialogMessage =>
-      'Messages in multiple conversations may be affected.';
+      'Może to wpłynąć na wiadomości w kilku rozmowach.';
 
   @override
-  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
+  String get markAllAsReadConfirmationDialogConfirmButton =>
+      'Oznacz jako przeczytane';
 
   @override
   String get today => 'Dzisiaj';
@@ -1042,7 +1089,16 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
       'Użyj poniższych przycisków aby skorzystać z widoku mieszanego lub listy kanałów.';
 
   @override
+  String get pinnedChannelsFolderName => 'Pinned channels';
+
+  @override
+  String get otherChannelsFolderName => 'Other channels';
+
+  @override
   String get recentDmConversationsPageTitle => 'Wiadomości bezpośrednie';
+
+  @override
+  String get recentDmConversationsPageShortLabel => 'DMs';
 
   @override
   String get recentDmConversationsSectionHeader => 'Wiadomości bezpośrednie';
@@ -1169,6 +1225,33 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'Powiadom w wątku';
+
+  @override
+  String get systemGroupNameEveryoneOnInternet => 'Everyone on the internet';
+
+  @override
+  String get systemGroupNameEveryone => 'Everyone including guests';
+
+  @override
+  String get systemGroupNameMembers => 'Everyone except guests';
+
+  @override
+  String get systemGroupNameFullMembers => 'Full members';
+
+  @override
+  String get systemGroupNameModerators => 'Moderators';
+
+  @override
+  String get systemGroupNameAdministrators => 'Administrators';
+
+  @override
+  String get systemGroupNameOwners => 'Owners';
+
+  @override
+  String get systemGroupNameNobody => 'Nobody';
+
+  @override
+  String get navBarFeedLabel => 'Feed';
 
   @override
   String get navBarMenuLabel => 'Menu';

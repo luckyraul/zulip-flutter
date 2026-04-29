@@ -10,14 +10,17 @@ import 'zulip_localizations_de.dart';
 import 'zulip_localizations_el.dart';
 import 'zulip_localizations_en.dart';
 import 'zulip_localizations_es.dart';
+import 'zulip_localizations_et.dart';
 import 'zulip_localizations_fr.dart';
 import 'zulip_localizations_he.dart';
 import 'zulip_localizations_hu.dart';
 import 'zulip_localizations_it.dart';
 import 'zulip_localizations_ja.dart';
 import 'zulip_localizations_kk.dart';
+import 'zulip_localizations_lv.dart';
 import 'zulip_localizations_nb.dart';
 import 'zulip_localizations_pl.dart';
+import 'zulip_localizations_pt.dart';
 import 'zulip_localizations_ru.dart';
 import 'zulip_localizations_sk.dart';
 import 'zulip_localizations_sl.dart';
@@ -117,14 +120,18 @@ abstract class ZulipLocalizations {
     Locale('el'),
     Locale('en', 'GB'),
     Locale('es'),
+    Locale('et'),
     Locale('fr'),
     Locale('he'),
     Locale('hu'),
     Locale('it'),
     Locale('ja'),
     Locale('kk'),
+    Locale('lv'),
     Locale('nb'),
     Locale('pl'),
+    Locale('pt'),
+    Locale('pt', 'PT'),
     Locale('ru'),
     Locale('sk'),
     Locale('sl'),
@@ -371,6 +378,30 @@ abstract class ZulipLocalizations {
   /// **'Failed to unsubscribe'**
   String get unsubscribeFailedTitle;
 
+  /// Label in the channel action sheet for pinning the channel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin to top'**
+  String get actionSheetOptionPinChannel;
+
+  /// Label in the channel action sheet for unpinning the channel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin from top'**
+  String get actionSheetOptionUnpinChannel;
+
+  /// Error title when pinning a channel to the top fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to pin channel'**
+  String get errorPinChannelFailedTitle;
+
+  /// Error title when unpinning a channel from the top fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to unpin channel'**
+  String get errorUnpinChannelFailedTitle;
+
   /// Label for muting a topic on action sheet.
   ///
   /// In en, this message translates to:
@@ -574,6 +605,36 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Copy link to topic'**
   String get actionSheetOptionCopyTopicLink;
+
+  /// The title of an action sheet for a 1:1 DM conversation with another user.
+  ///
+  /// In en, this message translates to:
+  /// **'DMs with {user}'**
+  String actionSheetTitleDm(String user);
+
+  /// The title of an action sheet for the 1:1 DM conversation with yourself.
+  ///
+  /// In en, this message translates to:
+  /// **'DMs with yourself'**
+  String get actionSheetTitleSelfDm;
+
+  /// The title of an action sheet for a group DM conversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Group DM'**
+  String get actionSheetTitleGroupDm;
+
+  /// Option to view the user's profile in the action sheet for a 1:1 DM conversation.
+  ///
+  /// In en, this message translates to:
+  /// **'View profile'**
+  String get actionSheetOptionViewProfile;
+
+  /// Option to mark a DM conversation as read in the action sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark conversation as read'**
+  String get actionSheetOptionMarkDmConversationAsRead;
 
   /// Error title when third-party authentication has an operational error (not necessarily caused by invalid credentials).
   ///
@@ -1309,11 +1370,11 @@ abstract class ZulipLocalizations {
   /// **'Add an account'**
   String get loginAddAnAccountPageTitle;
 
-  /// Label in login page for Zulip server URL entry.
+  /// Label in login page for Zulip realm/org URL entry.
   ///
   /// In en, this message translates to:
-  /// **'Your Zulip server URL'**
-  String get loginServerUrlLabel;
+  /// **'Your Zulip organization URL'**
+  String get loginRealmUrlLabel;
 
   /// Icon label for button to hide password in input form.
   ///
@@ -1381,15 +1442,39 @@ abstract class ZulipLocalizations {
   /// **'The file to be inserted is empty or cannot be accessed.'**
   String get errorContentToInsertIsEmpty;
 
-  /// Error message in the dialog for when the Zulip Server version is unsupported.
+  /// Error message in the dialog for when the Zulip Server version is not allowed.
   ///
   /// In en, this message translates to:
-  /// **'{url} is running Zulip Server {zulipVersion}, which is unsupported. The minimum supported version is Zulip Server {minSupportedZulipVersion}.'**
-  String errorServerVersionUnsupportedMessage(
+  /// **'{url} is running Zulip Server {zulipVersion}, which is unsupported. The minimum supported version is Zulip Server {minAllowedZulipVersion}.'**
+  String errorServerVersionNotAllowedMessage(
     String url,
     String zulipVersion,
-    String minSupportedZulipVersion,
+    String minAllowedZulipVersion,
   );
+
+  /// Banner message shown to server admins when the server version is no longer supported.
+  ///
+  /// In en, this message translates to:
+  /// **'{url} is running Zulip Server {zulipVersion}, which is unsupported. Please upgrade your server as soon as possible.'**
+  String serverCompatBannerAdminMessage(String url, String zulipVersion);
+
+  /// Banner message shown to non-admin users when the server version is no longer supported.
+  ///
+  /// In en, this message translates to:
+  /// **'{url} is running Zulip Server {zulipVersion}, which is unsupported. Please contact your server administrator about upgrading.'**
+  String serverCompatBannerUserMessage(String url, String zulipVersion);
+
+  /// Label for the button that dismisses the server compatibility warning banner.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get serverCompatBannerDismissLabel;
+
+  /// Label for the button in the server compatibility warning banner that opens the support policy doc.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more'**
+  String get serverCompatBannerLearnMoreLabel;
 
   /// Error message in the dialog for invalid API key.
   ///
@@ -1771,11 +1856,29 @@ abstract class ZulipLocalizations {
   /// **'Use the buttons below to view the combined feed or list of channels.'**
   String get inboxEmptyPlaceholderMessage;
 
+  /// Label for the channel folder for pinned channels.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned channels'**
+  String get pinnedChannelsFolderName;
+
+  /// Label for the channel folder for other channels.
+  ///
+  /// In en, this message translates to:
+  /// **'Other channels'**
+  String get otherChannelsFolderName;
+
   /// Title for the page with a list of DM conversations.
   ///
   /// In en, this message translates to:
   /// **'Direct messages'**
   String get recentDmConversationsPageTitle;
+
+  /// Short label for the recent-DMs page. Used in the bottom nav bar and for a tab in the share-to-Zulip sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'DMs'**
+  String get recentDmConversationsPageShortLabel;
 
   /// Heading for direct messages section on the 'Inbox' message view.
   ///
@@ -1974,6 +2077,60 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Notify topic'**
   String get wildcardMentionTopicDescription;
+
+  /// Display name for the system group that includes everyone on the internet.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone on the internet'**
+  String get systemGroupNameEveryoneOnInternet;
+
+  /// Display name for the system group that includes all users including guests.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone including guests'**
+  String get systemGroupNameEveryone;
+
+  /// Display name for the system group that includes all users excluding guests.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone except guests'**
+  String get systemGroupNameMembers;
+
+  /// Display name for the system group that includes all full members of the organization.
+  ///
+  /// In en, this message translates to:
+  /// **'Full members'**
+  String get systemGroupNameFullMembers;
+
+  /// Display name for the system group that includes all users with at least the moderator role.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderators'**
+  String get systemGroupNameModerators;
+
+  /// Display name for the system group that includes all users with at least the administrator role.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrators'**
+  String get systemGroupNameAdministrators;
+
+  /// Display name for the system group that includes all users with the owner role.
+  ///
+  /// In en, this message translates to:
+  /// **'Owners'**
+  String get systemGroupNameOwners;
+
+  /// Display name for the system group that includes nobody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody'**
+  String get systemGroupNameNobody;
+
+  /// Label for the Feed button on the bottom navigation bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Feed'**
+  String get navBarFeedLabel;
 
   /// Label for the Menu button on the bottom navigation bar.
   ///
@@ -2234,14 +2391,17 @@ class _ZulipLocalizationsDelegate
     'el',
     'en',
     'es',
+    'et',
     'fr',
     'he',
     'hu',
     'it',
     'ja',
     'kk',
+    'lv',
     'nb',
     'pl',
+    'pt',
     'ru',
     'sk',
     'sl',
@@ -2273,6 +2433,14 @@ ZulipLocalizations lookupZulipLocalizations(Locale locale) {
         }
         break;
       }
+    case 'pt':
+      {
+        switch (locale.countryCode) {
+          case 'PT':
+            return ZulipLocalizationsPtPt();
+        }
+        break;
+      }
   }
 
   // Lookup logic when only language code is specified.
@@ -2287,6 +2455,8 @@ ZulipLocalizations lookupZulipLocalizations(Locale locale) {
       return ZulipLocalizationsEn();
     case 'es':
       return ZulipLocalizationsEs();
+    case 'et':
+      return ZulipLocalizationsEt();
     case 'fr':
       return ZulipLocalizationsFr();
     case 'he':
@@ -2299,10 +2469,14 @@ ZulipLocalizations lookupZulipLocalizations(Locale locale) {
       return ZulipLocalizationsJa();
     case 'kk':
       return ZulipLocalizationsKk();
+    case 'lv':
+      return ZulipLocalizationsLv();
     case 'nb':
       return ZulipLocalizationsNb();
     case 'pl':
       return ZulipLocalizationsPl();
+    case 'pt':
+      return ZulipLocalizationsPt();
     case 'ru':
       return ZulipLocalizationsRu();
     case 'sk':

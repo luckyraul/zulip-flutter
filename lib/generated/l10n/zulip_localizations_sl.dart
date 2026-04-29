@@ -134,6 +134,18 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get unsubscribeFailedTitle => 'Preklic naročnine ni uspel';
 
   @override
+  String get actionSheetOptionPinChannel => 'Pin to top';
+
+  @override
+  String get actionSheetOptionUnpinChannel => 'Unpin from top';
+
+  @override
+  String get errorPinChannelFailedTitle => 'Failed to pin channel';
+
+  @override
+  String get errorUnpinChannelFailedTitle => 'Failed to unpin channel';
+
+  @override
   String get actionSheetOptionMuteTopic => 'Utišaj temo';
 
   @override
@@ -266,6 +278,24 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get actionSheetOptionCopyTopicLink => 'Kopiraj povezavo do teme';
+
+  @override
+  String actionSheetTitleDm(String user) {
+    return 'DMs with $user';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => 'DMs with yourself';
+
+  @override
+  String get actionSheetTitleGroupDm => 'Group DM';
+
+  @override
+  String get actionSheetOptionViewProfile => 'View profile';
+
+  @override
+  String get actionSheetOptionMarkDmConversationAsRead =>
+      'Mark conversation as read';
 
   @override
   String get errorWebAuthOperationalErrorTitle => 'Nekaj je šlo narobe';
@@ -739,7 +769,7 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
   String get loginAddAnAccountPageTitle => 'Dodaj račun';
 
   @override
-  String get loginServerUrlLabel => 'URL strežnika Zulip';
+  String get loginRealmUrlLabel => 'Your Zulip organization URL';
 
   @override
   String get loginHidePassword => 'Skrij geslo';
@@ -785,13 +815,29 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
       'Datoteka za vstavljanje je prazna ali nedostopna.';
 
   @override
-  String errorServerVersionUnsupportedMessage(
+  String errorServerVersionNotAllowedMessage(
     String url,
     String zulipVersion,
-    String minSupportedZulipVersion,
+    String minAllowedZulipVersion,
   ) {
-    return '$url uporablja strežnik Zulip $zulipVersion, ki ni podprt. Najnižja podprta različica je strežnik Zulip $minSupportedZulipVersion.';
+    return '$url uporablja strežnik Zulip $zulipVersion, ki ni podprt. Najnižja podprta različica je strežnik Zulip $minAllowedZulipVersion.';
   }
+
+  @override
+  String serverCompatBannerAdminMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please upgrade your server as soon as possible.';
+  }
+
+  @override
+  String serverCompatBannerUserMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please contact your server administrator about upgrading.';
+  }
+
+  @override
+  String get serverCompatBannerDismissLabel => 'Dismiss';
+
+  @override
+  String get serverCompatBannerLearnMoreLabel => 'Learn more';
 
   @override
   String errorInvalidApiKeyMessage(String url) {
@@ -1060,7 +1106,16 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
       'Uporabite spodnje gumbe za ogled združenega vira ali seznama kanalov.';
 
   @override
+  String get pinnedChannelsFolderName => 'Pinned channels';
+
+  @override
+  String get otherChannelsFolderName => 'Other channels';
+
+  @override
   String get recentDmConversationsPageTitle => 'Neposredna sporočila';
+
+  @override
+  String get recentDmConversationsPageShortLabel => 'DMs';
 
   @override
   String get recentDmConversationsSectionHeader => 'Neposredna sporočila';
@@ -1189,6 +1244,33 @@ class ZulipLocalizationsSl extends ZulipLocalizations {
 
   @override
   String get wildcardMentionTopicDescription => 'Obvesti udeležence teme';
+
+  @override
+  String get systemGroupNameEveryoneOnInternet => 'Everyone on the internet';
+
+  @override
+  String get systemGroupNameEveryone => 'Everyone including guests';
+
+  @override
+  String get systemGroupNameMembers => 'Everyone except guests';
+
+  @override
+  String get systemGroupNameFullMembers => 'Full members';
+
+  @override
+  String get systemGroupNameModerators => 'Moderators';
+
+  @override
+  String get systemGroupNameAdministrators => 'Administrators';
+
+  @override
+  String get systemGroupNameOwners => 'Owners';
+
+  @override
+  String get systemGroupNameNobody => 'Nobody';
+
+  @override
+  String get navBarFeedLabel => 'Feed';
 
   @override
   String get navBarMenuLabel => 'Menu';

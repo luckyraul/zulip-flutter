@@ -1,0 +1,1370 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'zulip_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Estonian (`et`).
+class ZulipLocalizationsEt extends ZulipLocalizations {
+  ZulipLocalizationsEt([String locale = 'et']) : super(locale);
+
+  @override
+  String get aboutPageTitle => 'Zulipi teave';
+
+  @override
+  String get aboutPageAppVersion => 'Rakenduse versioon';
+
+  @override
+  String get aboutPageOpenSourceLicenses =>
+      'Avatud lähtekoodiga tarkvara litsentsid';
+
+  @override
+  String get aboutPageTapToView => 'Vaatamiseks klõpsa';
+
+  @override
+  String get upgradeWelcomeDialogTitle =>
+      'Tere tulemast kasutama uut Zulipi rakendust!';
+
+  @override
+  String get upgradeWelcomeDialogMessage =>
+      'You’ll find a familiar experience in a faster, sleeker package.';
+
+  @override
+  String get upgradeWelcomeDialogLinkText =>
+      'Check out the announcement blog post!';
+
+  @override
+  String get upgradeWelcomeDialogDismiss => 'Alustame';
+
+  @override
+  String get chooseAccountPageTitle => 'Vali kasutajakonto';
+
+  @override
+  String get settingsPageTitle => 'Seadistused';
+
+  @override
+  String get switchAccountButtonTooltip => 'Vaheta kasutajakontot';
+
+  @override
+  String tryAnotherAccountMessage(Object url) {
+    return 'Your account at $url is taking a while to load.';
+  }
+
+  @override
+  String get tryAnotherAccountButton => 'Try another account';
+
+  @override
+  String get chooseAccountPageLogOutButton => 'Logi välja';
+
+  @override
+  String get logOutConfirmationDialogTitle => 'Kas logid välja?';
+
+  @override
+  String get logOutConfirmationDialogMessage =>
+      'To use this account in the future, you will have to re-enter the URL for your organization and your account information.';
+
+  @override
+  String get logOutConfirmationDialogConfirmButton => 'Logi välja';
+
+  @override
+  String get chooseAccountButtonAddAnAccount => 'Add an account';
+
+  @override
+  String get navButtonAllChannels => 'Kõik kanalid';
+
+  @override
+  String get allChannelsPageTitle => 'Kõik kanalid';
+
+  @override
+  String get allChannelsEmptyPlaceholderHeader =>
+      'There are no channels you can view in this organization.';
+
+  @override
+  String get profileButtonSendDirectMessage => 'Send direct message';
+
+  @override
+  String get errorCouldNotShowUserProfile => 'Could not show user profile.';
+
+  @override
+  String get permissionsNeededTitle => 'Vajalikud on õigused';
+
+  @override
+  String get permissionsNeededOpenSettings => 'Ava seadistused';
+
+  @override
+  String get permissionsDeniedCameraAccess =>
+      'To upload an image, please grant Zulip additional permissions in Settings.';
+
+  @override
+  String get permissionsDeniedReadExternalStorage =>
+      'To upload files, please grant Zulip additional permissions in Settings.';
+
+  @override
+  String get actionSheetOptionSubscribe => 'Telli';
+
+  @override
+  String get subscribeFailedTitle => 'Failed to subscribe';
+
+  @override
+  String get actionSheetOptionMarkChannelAsRead => 'Mark channel as read';
+
+  @override
+  String get actionSheetOptionCopyChannelLink => 'Copy link to channel';
+
+  @override
+  String get actionSheetOptionListOfTopics => 'List of topics';
+
+  @override
+  String get actionSheetOptionChannelFeed => 'Channel feed';
+
+  @override
+  String get actionSheetOptionUnsubscribe => 'Loobu tellimusest';
+
+  @override
+  String unsubscribeConfirmationDialogTitle(String channelName) {
+    return 'Unsubscribe from $channelName?';
+  }
+
+  @override
+  String get unsubscribeConfirmationDialogMessageCannotResubscribe =>
+      'Once you leave this channel, you will not be able to rejoin.';
+
+  @override
+  String get unsubscribeConfirmationDialogConfirmButton => 'Loobu tellimusest';
+
+  @override
+  String get unsubscribeFailedTitle => 'Failed to unsubscribe';
+
+  @override
+  String get actionSheetOptionPinChannel => 'Pin to top';
+
+  @override
+  String get actionSheetOptionUnpinChannel => 'Unpin from top';
+
+  @override
+  String get errorPinChannelFailedTitle => 'Failed to pin channel';
+
+  @override
+  String get errorUnpinChannelFailedTitle => 'Failed to unpin channel';
+
+  @override
+  String get actionSheetOptionMuteTopic => 'Summuta teema';
+
+  @override
+  String get actionSheetOptionUnmuteTopic => 'Lõpeta teema summutamine';
+
+  @override
+  String get actionSheetOptionFollowTopic => 'Jälgi teemat';
+
+  @override
+  String get actionSheetOptionUnfollowTopic => 'Lõpeta teema jälgimine';
+
+  @override
+  String get actionSheetOptionResolveTopic => 'Mark as resolved';
+
+  @override
+  String get actionSheetOptionUnresolveTopic => 'Mark as unresolved';
+
+  @override
+  String get errorResolveTopicFailedTitle => 'Failed to mark topic as resolved';
+
+  @override
+  String get errorUnresolveTopicFailedTitle =>
+      'Failed to mark topic as unresolved';
+
+  @override
+  String get actionSheetOptionSeeWhoReacted => 'See who reacted';
+
+  @override
+  String get seeWhoReactedSheetNoReactions => 'This message has no reactions.';
+
+  @override
+  String seeWhoReactedSheetHeaderLabel(int num) {
+    return 'Emoji reactions ($num total)';
+  }
+
+  @override
+  String seeWhoReactedSheetEmojiNameWithVoteCount(String emojiName, int num) {
+    String _temp0 = intl.Intl.pluralLogic(
+      num,
+      locale: localeName,
+      other: '$num votes',
+      one: '1 vote',
+    );
+    return '$emojiName: $_temp0';
+  }
+
+  @override
+  String seeWhoReactedSheetUserListLabel(String emojiName, int num) {
+    return 'Votes for $emojiName ($num)';
+  }
+
+  @override
+  String get actionSheetOptionViewReadReceipts => 'View read receipts';
+
+  @override
+  String get actionSheetReadReceipts => 'Lugemisteatised';
+
+  @override
+  String actionSheetReadReceiptsReadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'This message has been <z-link>read</z-link> by $count people:',
+      one: 'This message has been <z-link>read</z-link> by $count person:',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get actionSheetReadReceiptsZeroReadCount =>
+      'No one has read this message yet.';
+
+  @override
+  String get actionSheetReadReceiptsErrorReadCount =>
+      'Failed to load read receipts.';
+
+  @override
+  String get actionSheetOptionCopyMessageText => 'Copy message text';
+
+  @override
+  String get actionSheetOptionCopyMessageLink => 'Copy link to message';
+
+  @override
+  String get actionSheetOptionMarkAsUnread => 'Mark as unread from here';
+
+  @override
+  String get actionSheetOptionHideMutedMessage => 'Hide muted message again';
+
+  @override
+  String get actionSheetOptionShare => 'Jaga';
+
+  @override
+  String get actionSheetOptionQuoteMessage => 'Tsiteeri sõnumit';
+
+  @override
+  String get actionSheetOptionStarMessage => 'Märgi sõnum tärniga';
+
+  @override
+  String get actionSheetOptionUnstarMessage =>
+      'Eemalda sõnumilt tärniga märkimine';
+
+  @override
+  String get actionSheetOptionEditMessage => 'Muuda sõnumit';
+
+  @override
+  String get actionSheetOptionDeleteMessage => 'Kustuta sõnum';
+
+  @override
+  String get deleteMessageConfirmationDialogTitle => 'Kas kustutad sõnumi?';
+
+  @override
+  String get deleteMessageConfirmationDialogMessage =>
+      'Deleting a message permanently removes it for everyone.';
+
+  @override
+  String get deleteMessageConfirmationDialogConfirmButton => 'Kustuta';
+
+  @override
+  String get errorDeleteMessageFailedTitle => 'Failed to delete message';
+
+  @override
+  String get actionSheetOptionMarkTopicAsRead => 'Mark topic as read';
+
+  @override
+  String get actionSheetOptionCopyTopicLink => 'Copy link to topic';
+
+  @override
+  String actionSheetTitleDm(String user) {
+    return 'DMs with $user';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => 'DMs with yourself';
+
+  @override
+  String get actionSheetTitleGroupDm => 'Group DM';
+
+  @override
+  String get actionSheetOptionViewProfile => 'View profile';
+
+  @override
+  String get actionSheetOptionMarkDmConversationAsRead =>
+      'Mark conversation as read';
+
+  @override
+  String get errorWebAuthOperationalErrorTitle => 'Something went wrong';
+
+  @override
+  String get errorWebAuthOperationalError => 'An unexpected error occurred.';
+
+  @override
+  String get errorAccountLoggedInTitle => 'Account already logged in';
+
+  @override
+  String errorAccountLoggedIn(String email, String server) {
+    return 'The account $email at $server is already in your list of accounts.';
+  }
+
+  @override
+  String get errorCouldNotFetchMessageSource =>
+      'Could not fetch message source.';
+
+  @override
+  String get errorCouldNotAccessUploadedFileTitle =>
+      'Could not access uploaded file';
+
+  @override
+  String get errorCopyingFailed => 'Kopeerimine ei õnnestunud';
+
+  @override
+  String errorFailedToUploadFileTitle(String filename) {
+    return 'Failed to upload file: $filename';
+  }
+
+  @override
+  String filenameAndSizeInMiB(String filename, String size) {
+    return '$filename: $size MiB';
+  }
+
+  @override
+  String errorFilesTooLarge(
+    int num,
+    int maxFileUploadSizeMib,
+    String listMessage,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      num,
+      locale: localeName,
+      other: '$num files are',
+      one: 'File is',
+    );
+    return '$_temp0 larger than the server\'s limit of $maxFileUploadSizeMib MiB and will not be uploaded:\n\n$listMessage';
+  }
+
+  @override
+  String errorFilesTooLargeTitle(int num) {
+    String _temp0 = intl.Intl.pluralLogic(
+      num,
+      locale: localeName,
+      other: 'Files',
+      one: 'File',
+    );
+    return '$_temp0 too large';
+  }
+
+  @override
+  String get errorLoginInvalidInputTitle => 'Vigane sisend';
+
+  @override
+  String get errorLoginFailedTitle => 'Sisselogimine ei õnnestunud';
+
+  @override
+  String get errorMessageNotSent => 'Message not sent';
+
+  @override
+  String get errorMessageEditNotSaved => 'Message not saved';
+
+  @override
+  String errorLoginCouldNotConnect(String url) {
+    return 'Failed to connect to server:\n$url';
+  }
+
+  @override
+  String get errorCouldNotConnectTitle => 'Could not connect';
+
+  @override
+  String get errorMessageDoesNotSeemToExist =>
+      'That message does not seem to exist.';
+
+  @override
+  String get errorQuotationFailed => 'Tsiteerimine ei õnnestunud';
+
+  @override
+  String errorServerMessage(String message) {
+    return 'The server said:\n\n$message';
+  }
+
+  @override
+  String get errorConnectingToServerShort =>
+      'Error connecting to Zulip. Retrying…';
+
+  @override
+  String errorConnectingToServerDetails(String serverUrl, String error) {
+    return 'Error connecting to Zulip at $serverUrl. Will retry:\n\n$error';
+  }
+
+  @override
+  String get errorHandlingEventTitle =>
+      'Error handling a Zulip event. Retrying connection…';
+
+  @override
+  String errorHandlingEventDetails(
+    String serverUrl,
+    String error,
+    String event,
+  ) {
+    return 'Error handling a Zulip event from $serverUrl; will retry.\n\nError: $error\n\nEvent: $event';
+  }
+
+  @override
+  String get errorCouldNotOpenLinkTitle => 'Unable to open link';
+
+  @override
+  String errorCouldNotOpenLink(String url) {
+    return 'Link could not be opened: $url';
+  }
+
+  @override
+  String get errorMuteTopicFailed => 'Failed to mute topic';
+
+  @override
+  String get errorUnmuteTopicFailed => 'Failed to unmute topic';
+
+  @override
+  String get errorFollowTopicFailed => 'Failed to follow topic';
+
+  @override
+  String get errorUnfollowTopicFailed => 'Failed to unfollow topic';
+
+  @override
+  String get errorSharingFailed => 'Jagamine ei õnnestunud';
+
+  @override
+  String get errorStarMessageFailedTitle => 'Failed to star message';
+
+  @override
+  String get errorUnstarMessageFailedTitle => 'Failed to unstar message';
+
+  @override
+  String get errorCouldNotEditMessageTitle => 'Could not edit message';
+
+  @override
+  String get successLinkCopied => 'Link on kopeeritud';
+
+  @override
+  String get successMessageTextCopied => 'Message text copied';
+
+  @override
+  String get successMessageLinkCopied => 'Message link copied';
+
+  @override
+  String get successTopicLinkCopied => 'Topic link copied';
+
+  @override
+  String get successChannelLinkCopied => 'Channel link copied';
+
+  @override
+  String get composeBoxBannerLabelDeactivatedDmRecipient =>
+      'You cannot send messages to deactivated users.';
+
+  @override
+  String get composeBoxBannerLabelUnknownDmRecipient =>
+      'You cannot send messages to unknown users.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendUnspecifiedReason =>
+      'You cannot send messages here.';
+
+  @override
+  String get composeBoxBannerLabelCannotSendInChannel =>
+      'You do not have permission to post in this channel.';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribed =>
+      'Replies to your messages will not appear automatically.';
+
+  @override
+  String get composeBoxBannerLabelUnsubscribedWhenCannotSend =>
+      'New messages will not appear automatically.';
+
+  @override
+  String get composeBoxBannerButtonRefresh => 'Värskenda andmeid';
+
+  @override
+  String get composeBoxBannerButtonSubscribe => 'Telli';
+
+  @override
+  String get composeBoxBannerLabelEditMessage => 'Muuda sõnumit';
+
+  @override
+  String get composeBoxBannerButtonCancel => 'Katkesta';
+
+  @override
+  String get composeBoxBannerButtonSave => 'Salvesta';
+
+  @override
+  String get editAlreadyInProgressTitle => 'Cannot edit message';
+
+  @override
+  String get editAlreadyInProgressMessage =>
+      'An edit is already in progress. Please wait for it to complete.';
+
+  @override
+  String get savingMessageEditLabel => 'SALVESTAN MUUDATUST…';
+
+  @override
+  String get savingMessageEditFailedLabel => 'EDIT NOT SAVED';
+
+  @override
+  String get discardDraftConfirmationDialogTitle =>
+      'Discard the message you’re writing?';
+
+  @override
+  String get discardDraftForEditConfirmationDialogMessage =>
+      'When you edit a message, the content that was previously in the compose box is discarded.';
+
+  @override
+  String get discardDraftForOutboxConfirmationDialogMessage =>
+      'When you restore an unsent message, the content that was previously in the compose box is discarded.';
+
+  @override
+  String get discardDraftConfirmationDialogConfirmButton => 'Loobu';
+
+  @override
+  String get composeBoxAttachFilesTooltip => 'Lisa faile manuseks';
+
+  @override
+  String get composeBoxAttachMediaTooltip => 'Attach images or videos';
+
+  @override
+  String get composeBoxAttachFromCameraTooltip => 'Take a photo';
+
+  @override
+  String get composeBoxGenericContentHint => 'Type a message';
+
+  @override
+  String get newDmSheetComposeButtonLabel => 'Koosta sõnum';
+
+  @override
+  String get newDmSheetScreenTitle => 'Uus otsesõnum';
+
+  @override
+  String get newDmFabButtonLabel => 'Uus otsesõnum';
+
+  @override
+  String get newDmSheetSearchHintEmpty => 'Add one or more users';
+
+  @override
+  String get newDmSheetSearchHintSomeSelected => 'Add another user…';
+
+  @override
+  String get newDmSheetNoUsersFound => 'No users found';
+
+  @override
+  String composeBoxDmContentHint(String user) {
+    return 'Sõnum kasutajale @$user';
+  }
+
+  @override
+  String get composeBoxGroupDmContentHint => 'Sõnum grupile';
+
+  @override
+  String get composeBoxSelfDmContentHint => 'Write yourself a note';
+
+  @override
+  String composeBoxChannelContentHint(String destination) {
+    return 'Message $destination';
+  }
+
+  @override
+  String get preparingEditMessageContentInput => 'Valmistun…';
+
+  @override
+  String get composeBoxSendTooltip => 'Saada';
+
+  @override
+  String get unknownChannelName => '(unknown channel)';
+
+  @override
+  String get composeBoxTopicHintText => 'Teema';
+
+  @override
+  String composeBoxEnterTopicOrSkipHintText(String defaultTopicName) {
+    return 'Enter a topic (skip for “$defaultTopicName”)';
+  }
+
+  @override
+  String composeBoxUploadingFilename(String filename) {
+    return 'Uploading $filename…';
+  }
+
+  @override
+  String composeBoxLoadingMessage(int messageId) {
+    return '(loading message $messageId)';
+  }
+
+  @override
+  String get unknownUserName => '(unknown user)';
+
+  @override
+  String get dmsWithYourselfPageTitle => 'DMs with yourself';
+
+  @override
+  String messageListGroupYouAndOthers(String others) {
+    return 'You and $others';
+  }
+
+  @override
+  String dmsWithOthersPageTitle(String others) {
+    return 'DMs with $others';
+  }
+
+  @override
+  String get emptyMessageList => 'There are no messages here.';
+
+  @override
+  String get emptyMessageListCombinedFeed =>
+      'There are no messages in your combined feed.';
+
+  @override
+  String get emptyMessageListChannelWithoutContentAccess =>
+      'You don’t have <z-link>content access</z-link> to this channel.';
+
+  @override
+  String get emptyMessageListChannelUnavailable =>
+      'This channel doesn’t exist, or you are not allowed to view it.';
+
+  @override
+  String get emptyMessageListSelfDmHeader =>
+      'You have not sent any direct messages to yourself yet!';
+
+  @override
+  String get emptyMessageListSelfDmMessage =>
+      'Use this space for personal notes, or to test out Zulip features.';
+
+  @override
+  String emptyMessageListDm(String person) {
+    return 'You have no direct messages with $person yet.';
+  }
+
+  @override
+  String emptyMessageListDmDeactivatedUser(String person) {
+    return 'You have no direct messages with $person.';
+  }
+
+  @override
+  String get emptyMessageListDmUnknownUser =>
+      'You have no direct messages with this user.';
+
+  @override
+  String get emptyMessageListGroupDm =>
+      'You have no direct messages with these users yet.';
+
+  @override
+  String get emptyMessageListGroupDmDeactivatedUser =>
+      'You have no direct messages with these users.';
+
+  @override
+  String get emptyMessageListDmStartConversation =>
+      'Why not start the conversation?';
+
+  @override
+  String get emptyMessageListMentionsHeader =>
+      'This view will show messages where you are <z-link>mentioned</z-link>.';
+
+  @override
+  String get emptyMessageListMentionsMessage =>
+      'To call attention to a message, you can mention a user, a group, topic participants, or all subscribers to a channel. Type @ in the compose box, and choose who you’d like to mention from the list of suggestions.';
+
+  @override
+  String get emptyMessageListStarredHeader => 'You have no starred messages.';
+
+  @override
+  String emptyMessageListStarredMessage(String button) {
+    return '<z-link>Starring</z-link> is a good way to keep track of important messages, such as tasks you need to go back to, or useful references. To star a message, long-press it and tap “$button.”';
+  }
+
+  @override
+  String get emptyMessageListSearch => 'No search results.';
+
+  @override
+  String get messageListGroupYouWithYourself => 'Messages with yourself';
+
+  @override
+  String get contentValidationErrorTooLong =>
+      'Message length shouldn\'t be greater than 10000 characters.';
+
+  @override
+  String get contentValidationErrorEmpty => 'You have nothing to send!';
+
+  @override
+  String get contentValidationErrorQuoteAndReplyInProgress =>
+      'Please wait for the quotation to complete.';
+
+  @override
+  String get contentValidationErrorUploadInProgress =>
+      'Please wait for the upload to complete.';
+
+  @override
+  String get dialogCancel => 'Katkesta';
+
+  @override
+  String get dialogContinue => 'Jätka';
+
+  @override
+  String get dialogClose => 'Sulge';
+
+  @override
+  String get errorDialogLearnMore => 'Learn more';
+
+  @override
+  String get errorDialogContinue => 'Sobib';
+
+  @override
+  String get errorDialogTitle => 'Viga';
+
+  @override
+  String get snackBarDetails => 'Üksikasjad';
+
+  @override
+  String get lightboxCopyLinkTooltip => 'Copy link';
+
+  @override
+  String get lightboxVideoCurrentPosition => 'Current position';
+
+  @override
+  String get lightboxVideoDuration => 'Video duration';
+
+  @override
+  String get loginPageTitle => 'Log in';
+
+  @override
+  String get loginFormSubmitLabel => 'Log in';
+
+  @override
+  String get loginMethodDivider => 'VÕI';
+
+  @override
+  String get loginMethodDividerSemanticLabel => 'Log-in alternatives';
+
+  @override
+  String signInWithFoo(String method) {
+    return 'Sign in with $method';
+  }
+
+  @override
+  String get loginAddAnAccountPageTitle => 'Add an account';
+
+  @override
+  String get loginRealmUrlLabel => 'Your Zulip organization URL';
+
+  @override
+  String get loginHidePassword => 'Peida salasõna';
+
+  @override
+  String get loginEmailLabel => 'Email address';
+
+  @override
+  String get loginErrorMissingEmail => 'Please enter your email.';
+
+  @override
+  String get loginPasswordLabel => 'Salasõna';
+
+  @override
+  String get loginErrorMissingPassword => 'Palun sisesta oma salasõna.';
+
+  @override
+  String get loginUsernameLabel => 'Kasutajanimi';
+
+  @override
+  String get loginErrorMissingUsername => 'Please enter your username.';
+
+  @override
+  String topicValidationErrorTooLong(int maxLength) {
+    String _temp0 = intl.Intl.pluralLogic(
+      maxLength,
+      locale: localeName,
+      other: '$maxLength characters',
+      one: '1 character',
+    );
+    return 'Topic length shouldn\'t be greater than $_temp0.';
+  }
+
+  @override
+  String get topicValidationErrorMandatoryButEmpty =>
+      'Topics are required in this organization.';
+
+  @override
+  String get errorContentNotInsertedTitle => 'Content not inserted';
+
+  @override
+  String get errorContentToInsertIsEmpty =>
+      'The file to be inserted is empty or cannot be accessed.';
+
+  @override
+  String errorServerVersionNotAllowedMessage(
+    String url,
+    String zulipVersion,
+    String minAllowedZulipVersion,
+  ) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. The minimum supported version is Zulip Server $minAllowedZulipVersion.';
+  }
+
+  @override
+  String serverCompatBannerAdminMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please upgrade your server as soon as possible.';
+  }
+
+  @override
+  String serverCompatBannerUserMessage(String url, String zulipVersion) {
+    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please contact your server administrator about upgrading.';
+  }
+
+  @override
+  String get serverCompatBannerDismissLabel => 'Dismiss';
+
+  @override
+  String get serverCompatBannerLearnMoreLabel => 'Learn more';
+
+  @override
+  String errorInvalidApiKeyMessage(String url) {
+    return 'Your account at $url could not be authenticated. Please try logging in again or use another account.';
+  }
+
+  @override
+  String get errorInvalidResponse => 'The server sent an invalid response.';
+
+  @override
+  String get errorNetworkRequestFailed => 'Network request failed';
+
+  @override
+  String errorMalformedResponse(int httpStatus) {
+    return 'Server gave malformed response; HTTP status $httpStatus';
+  }
+
+  @override
+  String errorMalformedResponseWithCause(int httpStatus, String details) {
+    return 'Server gave malformed response; HTTP status $httpStatus; $details';
+  }
+
+  @override
+  String errorRequestFailed(int httpStatus) {
+    return 'Network request failed: HTTP status $httpStatus';
+  }
+
+  @override
+  String get errorVideoPlayerFailed => 'Unable to play the video.';
+
+  @override
+  String get serverUrlValidationErrorEmpty => 'Please enter a URL.';
+
+  @override
+  String get serverUrlValidationErrorInvalidUrl => 'Please enter a valid URL.';
+
+  @override
+  String get serverUrlValidationErrorNoUseEmail =>
+      'Please enter the server URL, not your email.';
+
+  @override
+  String get serverUrlValidationErrorUnsupportedScheme =>
+      'The server URL must start with http:// or https://.';
+
+  @override
+  String get spoilerDefaultHeaderText => 'Spoiler';
+
+  @override
+  String get markAllAsReadLabel => 'Mark all messages as read';
+
+  @override
+  String markAsReadComplete(int num) {
+    String _temp0 = intl.Intl.pluralLogic(
+      num,
+      locale: localeName,
+      other: '$num messages',
+      one: '1 message',
+    );
+    return 'Marked $_temp0 as read.';
+  }
+
+  @override
+  String get markAsReadInProgress => 'Marking messages as read…';
+
+  @override
+  String get errorMarkAsReadFailedTitle => 'Mark as read failed';
+
+  @override
+  String markAsUnreadComplete(int num) {
+    String _temp0 = intl.Intl.pluralLogic(
+      num,
+      locale: localeName,
+      other: '$num messages',
+      one: '1 message',
+    );
+    return 'Marked $_temp0 as unread.';
+  }
+
+  @override
+  String get markAsUnreadInProgress => 'Marking messages as unread…';
+
+  @override
+  String get errorMarkAsUnreadFailedTitle => 'Mark as unread failed';
+
+  @override
+  String markAllAsReadConfirmationDialogTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mark $count+ messages as read?',
+      one: 'Mark $count+ messages as read?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get markAllAsReadConfirmationDialogTitleNoCount =>
+      'Mark messages as read?';
+
+  @override
+  String get markAllAsReadConfirmationDialogMessage =>
+      'Messages in multiple conversations may be affected.';
+
+  @override
+  String get markAllAsReadConfirmationDialogConfirmButton => 'Mark as read';
+
+  @override
+  String get today => 'Täna';
+
+  @override
+  String get yesterday => 'Eile';
+
+  @override
+  String get userActiveNow => 'Active now';
+
+  @override
+  String get userIdle => 'Jõude';
+
+  @override
+  String userActiveMinutesAgo(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes minutes',
+      one: '1 minute',
+    );
+    return 'Active $_temp0 ago';
+  }
+
+  @override
+  String userActiveHoursAgo(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return 'Active $_temp0 ago';
+  }
+
+  @override
+  String get userActiveYesterday => 'Active yesterday';
+
+  @override
+  String userActiveDaysAgo(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Active $_temp0 ago';
+  }
+
+  @override
+  String userActiveDate(String date) {
+    return 'Active $date';
+  }
+
+  @override
+  String get userNotActiveInYear => 'Not active in the last year';
+
+  @override
+  String get invisibleMode => 'Invisible mode';
+
+  @override
+  String get turnOnInvisibleModeErrorTitle =>
+      'Error turning on invisible mode. Please try again.';
+
+  @override
+  String get turnOffInvisibleModeErrorTitle =>
+      'Error turning off invisible mode. Please try again.';
+
+  @override
+  String get userRoleOwner => 'Omanik';
+
+  @override
+  String get userRoleAdministrator => 'Peakasutaja';
+
+  @override
+  String get userRoleModerator => 'Moderaator';
+
+  @override
+  String get userRoleMember => 'Liige';
+
+  @override
+  String get userRoleGuest => 'Külaline';
+
+  @override
+  String get userRoleUnknown => 'Teadmata';
+
+  @override
+  String get statusButtonLabelStatusSet => 'Olek';
+
+  @override
+  String get statusButtonLabelStatusUnset => 'Set status';
+
+  @override
+  String get noStatusText => 'No status text';
+
+  @override
+  String get setStatusPageTitle => 'Set status';
+
+  @override
+  String get statusClearButtonLabel => 'Tühjenda';
+
+  @override
+  String get statusSaveButtonLabel => 'Salvesta';
+
+  @override
+  String get statusTextHint => 'Your status';
+
+  @override
+  String get userStatusBusy => 'Hõivatud';
+
+  @override
+  String get userStatusInAMeeting => 'In a meeting';
+
+  @override
+  String get userStatusCommuting => 'Liikumas ühest kohast teise';
+
+  @override
+  String get userStatusOutSick => 'Out sick';
+
+  @override
+  String get userStatusVacationing => 'Puhkusel';
+
+  @override
+  String get userStatusWorkingRemotely => 'Working remotely';
+
+  @override
+  String get userStatusAtTheOffice => 'At the office';
+
+  @override
+  String get updateStatusErrorTitle =>
+      'Error updating user status. Please try again.';
+
+  @override
+  String get searchMessagesPageTitle => 'Otsing';
+
+  @override
+  String get searchMessagesHintText => 'Otsi';
+
+  @override
+  String get searchMessagesClearButtonTooltip => 'Tühjenda';
+
+  @override
+  String get inboxPageTitle => 'Sisendkaust';
+
+  @override
+  String get inboxEmptyPlaceholderHeader =>
+      'There are no unread messages in your inbox.';
+
+  @override
+  String get inboxEmptyPlaceholderMessage =>
+      'Use the buttons below to view the combined feed or list of channels.';
+
+  @override
+  String get pinnedChannelsFolderName => 'Pinned channels';
+
+  @override
+  String get otherChannelsFolderName => 'Other channels';
+
+  @override
+  String get recentDmConversationsPageTitle => 'Direct messages';
+
+  @override
+  String get recentDmConversationsPageShortLabel => 'Otsesõnumid';
+
+  @override
+  String get recentDmConversationsSectionHeader => 'Direct messages';
+
+  @override
+  String get recentDmConversationsEmptyPlaceholderHeader =>
+      'You have no direct messages yet!';
+
+  @override
+  String get recentDmConversationsEmptyPlaceholderMessage =>
+      'Why not start a conversation?';
+
+  @override
+  String get combinedFeedPageTitle => 'Combined feed';
+
+  @override
+  String get mentionsPageTitle => 'Mainimised';
+
+  @override
+  String get starredMessagesPageTitle => 'Starred messages';
+
+  @override
+  String get channelsPageTitle => 'Kanalid';
+
+  @override
+  String get channelsEmptyPlaceholderHeader =>
+      'You’re not subscribed to any channels yet.';
+
+  @override
+  String channelsEmptyPlaceholderMessage(String allChannelsPageTitle) {
+    return 'Try going to <z-link>$allChannelsPageTitle</z-link> and joining some of them.';
+  }
+
+  @override
+  String get shareChooseAccountModalTitle => 'Choose an account';
+
+  @override
+  String get mainMenuMyProfile => 'My profile';
+
+  @override
+  String get topicsButtonTooltip => 'Teemad';
+
+  @override
+  String get channelFeedButtonTooltip => 'Channel feed';
+
+  @override
+  String notifGroupDmConversationLabel(String senderFullName, int numOthers) {
+    String _temp0 = intl.Intl.pluralLogic(
+      numOthers,
+      locale: localeName,
+      other: '$numOthers others',
+      one: '1 other',
+    );
+    return '$senderFullName to you and $_temp0';
+  }
+
+  @override
+  String get pinnedSubscriptionsLabel => 'Esiletõstetud';
+
+  @override
+  String get unpinnedSubscriptionsLabel => 'Pole esiletõstetud';
+
+  @override
+  String get notifSelfUser => 'Sina';
+
+  @override
+  String get reactedEmojiSelfUser => 'Sina';
+
+  @override
+  String get reactionChipsLabel => 'Reageerimised';
+
+  @override
+  String reactionChipLabel(String emojiName, String votes) {
+    return '$emojiName: $votes';
+  }
+
+  @override
+  String reactionChipVotesYouAndOthers(int otherUsersCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      otherUsersCount,
+      locale: localeName,
+      other: 'You and $otherUsersCount others',
+      one: 'You and 1 other',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String onePersonTyping(String typist) {
+    return '$typist is typing…';
+  }
+
+  @override
+  String twoPeopleTyping(String typist, String otherTypist) {
+    return '$typist and $otherTypist are typing…';
+  }
+
+  @override
+  String get manyPeopleTyping => 'Several people are typing…';
+
+  @override
+  String get wildcardMentionAll => 'kõik';
+
+  @override
+  String get wildcardMentionEveryone => 'kogu seltskond';
+
+  @override
+  String get wildcardMentionChannel => 'kanal';
+
+  @override
+  String get wildcardMentionStream => 'stream';
+
+  @override
+  String get wildcardMentionTopic => 'teema';
+
+  @override
+  String get wildcardMentionChannelDescription => 'Notify channel';
+
+  @override
+  String get wildcardMentionStreamDescription => 'Notify stream';
+
+  @override
+  String get wildcardMentionAllDmDescription => 'Notify recipients';
+
+  @override
+  String get wildcardMentionTopicDescription => 'Notify topic';
+
+  @override
+  String get systemGroupNameEveryoneOnInternet => 'Everyone on the internet';
+
+  @override
+  String get systemGroupNameEveryone => 'Everyone including guests';
+
+  @override
+  String get systemGroupNameMembers => 'Everyone except guests';
+
+  @override
+  String get systemGroupNameFullMembers => 'Full members';
+
+  @override
+  String get systemGroupNameModerators => 'Moderaatorid';
+
+  @override
+  String get systemGroupNameAdministrators => 'Peakasutajad';
+
+  @override
+  String get systemGroupNameOwners => 'Omanikud';
+
+  @override
+  String get systemGroupNameNobody => 'Mitte keegi';
+
+  @override
+  String get navBarFeedLabel => 'Feed';
+
+  @override
+  String get navBarMenuLabel => 'Menüü';
+
+  @override
+  String get messageIsEditedLabel => 'MUUDETUD';
+
+  @override
+  String get messageIsMovedLabel => 'TEISALDATUD';
+
+  @override
+  String get messageNotSentLabel => 'MESSAGE NOT SENT';
+
+  @override
+  String pollVoterNames(String voterNames) {
+    return '($voterNames)';
+  }
+
+  @override
+  String get themeSettingTitle => 'KUJUNDUS';
+
+  @override
+  String get themeSettingDark => 'Tume kujundus';
+
+  @override
+  String get themeSettingLight => 'Hele kujundus';
+
+  @override
+  String get themeSettingSystem => 'Süsteemi kujundus';
+
+  @override
+  String get openLinksWithInAppBrowser => 'Open links with in-app browser';
+
+  @override
+  String get pollWidgetQuestionMissing => 'No question.';
+
+  @override
+  String get pollWidgetOptionsMissing => 'This poll has no options yet.';
+
+  @override
+  String get initialAnchorSettingTitle => 'Open message feeds at';
+
+  @override
+  String get initialAnchorSettingDescription =>
+      'You can choose whether message feeds open at your first unread message or at the newest messages.';
+
+  @override
+  String get initialAnchorSettingFirstUnreadAlways => 'First unread message';
+
+  @override
+  String get initialAnchorSettingFirstUnreadConversations =>
+      'First unread message in conversation views, newest message elsewhere';
+
+  @override
+  String get initialAnchorSettingNewestAlways => 'Newest message';
+
+  @override
+  String get markReadOnScrollSettingTitle => 'Mark messages as read on scroll';
+
+  @override
+  String get markReadOnScrollSettingDescription =>
+      'When scrolling through messages, should they automatically be marked as read?';
+
+  @override
+  String get markReadOnScrollSettingAlways => 'Alati';
+
+  @override
+  String get markReadOnScrollSettingNever => 'Mitte kunagi';
+
+  @override
+  String get markReadOnScrollSettingConversations =>
+      'Only in conversation views';
+
+  @override
+  String get markReadOnScrollSettingConversationsDescription =>
+      'Messages will be automatically marked as read only when viewing a single topic or direct message conversation.';
+
+  @override
+  String get experimentalFeatureSettingsPageTitle => 'Experimental features';
+
+  @override
+  String get experimentalFeatureSettingsWarning =>
+      'These options enable features which are still under development and not ready. They may not work, and may cause issues in other areas of the app.\n\nThe purpose of these settings is for experimentation by people working on developing Zulip.';
+
+  @override
+  String get errorNotificationOpenTitle => 'Failed to open notification';
+
+  @override
+  String get errorNotificationOpenAccountNotFound =>
+      'The account associated with this notification could not be found.';
+
+  @override
+  String get errorReactionAddingFailedTitle => 'Adding reaction failed';
+
+  @override
+  String get errorReactionRemovingFailedTitle => 'Removing reaction failed';
+
+  @override
+  String get errorSharingTitle => 'Failed to share content';
+
+  @override
+  String get errorSharingAccountNotLoggedIn =>
+      'There is no account logged in. Please log in to an account and try again.';
+
+  @override
+  String get emojiReactionsMore => 'näita veel';
+
+  @override
+  String get emojiPickerSearchEmoji => 'Search emoji';
+
+  @override
+  String get noEarlierMessages => 'No earlier messages';
+
+  @override
+  String get revealButtonLabel => 'Reveal message';
+
+  @override
+  String get mutedUser => 'Muted user';
+
+  @override
+  String get scrollToBottomTooltip => 'Scroll to bottom';
+
+  @override
+  String get appVersionUnknownPlaceholder => '(…)';
+
+  @override
+  String get zulipAppTitle => 'Zulip';
+
+  @override
+  String get topicListEmptyPlaceholderHeader => 'There are no topics here yet.';
+}

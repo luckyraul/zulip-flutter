@@ -53,6 +53,9 @@
   "@actionSheetOptionMuteTopic": {
     "description": "Label for muting a topic on action sheet."
   },
+  "@actionSheetOptionPinChannel": {
+    "description": "Label in the channel action sheet for pinning the channel."
+  },
   "@actionSheetOptionQuoteMessage": {
     "description": "Label for the 'Quote message' button in the message action sheet."
   },
@@ -76,6 +79,9 @@
   },
   "@actionSheetOptionUnmuteTopic": {
     "description": "Label for unmuting a topic on action sheet."
+  },
+  "@actionSheetOptionUnpinChannel": {
+    "description": "Label in the channel action sheet for unpinning the channel."
   },
   "@actionSheetOptionUnresolveTopic": {
     "description": "Label for the 'Mark as unresolved' button on the topic action sheet."
@@ -134,11 +140,9 @@
   "@channelsPageTitle": {
     "description": "Title for the page with a list of subscribed channels."
   },
-  "@chooseAccountButtonAddAnAccount": {},
   "@chooseAccountPageLogOutButton": {
     "description": "Label for the 'Log out' button for an account on the choose-account page"
   },
-  "@chooseAccountPageTitle": {},
   "@combinedFeedPageTitle": {
     "description": "Page title for the 'Combined feed' message view."
   },
@@ -163,8 +167,23 @@
   "@composeBoxBannerButtonSubscribe": {
     "description": "Label text for the 'Subscribe' button in the compose-box banner when you are viewing an unsubscribed channel."
   },
+  "@composeBoxBannerLabelCannotSendInChannel": {
+    "description": "Error-banner text replacing the compose box when you do not have permission to send a message to the channel."
+  },
+  "@composeBoxBannerLabelCannotSendUnspecifiedReason": {
+    "description": "Label text for a banner replacing the compose box when you cannot send messages in the channel for an unspecified reason."
+  },
+  "@composeBoxBannerLabelDeactivatedDmRecipient": {
+    "description": "Label text for error banner when sending a message to one or multiple deactivated users."
+  },
   "@composeBoxBannerLabelEditMessage": {
     "description": "Label text for the compose-box banner when you are editing a message."
+  },
+  "@composeBoxBannerLabelUnknownDmRecipient": {
+    "description": "Label text for a banner replacing the compose box when you cannot send messages in the DM conversation because one or more members are unknown."
+  },
+  "@composeBoxBannerLabelUnsubscribed": {
+    "description": "Label text for a compose-box banner when you are viewing an unsubscribed channel."
   },
   "@composeBoxBannerLabelUnsubscribedWhenCannotSend": {
     "description": "Label text for a compose-box banner when you are viewing an unsubscribed channel in which you do not have permission to send messages."
@@ -380,12 +399,6 @@
   "@errorAccountLoggedInTitle": {
     "description": "Error title on attempting to log into an account that's already logged in."
   },
-  "@composeBoxBannerLabelCannotSendInChannel": {
-    "description": "Error-banner text replacing the compose box when you do not have permission to send a message to the channel."
-  },
-  "@composeBoxBannerLabelDeactivatedDmRecipient": {
-    "description": "Label text for error banner when sending a message to one or multiple deactivated users."
-  },
   "@errorConnectingToServerDetails": {
     "description": "Dialog error message for a generic unknown error connecting to the server with details.",
     "placeholders": {
@@ -584,6 +597,9 @@
   "@errorNotificationOpenTitle": {
     "description": "Error title when notification opening fails"
   },
+  "@errorPinChannelFailedTitle": {
+    "description": "Error title when pinning a channel to the top fails."
+  },
   "@errorQuotationFailed": {
     "description": "Error message when quoting a message failed."
   },
@@ -614,10 +630,10 @@
       }
     }
   },
-  "@errorServerVersionUnsupportedMessage": {
-    "description": "Error message in the dialog for when the Zulip Server version is unsupported.",
+  "@errorServerVersionNotAllowedMessage": {
+    "description": "Error message in the dialog for when the Zulip Server version is not allowed.",
     "placeholders": {
-      "minSupportedZulipVersion": {
+      "minAllowedZulipVersion": {
         "example": "4.0",
         "type": "String"
       },
@@ -648,6 +664,9 @@
   },
   "@errorUnmuteTopicFailed": {
     "description": "Error message when unmuting a topic failed."
+  },
+  "@errorUnpinChannelFailedTitle": {
+    "description": "Error title when unpinning a channel from the top fails."
   },
   "@errorUnresolveTopicFailedTitle": {
     "description": "Error title when marking a topic as unresolved failed."
@@ -761,9 +780,6 @@
   "@loginPasswordLabel": {
     "description": "Label for password input field."
   },
-  "@loginServerUrlLabel": {
-    "description": "Label in login page for Zulip server URL entry."
-  },
   "@loginUsernameLabel": {
     "description": "Label for input when a username is required to log in."
   },
@@ -772,6 +788,24 @@
   },
   "@manyPeopleTyping": {
     "description": "Text to display when there are multiple users typing."
+  },
+  "@markAllAsReadConfirmationDialogConfirmButton": {
+    "description": "Label for the 'Mark as read' button on a confirmation dialog for marking all messages as read."
+  },
+  "@markAllAsReadConfirmationDialogMessage": {
+    "description": "Message in the confirmation dialog for marking all messages as read."
+  },
+  "@markAllAsReadConfirmationDialogTitle": {
+    "description": "Title of the confirmation dialog for marking all messages as read. The '+' means 'this many messages or more'.",
+    "placeholders": {
+      "count": {
+        "description": "Minimum number of messages that will be marked as read",
+        "type": "int"
+      }
+    }
+  },
+  "@markAllAsReadConfirmationDialogTitleNoCount": {
+    "description": "Title of the confirmation dialog for marking all messages as read."
   },
   "@markAllAsReadLabel": {
     "description": "Button text to mark messages as read."
@@ -844,6 +878,9 @@
   },
   "@mutedUser": {
     "description": "Text to display in place of a muted user's name."
+  },
+  "@navBarFeedLabel": {
+    "description": "Label for the Feed button on the bottom navigation bar."
   },
   "@navBarMenuLabel": {
     "description": "Label for the Menu button on the bottom navigation bar."
@@ -936,7 +973,6 @@
   "@preparingEditMessageContentInput": {
     "description": "Hint text for content input when the compose box is preparing to edit a message."
   },
-  "@profileButtonSendDirectMessage": {},
   "@reactedEmojiSelfUser": {
     "description": "Display name for the user themself, to show on an emoji reaction added by the user."
   },
@@ -970,6 +1006,9 @@
   },
   "@recentDmConversationsEmptyPlaceholderMessage": {
     "description": "Additional centered text on the 'Direct messages' page saying that there is no content to show."
+  },
+  "@recentDmConversationsPageShortLabel": {
+    "description": "Short label for the recent-DMs page. Used in the bottom nav bar and for a tab in the share-to-Zulip sheet."
   },
   "@recentDmConversationsPageTitle": {
     "description": "Title for the page with a list of DM conversations."
@@ -1110,6 +1149,30 @@
   },
   "@switchAccountButtonTooltip": {
     "description": "Tooltip message for main-menu button leading to the choose-account page."
+  },
+  "@systemGroupNameAdministrators": {
+    "description": "Display name for the system group that includes all users with at least the administrator role."
+  },
+  "@systemGroupNameEveryone": {
+    "description": "Display name for the system group that includes all users including guests."
+  },
+  "@systemGroupNameEveryoneOnInternet": {
+    "description": "Display name for the system group that includes everyone on the internet."
+  },
+  "@systemGroupNameFullMembers": {
+    "description": "Display name for the system group that includes all full members of the organization."
+  },
+  "@systemGroupNameMembers": {
+    "description": "Display name for the system group that includes all users excluding guests."
+  },
+  "@systemGroupNameModerators": {
+    "description": "Display name for the system group that includes all users with at least the moderator role."
+  },
+  "@systemGroupNameNobody": {
+    "description": "Display name for the system group that includes nobody."
+  },
+  "@systemGroupNameOwners": {
+    "description": "Display name for the system group that includes all users with the owner role."
   },
   "@themeSettingDark": {
     "description": "Label for dark theme setting."
@@ -1257,12 +1320,6 @@
   "@userNotActiveInYear": {
     "description": "Indicates when a user was last active on Zulip (who is currently offline)"
   },
-  "@userRoleAdministrator": {},
-  "@userRoleGuest": {},
-  "@userRoleMember": {},
-  "@userRoleModerator": {},
-  "@userRoleOwner": {},
-  "@userRoleUnknown": {},
   "@userStatusAtTheOffice": {
     "description": "A suggested user status text, 'At the office'."
   },
@@ -1335,6 +1392,7 @@
   "actionSheetOptionMarkChannelAsRead": "チャンネルを既読にする",
   "actionSheetOptionMarkTopicAsRead": "トピックを既読にする",
   "actionSheetOptionMuteTopic": "トピックをミュート",
+  "actionSheetOptionPinChannel": "上部に固定",
   "actionSheetOptionQuoteMessage": "メッセージを引用",
   "actionSheetOptionResolveTopic": "解決済みにする",
   "actionSheetOptionSeeWhoReacted": "リアクションした人を見る",
@@ -1343,13 +1401,14 @@
   "actionSheetOptionSubscribe": "チャンネルに参加",
   "actionSheetOptionUnfollowTopic": "トピックのフォローを解除",
   "actionSheetOptionUnmuteTopic": "トピックのミュートを解除",
+  "actionSheetOptionUnpinChannel": "上部に固定を解除",
   "actionSheetOptionUnresolveTopic": "未解決にする",
   "actionSheetOptionUnstarMessage": "メッセージのスターを外す",
   "actionSheetOptionUnsubscribe": "チャンネルから退出",
   "actionSheetOptionViewReadReceipts": "既読確認を表示",
   "actionSheetReadReceipts": "既読確認",
   "actionSheetReadReceiptsErrorReadCount": "既読情報の読み込みに失敗しました。",
-  "actionSheetReadReceiptsReadCount": "{count, plural, =1{このメッセージは <z-link>{count} 人</z-link>に読まれています:} other{このメッセージは <z-link>{count} 人</z-link>に読まれています:}}",
+  "actionSheetReadReceiptsReadCount": "{count, plural, =1{ このメッセージは <z-link>{count} 人</z-link> に読まれています:} other{ このメッセージは <z-link>{count} 人</z-link> に読まれています:}}",
   "actionSheetReadReceiptsZeroReadCount": "このメッセージはまだ誰も読んでいません。",
   "allChannelsEmptyPlaceholderHeader": "この組織には、あなたが閲覧できるチャンネルはありません。",
   "allChannelsPageTitle": "全てのチャンネル",
@@ -1369,7 +1428,12 @@
   "composeBoxBannerButtonRefresh": "更新",
   "composeBoxBannerButtonSave": "保存",
   "composeBoxBannerButtonSubscribe": "購読する",
+  "composeBoxBannerLabelCannotSendInChannel": "このチャンネルに投稿する権限がありません。",
+  "composeBoxBannerLabelCannotSendUnspecifiedReason": "ここではメッセージを送信できません。",
+  "composeBoxBannerLabelDeactivatedDmRecipient": "無効化されたユーザーにはメッセージを送信できません。",
   "composeBoxBannerLabelEditMessage": "メッセージを編集",
+  "composeBoxBannerLabelUnknownDmRecipient": "不明なユーザーにメッセージを送信することはできません。",
+  "composeBoxBannerLabelUnsubscribed": "あなたのメッセージへの返信は、自動的には表示されません。",
   "composeBoxBannerLabelUnsubscribedWhenCannotSend": "新しいメッセージは自動的に表示されません。",
   "composeBoxChannelContentHint": "{destination} にメッセージを送信",
   "composeBoxDmContentHint": "@{user} さんにメッセージ",
@@ -1403,7 +1467,7 @@
   "emojiReactionsMore": "その他",
   "emptyMessageList": "ここにはメッセージがありません。",
   "emptyMessageListChannelUnavailable": "このチャンネルは存在しないか、または閲覧する権限がありません。",
-  "emptyMessageListChannelWithoutContentAccess": "このチャンネルに対する<z-link>コンテンツへのアクセス権</z-link>がありません。",
+  "emptyMessageListChannelWithoutContentAccess": "このチャンネルの <z-link>コンテンツへのアクセス権</z-link> がありません。",
   "emptyMessageListCombinedFeed": "統合フィードにメッセージはありません。",
   "emptyMessageListDm": "{person} さんとのダイレクトメッセージはまだありません。",
   "emptyMessageListDmDeactivatedUser": "{person} さんとのダイレクトメッセージはありません。",
@@ -1411,17 +1475,15 @@
   "emptyMessageListDmUnknownUser": "このユーザーとのダイレクトメッセージはありません。",
   "emptyMessageListGroupDm": "これらのユーザーとのダイレクトメッセージはまだありません。",
   "emptyMessageListGroupDmDeactivatedUser": "これらのユーザーとのダイレクトメッセージはありません。",
-  "emptyMessageListMentionsHeader": "このビューには、あなたが<z-link>メンション</z-link>されたメッセージが表示されます。",
+  "emptyMessageListMentionsHeader": "このビューには、あなたが <z-link>メンション</z-link> されたメッセージが表示されます。",
   "emptyMessageListMentionsMessage": "メッセージに注目してほしいときは、ユーザー、グループ、トピックの参加者、またはチャンネルの全購読者をメンションできます。メッセージ作成ボックスで「@」を入力し、候補リストからメンションしたい相手を選んでください。",
   "emptyMessageListSearch": "検索結果はありません。",
   "emptyMessageListSelfDmHeader": "自分宛のダイレクトメッセージはまだありません！",
   "emptyMessageListSelfDmMessage": "このスペースは、自分用のメモやZulipの機能を試すために活用してください。",
   "emptyMessageListStarredHeader": "スター付きメッセージはありません。",
-  "emptyMessageListStarredMessage": "<z-link>スター</z-link>を付けると、後で見返したいタスクや役立つ参考資料など、重要なメッセージを管理するのに便利です。メッセージにスターを付けるには、メッセージを長押しして「{button}」をタップしてください。",
+  "emptyMessageListStarredMessage": "<z-link>スター</z-link> は、後で見返したいタスクや便利な参照資料など、重要なメッセージを記録しておくのに最適な方法です。メッセージにスターを付けるには、メッセージを長押しして「{button}」をタップしてください。",
   "errorAccountLoggedIn": "{server} の {email} アカウントは、すでにアカウント一覧に追加されています。",
   "errorAccountLoggedInTitle": "このアカウントはすでにログインしています",
-  "composeBoxBannerLabelCannotSendInChannel": "このチャンネルに投稿する権限がありません。",
-  "composeBoxBannerLabelDeactivatedDmRecipient": "無効化されたユーザーにはメッセージを送信できません。",
   "errorConnectingToServerDetails": "Zulip（{serverUrl}）への接続でエラーが発生しました。再試行します：\n\n{error}",
   "errorConnectingToServerShort": "Zulip への接続でエラーが発生しました。再試行中…",
   "errorContentNotInsertedTitle": "コンテンツを挿入できませんでした",
@@ -1460,19 +1522,21 @@
   "errorNetworkRequestFailed": "ネットワークエラーが発生しました",
   "errorNotificationOpenAccountNotFound": "この通知に関連付けられたアカウントが見つかりませんでした。",
   "errorNotificationOpenTitle": "通知を開けませんでした",
+  "errorPinChannelFailedTitle": "チャンネルの固定に失敗しました",
   "errorQuotationFailed": "引用できませんでした",
   "errorReactionAddingFailedTitle": "リアクションを追加できませんでした",
   "errorReactionRemovingFailedTitle": "リアクションを削除できませんでした",
   "errorRequestFailed": "ネットワークリクエストに失敗しました：HTTP ステータス {httpStatus}",
   "errorResolveTopicFailedTitle": "トピックを解決済みにできませんでした",
   "errorServerMessage": "サーバーからの応答：\n\n{message}",
-  "errorServerVersionUnsupportedMessage": "{url} で動作している Zulip Server {zulipVersion} はサポート対象外です。サポートされる最小バージョンは Zulip Server {minSupportedZulipVersion} です。",
+  "errorServerVersionNotAllowedMessage": "{url} で動作している Zulip Server {zulipVersion} はサポート対象外です。サポートされる最小バージョンは Zulip Server {minAllowedZulipVersion} です。",
   "errorSharingAccountNotLoggedIn": "ログインしていません。アカウントにログインしてから、もう一度お試しください。",
   "errorSharingFailed": "共有に失敗しました",
   "errorSharingTitle": "コンテンツを共有できませんでした",
   "errorStarMessageFailedTitle": "メッセージにスターを付けられませんでした",
   "errorUnfollowTopicFailed": "トピックのフォロー解除ができませんでした",
   "errorUnmuteTopicFailed": "トピックのミュート解除ができませんでした",
+  "errorUnpinChannelFailedTitle": "チャンネルの固定解除に失敗しました",
   "errorUnresolveTopicFailedTitle": "トピックを未解決にできませんでした",
   "errorUnstarMessageFailedTitle": "メッセージのスターを外せませんでした",
   "errorVideoPlayerFailed": "動画を再生できません。",
@@ -1507,10 +1571,13 @@
   "loginMethodDividerSemanticLabel": "他のログイン方法",
   "loginPageTitle": "ログイン",
   "loginPasswordLabel": "パスワード",
-  "loginServerUrlLabel": "Zulip サーバーのURL",
   "loginUsernameLabel": "ユーザー名",
   "mainMenuMyProfile": "自分のプロフィール",
   "manyPeopleTyping": "複数のユーザーが入力中…",
+  "markAllAsReadConfirmationDialogConfirmButton": "既読にする",
+  "markAllAsReadConfirmationDialogMessage": "複数の会話内のメッセージが影響を受ける可能性があります。",
+  "markAllAsReadConfirmationDialogTitle": "{count, plural, =1{{count} 件以上のメッセージを既読にしますか？} other{{count} 件以上のメッセージを既読にしますか？}}",
+  "markAllAsReadConfirmationDialogTitleNoCount": "メッセージを既読にしますか？",
   "markAllAsReadLabel": "すべてのメッセージを既読にする",
   "markAsReadComplete": "{num, plural, =1{1} other{{num}}}件のメッセージを既読にしました。",
   "markAsReadInProgress": "メッセージを既読にしています…",
@@ -1529,6 +1596,7 @@
   "messageListGroupYouWithYourself": "自分とのメッセージ",
   "messageNotSentLabel": "メッセージ未送信",
   "mutedUser": "ミュート中のユーザー",
+  "navBarFeedLabel": "フィード",
   "navBarMenuLabel": "メニュー",
   "navButtonAllChannels": "全てのチャンネル",
   "newDmFabButtonLabel": "新しいDM",
@@ -1559,6 +1627,7 @@
   "reactionChipsLabel": "リアクション",
   "recentDmConversationsEmptyPlaceholderHeader": "ダイレクトメッセージはまだありません！",
   "recentDmConversationsEmptyPlaceholderMessage": "会話を始めてみませんか？",
+  "recentDmConversationsPageShortLabel": "DM",
   "recentDmConversationsPageTitle": "ダイレクトメッセージ",
   "recentDmConversationsSectionHeader": "ダイレクトメッセージ",
   "revealButtonLabel": "メッセージを表示",
@@ -1595,6 +1664,14 @@
   "successMessageTextCopied": "メッセージ本文をコピーしました",
   "successTopicLinkCopied": "トピックのリンクをコピーしました",
   "switchAccountButtonTooltip": "アカウントを切り替える",
+  "systemGroupNameAdministrators": "管理者",
+  "systemGroupNameEveryone": "ゲストを含む全員",
+  "systemGroupNameEveryoneOnInternet": "インターネット上の全員",
+  "systemGroupNameFullMembers": "フルメンバー",
+  "systemGroupNameMembers": "ゲストを除く全員",
+  "systemGroupNameModerators": "モデレーター",
+  "systemGroupNameNobody": "なし",
+  "systemGroupNameOwners": "オーナー",
   "themeSettingDark": "ダークテーマ",
   "themeSettingLight": "ライトテーマ",
   "themeSettingSystem": "自動テーマ",

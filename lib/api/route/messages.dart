@@ -1,6 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../core.dart';
+import '../model/initial_snapshot.dart';
 import '../model/model.dart';
 import '../model/narrow.dart';
 
@@ -14,7 +15,7 @@ Future<GetMessageResult> getMessage(ApiConnection connection, {
 }) {
   assert(allowEmptyTopicName, '`allowEmptyTopicName` should only be true');
   return connection.get('getMessage', GetMessageResult.fromJson, 'messages/$messageId', {
-    if (applyMarkdown != null) 'apply_markdown': applyMarkdown,
+    'apply_markdown': ?applyMarkdown,
     'allow_empty_topic_name': allowEmptyTopicName,
   });
 }
@@ -51,11 +52,11 @@ Future<GetMessagesResult> getMessages(ApiConnection connection, {
   return connection.get('getMessages', GetMessagesResult.fromJson, 'messages', {
     'narrow': resolveApiNarrowForServer(narrow, connection.zulipFeatureLevel!),
     'anchor': RawParameter(anchor.toJson()),
-    if (includeAnchor != null) 'include_anchor': includeAnchor,
+    'include_anchor': ?includeAnchor,
     'num_before': numBefore,
     'num_after': numAfter,
-    if (clientGravatar != null) 'client_gravatar': clientGravatar,
-    if (applyMarkdown != null) 'apply_markdown': applyMarkdown,
+    'client_gravatar': ?clientGravatar,
+    'apply_markdown': ?applyMarkdown,
     'allow_empty_topic_name': allowEmptyTopicName,
   });
 }
@@ -149,7 +150,7 @@ Future<SendMessageResult> sendMessage(
     'content': RawParameter(content),
     if (queueId != null) 'queue_id': RawParameter(queueId),
     if (localId != null) 'local_id': RawParameter(localId),
-    if (readBySender != null) 'read_by_sender': readBySender,
+    'read_by_sender': ?readBySender,
   },
   overrideUserAgent: switch ((supportsReadBySender, readBySender)) {
     // Old servers use the user agent to decide if we're a UI client
@@ -227,11 +228,11 @@ Future<UpdateMessageResult> updateMessage(
   return connection.patch('updateMessage', UpdateMessageResult.fromJson, 'messages/$messageId', {
     if (topic != null) 'topic': RawParameter(topic.apiName),
     if (propagateMode != null) 'propagate_mode': RawParameter(propagateMode.toJson()),
-    if (sendNotificationToOldThread != null) 'send_notification_to_old_thread': sendNotificationToOldThread,
-    if (sendNotificationToNewThread != null) 'send_notification_to_new_thread': sendNotificationToNewThread,
+    'send_notification_to_old_thread': ?sendNotificationToOldThread,
+    'send_notification_to_new_thread': ?sendNotificationToNewThread,
     if (content != null) 'content': RawParameter(content),
     if (prevContentSha256 != null) 'prev_content_sha256': RawParameter(prevContentSha256),
-    if (streamId != null) 'stream_id': streamId,
+    'stream_id': ?streamId,
   });
 }
 
@@ -253,6 +254,45 @@ Future<void> deleteMessage(
   required int messageId,
 }) {
   return connection.delete('deleteMessage', (_) {}, 'messages/$messageId', {});
+}
+
+/// https://zulip.com/api/report-message
+Future<void> reportMessage(ApiConnection connection, {
+  required int messageId,
+  required String reportType,
+  String? description,
+}) {
+  return connection.post('reportMessage', (_) {}, 'messages/$messageId/report', {
+    'report_type': RawParameter(reportType),
+    if (description != null) 'description': RawParameter(description),
+  });
+}
+
+/// The `report_type` value meaning "other", for [reportMessage].
+///
+/// https://zulip.com/api/report-message
+const kMessageReportTypeOther = 'other';
+
+/// The max length for a report-message description, in Unicode code points.
+///
+/// https://zulip.com/api/report-message#parameter-description
+const kMaxMessageReportDescriptionLength = 1000;
+
+/// The type of report to submit for [reportMessage].
+///
+/// Servers at feature level 435+ provide the report types as
+/// [InitialSnapshot.serverReportMessageTypes]; always use that when available.
+///
+/// https://zulip.com/api/report-message#parameter-report_type
+@JsonEnum(fieldRename: FieldRename.snake, alwaysCreate: true)
+enum LegacyReportMessageType {
+  spam,
+  harassment,
+  inappropriate,
+  norms,
+  other;
+
+  String toJson() => _$LegacyReportMessageTypeEnumMap[this]!;
 }
 
 /// https://zulip.com/api/upload-file
@@ -381,7 +421,7 @@ Future<UpdateMessageFlagsForNarrowResult> updateMessageFlagsForNarrow(ApiConnect
 }) {
   return connection.post('updateMessageFlagsForNarrow', UpdateMessageFlagsForNarrowResult.fromJson, 'messages/flags/narrow', {
     'anchor': RawParameter(anchor.toJson()),
-    if (includeAnchor != null) 'include_anchor': includeAnchor,
+    'include_anchor': ?includeAnchor,
     'num_before': numBefore,
     'num_after': numAfter,
     'narrow': resolveApiNarrowForServer(narrow, connection.zulipFeatureLevel!),

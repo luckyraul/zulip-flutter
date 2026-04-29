@@ -110,6 +110,12 @@ ThemeData zulipThemeData(BuildContext context) {
     ),
     colorScheme: colorScheme,
     scaffoldBackgroundColor: designVariables.mainBackground,
+    textSelectionTheme: TextSelectionThemeData(
+      // As in Figma:
+      //   https://www.figma.com/design/1JTNtYo9memgW7vV6d0ygq/Zulip-Mobile?node-id=11011-18859&m=dev
+      cursorColor: designVariables.textInput,
+      // TODO(design) selectionColor, selectionHandleColor?
+    ),
     tooltipTheme: const TooltipThemeData(preferBelow: false),
     bottomSheetTheme: BottomSheetThemeData(
       clipBehavior: Clip.antiAlias,
@@ -146,6 +152,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     bgMenuButtonActive: Colors.black.withValues(alpha: 0.05),
     bgMenuButtonSelected: Colors.white,
     bgMessageRegular: const HSLColor.fromAHSL(1, 0, 0, 1).toColor(),
+    bgSearchInput: const Color(0xffe3e3e3),
     bgTopBar: const Color(0xfff5f5f5),
     borderBar: Colors.black.withValues(alpha: 0.2),
     borderMenuButtonSelected: Colors.black.withValues(alpha: 0.2),
@@ -153,6 +160,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     btnBgAttHighIntInfoNormal: const Color(0xff3c6bff),
     btnBgAttHighIntWarningActive: const Color(0xffeba002),
     btnBgAttHighIntWarningNormal: const Color(0xfffebe3d),
+    btnBgAttLowIntDangerActive: const Color(0xffc0070a).withValues(alpha: 0.13),
+    btnBgAttMediumIntDangerActive: const Color(0xffe1392e).withValues(alpha: 0.23),
+    btnBgAttMediumIntDangerNormal: const Color(0xffe1392e).withValues(alpha: 0.13),
     btnBgAttMediumIntInfoActive: const Color(0xff3c6bff).withValues(alpha: 0.22),
     btnBgAttMediumIntInfoNormal: const Color(0xff3c6bff).withValues(alpha: 0.12),
     btnBgAttMediumIntWarningActive: const Color(0xffeba001).withValues(alpha: 0.28),
@@ -166,6 +176,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     btnLabelAttMediumIntWarning: const Color(0xff764607),
     btnShadowAttMed: const Color(0xff000000).withValues(alpha: 0.20),
     composeBoxBg: const Color(0xffffffff),
+    contextMenuBg: const Color(0xffffffff), // grey/900
+    contextMenuBorder: const Color(0xff9ea1ae), // grey/350
     contextMenuCancelText: const Color(0xff222222),
     contextMenuItemBg: const Color(0xff6159e1),
     contextMenuItemBgDanger: const Color(0xffc0070a), // TODO(#831) red/550
@@ -181,7 +193,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     fabLabel: const Color(0xfff1f3fe),
     fabLabelPressed: const Color(0xffeceefc),
     fabShadow: const Color(0xff2b0e8a).withValues(alpha: 0.4),
+    folderText: const Color(0xff596680),
     foreground: const Color(0xff000000),
+    groupIcon: const Color(0xff7199fe), // blue/350
     icon: const Color(0xff6159e1),
     iconSelected: const Color(0xff222222),
     labelCounterQuantity: const Color(0xff222222).withValues(alpha: 0.6),
@@ -212,10 +226,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
 
     statusOnline: Color(0xff46aa62),
     textInput: const Color(0xff000000),
-    title: const Color(0xff1a1a1a),
-    bgSearchInput: const Color(0xffe3e3e3),
     textMessage: const Color(0xff262626),
     textMessageMuted: const Color(0xff262626).withValues(alpha: 0.6),
+    title: const Color(0xff1a1a1a),
     channelColorSwatches: ChannelColorSwatches.light,
     avatarPlaceholderBg: const Color(0x33808080),
     avatarPlaceholderIcon: Colors.black.withValues(alpha: 0.5),
@@ -248,6 +261,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     bgMenuButtonActive: Colors.black.withValues(alpha: 0.2),
     bgMenuButtonSelected: Colors.black.withValues(alpha: 0.25),
     bgMessageRegular: const Color(0xff1d1d1d),
+    bgSearchInput: const Color(0xff313131),
     bgTopBar: const Color(0xff242424),
     borderBar: const Color(0xffffffff).withValues(alpha: 0.1),
     borderMenuButtonSelected: Colors.white.withValues(alpha: 0.1),
@@ -255,6 +269,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     btnBgAttHighIntInfoNormal: const Color(0xff1e41d3),
     btnBgAttHighIntWarningActive: const Color(0xffdb920d),
     btnBgAttHighIntWarningNormal: const Color(0xffdb920d),
+    btnBgAttLowIntDangerActive: const Color(0xfff34c3e).withValues(alpha: 0.17),
+    btnBgAttMediumIntDangerActive: const Color(0xfffd5f50).withValues(alpha: 0.12),
+    btnBgAttMediumIntDangerNormal: const Color(0xfffd5f50).withValues(alpha: 0.12),
     btnBgAttMediumIntInfoActive: const Color(0xff97b6fe).withValues(alpha: 0.12),
     btnBgAttMediumIntInfoNormal: const Color(0xff97b6fe).withValues(alpha: 0.12),
     btnBgAttMediumIntWarningActive: const Color(0xffdb920d).withValues(alpha: 0.12),
@@ -268,6 +285,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     btnLabelAttMediumIntWarning: const Color(0xfff8b325),
     btnShadowAttMed: const Color(0xffffffff).withValues(alpha: 0.21),
     composeBoxBg: const Color(0xff0f0f0f),
+    contextMenuBg: const Color(0xff11131e),
+    contextMenuBorder: const Color(0xff444754), // grey/650
     contextMenuCancelText: const Color(0xffffffff).withValues(alpha: 0.75),
     contextMenuItemBg: const Color(0xff7977fe),
     contextMenuItemBgDanger: const Color(0xffe1392e), // TODO(#831) red/450
@@ -283,7 +302,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     fabLabel: const Color(0xffeceefc),
     fabLabelPressed: const Color(0xffeceefc),
     fabShadow: const Color(0xff18171c),
+    folderText: const Color(0xff8793ab),
     foreground: const Color(0xffffffff),
+    groupIcon: const Color(0xff84a8fd), // blue/300
     icon: const Color(0xff7977fe),
     iconSelected: Colors.white.withValues(alpha: 0.8),
     labelCounterQuantity: const Color(0xffffffff).withValues(alpha: 0.7),
@@ -314,10 +335,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
 
     statusOnline: Color(0xff44bb66),
     textInput: const Color(0xffffffff).withValues(alpha: 0.9),
-    title: const Color(0xffffffff).withValues(alpha: 0.9),
-    bgSearchInput: const Color(0xff313131),
     textMessage: const Color(0xffffffff).withValues(alpha: 0.8),
     textMessageMuted: const Color(0xffffffff).withValues(alpha: 0.5),
+    title: const Color(0xffffffff).withValues(alpha: 0.9),
     channelColorSwatches: ChannelColorSwatches.dark,
     // TODO(design-dark) need proper dark-theme color (this is ad hoc)
     avatarPlaceholderBg: const Color(0x33cccccc),
@@ -359,6 +379,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.bgMenuButtonActive,
     required this.bgMenuButtonSelected,
     required this.bgMessageRegular,
+    required this.bgSearchInput,
     required this.bgTopBar,
     required this.borderBar,
     required this.borderMenuButtonSelected,
@@ -366,6 +387,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.btnBgAttHighIntInfoNormal,
     required this.btnBgAttHighIntWarningActive,
     required this.btnBgAttHighIntWarningNormal,
+    required this.btnBgAttLowIntDangerActive,
+    required this.btnBgAttMediumIntDangerActive,
+    required this.btnBgAttMediumIntDangerNormal,
     required this.btnBgAttMediumIntInfoActive,
     required this.btnBgAttMediumIntInfoNormal,
     required this.btnBgAttMediumIntWarningActive,
@@ -379,6 +403,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.btnLabelAttMediumIntWarning,
     required this.btnShadowAttMed,
     required this.composeBoxBg,
+    required this.contextMenuBg,
+    required this.contextMenuBorder,
     required this.contextMenuCancelText,
     required this.contextMenuItemBg,
     required this.contextMenuItemBgDanger,
@@ -389,12 +415,14 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.contextMenuItemText,
     required this.contextMenuItemTextDanger,
     required this.editorButtonPressedBg,
-    required this.foreground,
     required this.fabBg,
     required this.fabBgPressed,
     required this.fabLabel,
     required this.fabLabelPressed,
     required this.fabShadow,
+    required this.folderText,
+    required this.foreground,
+    required this.groupIcon,
     required this.icon,
     required this.iconSelected,
     required this.labelCounterQuantity,
@@ -416,10 +444,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     required this.statusIdle,
     required this.statusOnline,
     required this.textInput,
-    required this.title,
-    required this.bgSearchInput,
     required this.textMessage,
     required this.textMessageMuted,
+    required this.title,
     required this.channelColorSwatches,
     required this.avatarPlaceholderBg,
     required this.avatarPlaceholderIcon,
@@ -450,6 +477,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     return extension!;
   }
 
+  // Named variables from the Figma, but in camelCase.
   final Color background;
   final Color bannerBgIntDanger;
   final Color bannerBgIntInfo;
@@ -461,6 +489,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color bgMenuButtonActive;
   final Color bgMenuButtonSelected;
   final Color bgMessageRegular;
+  final Color bgSearchInput;
   final Color bgTopBar;
   final Color borderBar;
   final Color borderMenuButtonSelected;
@@ -468,6 +497,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color btnBgAttHighIntInfoNormal;
   final Color btnBgAttHighIntWarningActive;
   final Color btnBgAttHighIntWarningNormal;
+  final Color btnBgAttLowIntDangerActive;
+  final Color btnBgAttMediumIntDangerActive;
+  final Color btnBgAttMediumIntDangerNormal;
   final Color btnBgAttMediumIntInfoActive;
   final Color btnBgAttMediumIntInfoNormal;
   final Color btnBgAttMediumIntWarningActive;
@@ -481,6 +513,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color btnLabelAttMediumIntWarning;
   final Color btnShadowAttMed;
   final Color composeBoxBg;
+  final Color contextMenuBg;
+  final Color contextMenuBorder;
   final Color contextMenuCancelText;
   final Color contextMenuItemBg;
   final Color contextMenuItemBgDanger;
@@ -496,7 +530,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color fabLabel;
   final Color fabLabelPressed;
   final Color fabShadow;
+  final Color folderText;
   final Color foreground;
+  final Color groupIcon;
   final Color icon;
   final Color iconSelected;
   final Color labelCounterQuantity;
@@ -518,10 +554,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
   final Color statusIdle;
   final Color statusOnline;
   final Color textInput;
-  final Color title;
-  final Color bgSearchInput;
   final Color textMessage;
   final Color textMessageMuted;
+  final Color title;
 
   // Not exactly from the Figma design, but from Vlad anyway.
   final ChannelColorSwatches channelColorSwatches;
@@ -558,6 +593,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? bgMenuButtonActive,
     Color? bgMenuButtonSelected,
     Color? bgMessageRegular,
+    Color? bgSearchInput,
     Color? bgTopBar,
     Color? borderBar,
     Color? borderMenuButtonSelected,
@@ -565,6 +601,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? btnBgAttHighIntInfoNormal,
     Color? btnBgAttHighIntWarningActive,
     Color? btnBgAttHighIntWarningNormal,
+    Color? btnBgAttLowIntDangerActive,
+    Color? btnBgAttMediumIntDangerActive,
+    Color? btnBgAttMediumIntDangerNormal,
     Color? btnBgAttMediumIntInfoActive,
     Color? btnBgAttMediumIntInfoNormal,
     Color? btnBgAttMediumIntWarningActive,
@@ -578,6 +617,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? btnLabelAttMediumIntWarning,
     Color? btnShadowAttMed,
     Color? composeBoxBg,
+    Color? contextMenuBg,
+    Color? contextMenuBorder,
     Color? contextMenuCancelText,
     Color? contextMenuItemBg,
     Color? contextMenuItemBgDanger,
@@ -593,7 +634,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? fabLabel,
     Color? fabLabelPressed,
     Color? fabShadow,
+    Color? folderText,
     Color? foreground,
+    Color? groupIcon,
     Color? icon,
     Color? iconSelected,
     Color? labelCounterQuantity,
@@ -615,10 +658,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
     Color? statusIdle,
     Color? statusOnline,
     Color? textInput,
-    Color? title,
-    Color? bgSearchInput,
     Color? textMessage,
     Color? textMessageMuted,
+    Color? title,
     ChannelColorSwatches? channelColorSwatches,
     Color? avatarPlaceholderBg,
     Color? avatarPlaceholderIcon,
@@ -650,6 +692,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       bgMenuButtonActive: bgMenuButtonActive ?? this.bgMenuButtonActive,
       bgMenuButtonSelected: bgMenuButtonSelected ?? this.bgMenuButtonSelected,
       bgMessageRegular: bgMessageRegular ?? this.bgMessageRegular,
+      bgSearchInput: bgSearchInput ?? this.bgSearchInput,
       bgTopBar: bgTopBar ?? this.bgTopBar,
       borderBar: borderBar ?? this.borderBar,
       borderMenuButtonSelected: borderMenuButtonSelected ?? this.borderMenuButtonSelected,
@@ -657,6 +700,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       btnBgAttHighIntInfoNormal: btnBgAttHighIntInfoNormal ?? this.btnBgAttHighIntInfoNormal,
       btnBgAttHighIntWarningActive: btnBgAttHighIntWarningActive ?? this.btnBgAttHighIntWarningActive,
       btnBgAttHighIntWarningNormal: btnBgAttHighIntWarningNormal ?? this.btnBgAttHighIntWarningNormal,
+      btnBgAttLowIntDangerActive: btnBgAttLowIntDangerActive ?? this.btnBgAttLowIntDangerActive,
+      btnBgAttMediumIntDangerActive: btnBgAttMediumIntDangerActive ?? this.btnBgAttMediumIntDangerActive,
+      btnBgAttMediumIntDangerNormal: btnBgAttMediumIntDangerNormal ?? this.btnBgAttMediumIntDangerNormal,
       btnBgAttMediumIntInfoActive: btnBgAttMediumIntInfoActive ?? this.btnBgAttMediumIntInfoActive,
       btnBgAttMediumIntInfoNormal: btnBgAttMediumIntInfoNormal ?? this.btnBgAttMediumIntInfoNormal,
       btnBgAttMediumIntWarningActive: btnBgAttMediumIntWarningActive ?? this.btnBgAttMediumIntWarningActive,
@@ -670,6 +716,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       btnLabelAttMediumIntWarning: btnLabelAttMediumIntWarning ?? this.btnLabelAttMediumIntWarning,
       btnShadowAttMed: btnShadowAttMed ?? this.btnShadowAttMed,
       composeBoxBg: composeBoxBg ?? this.composeBoxBg,
+      contextMenuBg: contextMenuBg ?? this.contextMenuBg,
+      contextMenuBorder: contextMenuBorder ?? this.contextMenuBorder,
       contextMenuCancelText: contextMenuCancelText ?? this.contextMenuCancelText,
       contextMenuItemBg: contextMenuItemBg ?? this.contextMenuItemBg,
       contextMenuItemBgDanger: contextMenuItemBgDanger ?? this.contextMenuItemBgDanger,
@@ -680,12 +728,14 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       contextMenuItemText: contextMenuItemText ?? this.contextMenuItemText,
       contextMenuItemTextDanger: contextMenuItemTextDanger ?? this.contextMenuItemTextDanger,
       editorButtonPressedBg: editorButtonPressedBg ?? this.editorButtonPressedBg,
-      foreground: foreground ?? this.foreground,
       fabBg: fabBg ?? this.fabBg,
       fabBgPressed: fabBgPressed ?? this.fabBgPressed,
       fabLabel: fabLabel ?? this.fabLabel,
       fabLabelPressed: fabLabelPressed ?? this.fabLabelPressed,
       fabShadow: fabShadow ?? this.fabShadow,
+      folderText: folderText ?? this.folderText,
+      foreground: foreground ?? this.foreground,
+      groupIcon: groupIcon ?? this.groupIcon,
       icon: icon ?? this.icon,
       iconSelected: iconSelected ?? this.iconSelected,
       labelCounterQuantity: labelCounterQuantity ?? this.labelCounterQuantity,
@@ -707,10 +757,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       statusIdle: statusIdle ?? this.statusIdle,
       statusOnline: statusOnline ?? this.statusOnline,
       textInput: textInput ?? this.textInput,
-      title: title ?? this.title,
-      bgSearchInput: bgSearchInput ?? this.bgSearchInput,
       textMessage: textMessage ?? this.textMessage,
       textMessageMuted: textMessageMuted ?? this.textMessageMuted,
+      title: title ?? this.title,
       channelColorSwatches: channelColorSwatches ?? this.channelColorSwatches,
       avatarPlaceholderBg: avatarPlaceholderBg ?? this.avatarPlaceholderBg,
       avatarPlaceholderIcon: avatarPlaceholderIcon ?? this.avatarPlaceholderIcon,
@@ -749,6 +798,7 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       bgMenuButtonActive: Color.lerp(bgMenuButtonActive, other.bgMenuButtonActive, t)!,
       bgMenuButtonSelected: Color.lerp(bgMenuButtonSelected, other.bgMenuButtonSelected, t)!,
       bgMessageRegular: Color.lerp(bgMessageRegular, other.bgMessageRegular, t)!,
+      bgSearchInput: Color.lerp(bgSearchInput, other.bgSearchInput, t)!,
       bgTopBar: Color.lerp(bgTopBar, other.bgTopBar, t)!,
       borderBar: Color.lerp(borderBar, other.borderBar, t)!,
       borderMenuButtonSelected: Color.lerp(borderMenuButtonSelected, other.borderMenuButtonSelected, t)!,
@@ -756,6 +806,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       btnBgAttHighIntInfoNormal: Color.lerp(btnBgAttHighIntInfoNormal, other.btnBgAttHighIntInfoNormal, t)!,
       btnBgAttHighIntWarningActive: Color.lerp(btnBgAttHighIntWarningActive, other.btnBgAttHighIntWarningActive, t)!,
       btnBgAttHighIntWarningNormal: Color.lerp(btnBgAttHighIntWarningNormal, other.btnBgAttHighIntWarningNormal, t)!,
+      btnBgAttLowIntDangerActive: Color.lerp(btnBgAttLowIntDangerActive, other.btnBgAttLowIntDangerActive, t)!,
+      btnBgAttMediumIntDangerActive: Color.lerp(btnBgAttMediumIntDangerActive, other.btnBgAttMediumIntDangerActive, t)!,
+      btnBgAttMediumIntDangerNormal: Color.lerp(btnBgAttMediumIntDangerNormal, other.btnBgAttMediumIntDangerNormal, t)!,
       btnBgAttMediumIntInfoActive: Color.lerp(btnBgAttMediumIntInfoActive, other.btnBgAttMediumIntInfoActive, t)!,
       btnBgAttMediumIntInfoNormal: Color.lerp(btnBgAttMediumIntInfoNormal, other.btnBgAttMediumIntInfoNormal, t)!,
       btnBgAttMediumIntWarningActive: Color.lerp(btnBgAttMediumIntWarningActive, other.btnBgAttMediumIntWarningActive, t)!,
@@ -769,6 +822,8 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       btnLabelAttMediumIntWarning: Color.lerp(btnLabelAttMediumIntWarning, other.btnLabelAttMediumIntWarning, t)!,
       btnShadowAttMed: Color.lerp(btnShadowAttMed, other.btnShadowAttMed, t)!,
       composeBoxBg: Color.lerp(composeBoxBg, other.composeBoxBg, t)!,
+      contextMenuBg: Color.lerp(contextMenuBg, other.contextMenuBg, t)!,
+      contextMenuBorder: Color.lerp(contextMenuBorder, other.contextMenuBorder, t)!,
       contextMenuCancelText: Color.lerp(contextMenuCancelText, other.contextMenuCancelText, t)!,
       contextMenuItemBg: Color.lerp(contextMenuItemBg, other.contextMenuItemBg, t)!,
       contextMenuItemBgDanger: Color.lerp(contextMenuItemBgDanger, other.contextMenuItemBgDanger, t)!,
@@ -779,12 +834,14 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       contextMenuItemText: Color.lerp(contextMenuItemText, other.contextMenuItemText, t)!,
       contextMenuItemTextDanger: Color.lerp(contextMenuItemTextDanger, other.contextMenuItemTextDanger, t)!,
       editorButtonPressedBg: Color.lerp(editorButtonPressedBg, other.editorButtonPressedBg, t)!,
-      foreground: Color.lerp(foreground, other.foreground, t)!,
       fabBg: Color.lerp(fabBg, other.fabBg, t)!,
       fabBgPressed: Color.lerp(fabBgPressed, other.fabBgPressed, t)!,
       fabLabel: Color.lerp(fabLabel, other.fabLabel, t)!,
       fabLabelPressed: Color.lerp(fabLabelPressed, other.fabLabelPressed, t)!,
       fabShadow: Color.lerp(fabShadow, other.fabShadow, t)!,
+      folderText: Color.lerp(folderText, other.folderText, t)!,
+      foreground: Color.lerp(foreground, other.foreground, t)!,
+      groupIcon: Color.lerp(groupIcon, other.groupIcon, t)!,
       icon: Color.lerp(icon, other.icon, t)!,
       iconSelected: Color.lerp(iconSelected, other.iconSelected, t)!,
       labelCounterQuantity: Color.lerp(labelCounterQuantity, other.labelCounterQuantity, t)!,
@@ -806,10 +863,9 @@ class DesignVariables extends ThemeExtension<DesignVariables> {
       statusIdle: Color.lerp(statusIdle, other.statusIdle, t)!,
       statusOnline: Color.lerp(statusOnline, other.statusOnline, t)!,
       textInput: Color.lerp(textInput, other.textInput, t)!,
-      title: Color.lerp(title, other.title, t)!,
-      bgSearchInput: Color.lerp(bgSearchInput, other.bgSearchInput, t)!,
       textMessage: Color.lerp(textMessage, other.textMessage, t)!,
       textMessageMuted: Color.lerp(textMessageMuted, other.textMessageMuted, t)!,
+      title: Color.lerp(title, other.title, t)!,
       channelColorSwatches: ChannelColorSwatches.lerp(channelColorSwatches, other.channelColorSwatches, t),
       avatarPlaceholderBg: Color.lerp(avatarPlaceholderBg, other.avatarPlaceholderBg, t)!,
       avatarPlaceholderIcon: Color.lerp(avatarPlaceholderIcon, other.avatarPlaceholderIcon, t)!,

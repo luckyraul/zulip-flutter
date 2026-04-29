@@ -25,6 +25,7 @@ import 'compose_box.dart';
 import 'content.dart';
 import 'emoji_reaction.dart';
 import 'icons.dart';
+import 'input.dart';
 import 'page.dart';
 import 'profile.dart';
 import 'scrolling.dart';
@@ -182,6 +183,19 @@ class MessageListPage extends StatefulWidget {
     required this.initNarrow,
     this.initAnchorMessageId,
   });
+
+  /// The maximum width for the messages
+  /// and for the content of the compose box and its banner.
+  ///
+  /// This helps with readability, eye strain, and user focus
+  /// when the screen is very wide.
+  // TODO(design) this can look a bit silly on very large tablets in landscape,
+  //   where the app bar and compose box stretch to full width, leaving
+  //   the messages and compose-box content in a centered ~half-width column:
+  //     https://github.com/zulip/zulip-flutter/pull/2225#issuecomment-4174040384
+  //   The right eventual solution might be to fit more UI on the screen,
+  //   such as sidebars (like in web), subject to breakpoints.
+  static const double maxContentWidth = 760;
 
   static AccountRoute<void> buildRoute({
     int? accountId,
@@ -452,9 +466,9 @@ abstract class _MessageListAppBar {
       case KeywordSearchNarrow():
         appBarBackgroundColor = null; // i.e., inherit
 
-      case ChannelNarrow(:final streamId):
-      case TopicNarrow(:final streamId):
-        final subscription = store.subscriptions[streamId];
+      case ChannelNarrow(:final channelId):
+      case TopicNarrow(:final channelId):
+        final subscription = store.subscriptions[channelId];
         appBarBackgroundColor =
           colorSwatchFor(context, subscription).barBackground;
         // All recipient headers will match this color; remove distracting line
@@ -471,21 +485,27 @@ abstract class _MessageListAppBar {
     List<Widget> actions = [];
     switch (narrow) {
       case CombinedFeedNarrow():
+        actions.add(IconButton(
+          icon: const Icon(ZulipIcons.search),
+          tooltip: zulipLocalizations.searchMessagesPageTitle,
+          onPressed: () => Navigator.push(context,
+            MessageListPage.buildRoute(context: context,
+              narrow: KeywordSearchNarrow('')))));
       case MentionsNarrow():
       case StarredMessagesNarrow():
       case KeywordSearchNarrow():
       case DmNarrow():
         break;
-      case ChannelNarrow(:final streamId):
-        actions.add(_TopicListButton(streamId: streamId));
-      case TopicNarrow(:final streamId):
+      case ChannelNarrow(:final channelId):
+        actions.add(_TopicListButton(channelId: channelId));
+      case TopicNarrow(:final channelId):
         actions.add(IconButton(
           icon: const Icon(ZulipIcons.message_feed),
           tooltip: zulipLocalizations.channelFeedButtonTooltip,
           onPressed: () => Navigator.push(context,
             MessageListPage.buildRoute(context: context,
-              narrow: ChannelNarrow(streamId)))));
-        actions.add(_TopicListButton(streamId: streamId));
+              narrow: ChannelNarrow(channelId)))));
+        actions.add(_TopicListButton(channelId: channelId));
     }
 
     return ZulipAppBar(
@@ -535,9 +555,9 @@ class _RevealedMutedMessagesProvider extends InheritedNotifier<RevealedMutedMess
 }
 
 class _TopicListButton extends StatelessWidget {
-  const _TopicListButton({required this.streamId});
+  const _TopicListButton({required this.channelId});
 
-  final int streamId;
+  final int channelId;
 
   @override
   Widget build(BuildContext context) {
@@ -547,7 +567,7 @@ class _TopicListButton extends StatelessWidget {
       tooltip: zulipLocalizations.topicsButtonTooltip,
       onPressed: () => Navigator.push(context,
         TopicListPage.buildRoute(context: context,
-          streamId: streamId)));
+          channelId: channelId)));
   }
 }
 
@@ -628,9 +648,9 @@ class MessageListAppBarTitle extends StatelessWidget {
       case StarredMessagesNarrow():
         return Text(zulipLocalizations.starredMessagesPageTitle);
 
-      case ChannelNarrow(:var streamId):
+      case ChannelNarrow(:var channelId):
         final store = PerAccountStoreWidget.of(context);
-        final stream = store.streams[streamId];
+        final stream = store.streams[channelId];
         final alignment = willCenterTitle
           ? Alignment.center
           : AlignmentDirectional.centerStart;
@@ -639,14 +659,14 @@ class MessageListAppBarTitle extends StatelessWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onLongPress: () {
-              showChannelActionSheet(context, channelId: streamId);
+              showChannelActionSheet(context, channelId: channelId);
             },
             child: Align(alignment: alignment,
               child: _buildStreamRow(context, stream: stream))));
 
-      case TopicNarrow(:var streamId, :var topic):
+      case TopicNarrow(:var channelId, :var topic):
         final store = PerAccountStoreWidget.of(context);
-        final stream = store.streams[streamId];
+        final stream = store.streams[channelId];
         final alignment = willCenterTitle
           ? Alignment.center
           : AlignmentDirectional.centerStart;
@@ -656,7 +676,7 @@ class MessageListAppBarTitle extends StatelessWidget {
             GestureDetector(
               behavior: HitTestBehavior.translucent,
               onLongPress: () {
-                showChannelActionSheet(context, channelId: streamId);
+                showChannelActionSheet(context, channelId: channelId);
               },
               child: Align(alignment: alignment,
                 child: _buildStreamRow(context, stream: stream))),
@@ -672,7 +692,7 @@ class MessageListAppBarTitle extends StatelessWidget {
                 // act on anyway.
                 assert(someMessage == null || narrow.containsMessage(someMessage)!);
                 showTopicActionSheet(context,
-                  channelId: streamId,
+                  channelId: channelId,
                   topic: topic,
                   someMessageIdInTopic: someMessage?.id);
               },
@@ -682,14 +702,28 @@ class MessageListAppBarTitle extends StatelessWidget {
 
       case DmNarrow(:var otherRecipientIds):
         final store = PerAccountStoreWidget.of(context);
+        final alignment = willCenterTitle
+          ? Alignment.center
+          : AlignmentDirectional.centerStart;
+
+        Widget child;
         if (otherRecipientIds.isEmpty) {
-          return Text(zulipLocalizations.dmsWithYourselfPageTitle);
+          child = Text(zulipLocalizations.dmsWithYourselfPageTitle);
         } else {
           final names = otherRecipientIds.map(store.userDisplayName);
           // TODO show avatars
-          return Text(
+          child = Text(
             zulipLocalizations.dmsWithOthersPageTitle(names.join(', ')));
         }
+
+        return SizedBox(
+          width: double.infinity,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onLongPress: () =>
+              showDmActionSheet(context, narrow: narrow as DmNarrow),
+            child: Align(alignment: alignment,
+              child: child)));
 
       case KeywordSearchNarrow():
         assert(!willCenterTitle);
@@ -746,43 +780,30 @@ class _SearchBarState extends State<_SearchBar> {
 
       autofocus: true,
       onSubmitted: _handleSubmitted,
-      cursorColor: designVariables.textInput,
-      style: TextStyle(
-        color: designVariables.textInput,
-        fontSize: 19,
-        height: 28 / 19,
-      ),
+      style: filledInputTextStyle(designVariables),
       textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: zulipLocalizations.searchMessagesHintText,
-        hintStyle: TextStyle(color: designVariables.labelSearchPrompt),
-        prefixIcon: Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 0, 8),
-          child: Icon(size: 24, ZulipIcons.search)),
-        prefixIconColor: designVariables.labelSearchPrompt,
-        prefixIconConstraints: BoxConstraints(),
-        suffixIcon: IconButton(
-          tooltip: zulipLocalizations.searchMessagesClearButtonTooltip,
-          onPressed: _clearInput,
-          // This and `suffixIconConstraints` allow 42px square touch target.
-          visualDensity: VisualDensity.compact,
-          highlightColor: Colors.transparent,
-          style: ButtonStyle(
-            padding: WidgetStatePropertyAll(EdgeInsets.zero),
-            splashFactory: NoSplash.splashFactory,
-          ),
-          iconSize: 24,
-          icon: Icon(ZulipIcons.remove)),
-        suffixIconColor: designVariables.textMessageMuted,
-        suffixIconConstraints: BoxConstraints(minWidth: 42, minHeight: 42),
-        contentPadding: const EdgeInsetsDirectional.symmetric(vertical: 7),
-        filled: true,
-        fillColor: designVariables.bgSearchInput,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none),
-      ));
+      decoration: baseFilledInputDecoration(designVariables)
+        .copyWith(
+          hintText: zulipLocalizations.searchMessagesHintText,
+          prefixIcon: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 0, 8),
+            child: Icon(size: 24, ZulipIcons.search)),
+          prefixIconColor: designVariables.labelSearchPrompt,
+          prefixIconConstraints: BoxConstraints(),
+          suffixIcon: IconButton(
+            tooltip: zulipLocalizations.searchMessagesClearButtonTooltip,
+            onPressed: _clearInput,
+            // This and `suffixIconConstraints` allow 42px square touch target.
+            visualDensity: VisualDensity.compact,
+            highlightColor: Colors.transparent,
+            style: ButtonStyle(
+              padding: WidgetStatePropertyAll(EdgeInsets.zero),
+              splashFactory: NoSplash.splashFactory,
+            ),
+            iconSize: 24,
+            icon: Icon(ZulipIcons.remove)),
+          suffixIconColor: designVariables.textMessageMuted,
+          suffixIconConstraints: BoxConstraints(minWidth: 42, minHeight: 42)));
   }
 }
 
@@ -859,7 +880,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
     var narrow = widget.narrow;
     if (narrow is TopicNarrow) {
       // Normalize topic name.  See #1717.
-      narrow = TopicNarrow(narrow.streamId,
+      narrow = TopicNarrow(narrow.channelId,
         store.processTopicLikeServer(narrow.topic),
         with_: narrow.with_);
       if (narrow != widget.narrow) {
@@ -1083,7 +1104,7 @@ class _MessageListState extends State<MessageList> with PerAccountStoreAwareStat
       // to position its padding over the device insets and centers content.
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
+          constraints: const BoxConstraints(maxWidth: MessageListPage.maxContentWidth),
           child: NotificationListener<ScrollMetricsNotification>(
             onNotification: _handleScrollMetricsNotification,
             child: Stack(
@@ -1307,8 +1328,8 @@ class _EmptyMessageListPlaceholder extends StatelessWidget {
         return PageBodyEmptyContentPlaceholder(
           header: zulipLocalizations.emptyMessageListCombinedFeed);
 
-      case ChannelNarrow(:final streamId) || TopicNarrow(:final streamId):
-        final channel = store.streams[streamId];
+      case ChannelNarrow(:final channelId) || TopicNarrow(:final channelId):
+        final channel = store.streams[channelId];
         if (channel == null) {
           return PageBodyEmptyContentPlaceholder(
             header: zulipLocalizations.emptyMessageListChannelUnavailable);
@@ -1970,6 +1991,8 @@ class DmRecipientHeader extends StatelessWidget {
         : () => Navigator.push(context,
             MessageListPage.buildRoute(context: context,
               narrow: DmNarrow.ofMessage(message, selfUserId: store.selfUserId))),
+      onLongPress: () => showDmActionSheet(context,
+        narrow: DmNarrow.ofMessage(message, selfUserId: store.selfUserId)),
       child: ColoredBox(
         color: messageListTheme.dmRecipientHeaderBg,
         child: Padding(
@@ -2206,10 +2229,15 @@ enum MessageTimestampStyle {
     }
   }
 
-  static final _timeFormat12 =                       DateFormat('h:mm aa');
+  // Since https://github.com/flutter/flutter/commit/3ea161909,
+  // DateFormat with 'j'-prefix pattern (used by locale default patterns below)
+  // emits U+202F (NARROW NO-BREAK SPACE) character as a separator between time
+  // and its period (AM/PM), instead of the space character.
+  // So, do the same for other 12-hour formats here.
+  static final _timeFormat12 =                       DateFormat('h:mm\u{202F}aa');
   static final _timeFormat24 =                       DateFormat('Hm');
   static final _timeFormatLocaleDefault =            DateFormat('jm');
-  static final _timeFormat12WithSeconds =            DateFormat('h:mm:ss aa');
+  static final _timeFormat12WithSeconds =            DateFormat('h:mm:ss\u{202F}aa');
   static final _timeFormat24WithSeconds =            DateFormat('Hms');
   static final _timeFormatLocaleDefaultWithSeconds = DateFormat('jms');
 
@@ -2233,8 +2261,7 @@ enum MessageTimestampStyle {
     required ZulipLocalizations zulipLocalizations,
     required TwentyFourHourTimeMode twentyFourHourTimeMode,
   }) {
-    final asDateTime =
-      DateTime.fromMillisecondsSinceEpoch(1000 * messageTimestamp);
+    final asDateTime = dateTimeFromTimestamp(messageTimestamp);
 
     switch (this) {
       case none:     return null;

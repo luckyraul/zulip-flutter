@@ -29,11 +29,13 @@ import 'icons.dart';
 import 'inset_shadow.dart';
 import 'message_list.dart';
 import 'page.dart';
+import 'profile.dart';
 import 'read_receipts.dart';
 import 'store.dart';
 import 'text.dart';
 import 'theme.dart';
 import 'topic_list.dart';
+import 'user.dart';
 
 /// Show an action sheet with scrollable menu buttons
 /// and an optional scrollable header.
@@ -45,9 +47,11 @@ void _showActionSheet(
   BuildContext pageContext, {
   Widget? header,
   bool headerScrollable = true,
+  bool shorterScrollableMaxHeight = false,
   required List<List<Widget>> buttonSections,
 }) {
   assert(header is! BottomSheetHeader || !header.outerVerticalPadding);
+  assert(headerScrollable || !shorterScrollableMaxHeight);
 
   // Could omit this if we need _showActionSheet outside a per-account context.
   final accountId = PerAccountStoreWidget.accountIdOf(pageContext);
@@ -74,12 +78,20 @@ void _showActionSheet(
               //   Needs support for separate properties like `flex-grow`
               //   and `flex-shrink`.
               flex: 1,
-              child: InsetShadowBox(
-                top: 8, bottom: 8,
-                color: designVariables.bgContextMenu,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: header)))
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: shorterScrollableMaxHeight
+                    // Chosen so we show "4-ish lines rather than 6-ish" in the
+                    // DM action sheet header with group participant pills:
+                    //   https://chat.zulip.org/#narrow/channel/48-mobile/topic/abbreviated.20headings/near/2371840
+                    ? 160
+                    : double.infinity),
+                child: InsetShadowBox(
+                  top: 8, bottom: 8,
+                  color: designVariables.bgContextMenu,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: header))))
           : Padding(
               padding: EdgeInsets.only(top: 16, bottom: 4),
               child: header);
@@ -383,6 +395,9 @@ class DraggableScrollableModalBottomSheet extends StatelessWidget {
 /// (Even if we did live-update the buttons, it's possible anyway that a user's
 /// action can race with a change that's already been applied on the server,
 /// because it takes some time for the server to report changes to us.)
+//
+// When defining button classes (subclasses of this class), try to
+// put definitions in the same order as the buttons appear in the action sheet.
 abstract class ActionSheetMenuItemButton extends StatelessWidget {
   const ActionSheetMenuItemButton({super.key, required this.pageContext});
 
@@ -494,7 +509,7 @@ void showChannelActionSheet(BuildContext context, {
 
   final messageListPageNarrow = messageListPageState?.narrow;
   final isOnChannelFeed = messageListPageNarrow is ChannelNarrow
-    && messageListPageNarrow.streamId == channelId;
+    && messageListPageNarrow.channelId == channelId;
 
   final unreadCount = store.unreads.countInChannelNarrow(channelId);
   final channel = store.streams[channelId];
@@ -504,6 +519,7 @@ void showChannelActionSheet(BuildContext context, {
         && channel != null && store.selfHasContentAccess(channel))
       [SubscribeButton(pageContext: pageContext, channelId: channelId)],
     [
+      // This section has frequent actions, with only short-term effects.
       if (unreadCount > 0)
         MarkChannelAsReadButton(pageContext: pageContext, channelId: channelId),
       if (showTopicListButton)
@@ -511,6 +527,14 @@ void showChannelActionSheet(BuildContext context, {
       if (!isOnChannelFeed)
         ChannelFeedButton(pageContext: pageContext, channelId: channelId),
       CopyChannelLinkButton(channelId: channelId, pageContext: pageContext)
+    ],
+    [
+      // This section has settings for the channel or subscription.
+      if (isSubscribed)
+        PinUnpinButton(pageContext: pageContext, channelId: channelId,
+          isPinned: channel.pinToTop),
+      // (It's harmless that this section can be empty; in that case
+      // it ends up rendering to nothing.)
     ],
     if (isSubscribed)
       [UnsubscribeButton(pageContext: pageContext, channelId: channelId)],
@@ -600,7 +624,7 @@ class TopicListButton extends ActionSheetMenuItemButton {
   @override
   void onPressed() {
     Navigator.push(pageContext,
-      TopicListPage.buildRoute(context: pageContext, streamId: channelId));
+      TopicListPage.buildRoute(context: pageContext, channelId: channelId));
   }
 }
 
@@ -653,6 +677,57 @@ class CopyChannelLinkButton extends ActionSheetMenuItemButton {
     PlatformActions.copyWithPopup(context: pageContext,
       successContent: Text(zulipLocalizations.successChannelLinkCopied),
       data: ClipboardData(text: narrowLink(store, ChannelNarrow(channelId)).toString()));
+  }
+}
+
+class PinUnpinButton extends ActionSheetMenuItemButton {
+  const PinUnpinButton({
+    super.key,
+    required this.channelId,
+    required this.isPinned,
+    required super.pageContext,
+  });
+
+  final int channelId;
+  final bool isPinned;
+
+  @override
+  IconData get icon => isPinned ? ZulipIcons.pin_remove : ZulipIcons.pin;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return isPinned
+      ? zulipLocalizations.actionSheetOptionUnpinChannel
+      : zulipLocalizations.actionSheetOptionPinChannel;
+  }
+
+  @override
+  void onPressed() async {
+    try {
+      await updateSubscriptionSettings(
+        PerAccountStoreWidget.of(pageContext).connection,
+        streamId: channelId,
+        property: SubscriptionProperty.pinToTop,
+        value: !isPinned);
+    } catch (e) {
+      if (!pageContext.mounted) return;
+
+      String? errorMessage;
+      switch (e) {
+        case ZulipApiException():
+          errorMessage = e.message;
+          // TODO(#741) specific messages for common errors, like network errors
+          //   (support with reusable code)
+        default:
+      }
+
+      final zulipLocalizations = ZulipLocalizations.of(pageContext);
+      showErrorDialog(context: pageContext,
+        title: isPinned
+          ? zulipLocalizations.errorUnpinChannelFailedTitle
+          : zulipLocalizations.errorPinChannelFailedTitle,
+        message: errorMessage);
+    }
   }
 }
 
@@ -778,12 +853,12 @@ void showTopicActionSheet(BuildContext context, {
     optionButtons.add(MarkTopicAsReadButton(
       channelId: channelId,
       topic: topic,
-      pageContext: context));
+      pageContext: pageContext));
   }
 
   optionButtons.add(CopyTopicLinkButton(
     narrow: TopicNarrow(channelId, topic, with_: someMessageIdInTopic),
-    pageContext: context));
+    pageContext: pageContext));
 
   final header = BottomSheetHeader(
     buildTitle: (baseStyle) => Text.rich(
@@ -897,7 +972,7 @@ class UserTopicUpdateButton extends ActionSheetMenuItemButton {
     try {
       await updateUserTopicCompat(
         PerAccountStoreWidget.of(pageContext).connection,
-        streamId: narrow.streamId,
+        channelId: narrow.channelId,
         topic: narrow.topic,
         visibilityPolicy: newVisibilityPolicy);
     } catch (e) {
@@ -1040,6 +1115,106 @@ class CopyTopicLinkButton extends ActionSheetMenuItemButton {
     PlatformActions.copyWithPopup(context: pageContext,
       successContent: Text(zulipLocalizations.successTopicLinkCopied),
       data: ClipboardData(text: narrowLink(store, narrow).toString()));
+  }
+}
+
+/// Show a sheet of actions you can take on a DM conversation.
+///
+/// Needs a [PageRoot] ancestor.
+void showDmActionSheet(BuildContext context, {required DmNarrow narrow}) {
+  final pageContext = PageRoot.contextOf(context);
+  final zulipLocalizations = ZulipLocalizations.of(context);
+  final store = PerAccountStoreWidget.of(pageContext);
+
+  final otherRecipientIds = narrow.otherRecipientIds;
+  final unreadCount = store.unreads.countInDmNarrow(narrow);
+
+  final buttonSections = [
+    // TODO(#1534) Button to show list of participants as a separate page?
+
+    [
+      if (otherRecipientIds.isEmpty)
+        ViewProfileButton(pageContext: pageContext,
+          userId: store.selfUserId)
+      else if (otherRecipientIds.length == 1)
+        ViewProfileButton(pageContext: pageContext,
+          userId: otherRecipientIds.single),
+
+      if (unreadCount > 0)
+        MarkDmConversationAsReadButton(pageContext: pageContext, narrow: narrow),
+    ],
+
+    // TODO(#2113) Mute/unmute button
+  ];
+
+  final header = BottomSheetHeader(
+    title: switch (otherRecipientIds) {
+      [] => zulipLocalizations.actionSheetTitleSelfDm,
+      [final otherUserId] =>
+        zulipLocalizations.actionSheetTitleDm(
+          store.userDisplayName(otherUserId, replaceIfMuted: false)),
+      [...] => zulipLocalizations.actionSheetTitleGroupDm,
+    },
+    buildMessage: otherRecipientIds.length > 1
+      ? (_) => Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: otherRecipientIds.map((userId) =>
+            UserChip(
+              userId: userId,
+              onTap: () => Navigator.push(pageContext,
+                ProfilePage.buildRoute(context: pageContext, userId: userId)))).toList())
+     : null);
+
+  final headerScrollable = otherRecipientIds.length > 1;
+  _showActionSheet(pageContext,
+    header: header,
+    headerScrollable: headerScrollable,
+    shorterScrollableMaxHeight: headerScrollable,
+    buttonSections: buttonSections);
+}
+
+class ViewProfileButton extends ActionSheetMenuItemButton {
+  const ViewProfileButton({
+    super.key,
+    required super.pageContext,
+    required this.userId,
+  });
+
+  final int userId;
+
+  @override IconData get icon => ZulipIcons.person;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return zulipLocalizations.actionSheetOptionViewProfile;
+  }
+
+  @override void onPressed() {
+    Navigator.push(pageContext,
+      ProfilePage.buildRoute(context: pageContext, userId: userId));
+  }
+}
+
+class MarkDmConversationAsReadButton extends ActionSheetMenuItemButton {
+  const MarkDmConversationAsReadButton({
+    super.key,
+    required super.pageContext,
+    required this.narrow,
+  });
+
+  final DmNarrow narrow;
+
+  @override IconData get icon => ZulipIcons.message_checked;
+
+  @override
+  String label(ZulipLocalizations zulipLocalizations) {
+    return zulipLocalizations.actionSheetOptionMarkDmConversationAsRead;
+  }
+
+  @override void onPressed() async {
+    await ZulipAction.markNarrowAsRead(pageContext, narrow);
   }
 }
 

@@ -18,7 +18,7 @@ Future<void> subscribeToChannel(ApiConnection connection, {
 }) {
   return connection.post('subscribeToChannel', (_) {}, 'users/me/subscriptions', {
     'subscriptions': subscriptions.map((name) => {'name': name}).toList(),
-    if (principals != null) 'principals': principals,
+    'principals': ?principals,
   });
 }
 
@@ -36,7 +36,22 @@ Future<void> unsubscribeFromChannel(ApiConnection connection, {
 }) {
   return connection.delete('unsubscribeFromChannel', (_) {}, 'users/me/subscriptions', {
     'subscriptions': subscriptions,
-    if (principals != null) 'principals': principals,
+    'principals': ?principals,
+  });
+}
+
+/// https://zulip.com/api/update-subscription-settings
+Future<void> updateSubscriptionSettings(ApiConnection connection, {
+  required int streamId,
+  required SubscriptionProperty property,
+  required Object value,
+}) {
+  return connection.post('updateSubscriptionSettings', (_) {}, 'users/me/subscriptions/properties', {
+    'subscription_data': [{
+      'stream_id': streamId,
+      'property': property,
+      'value': value,
+    }],
   });
 }
 
@@ -85,7 +100,7 @@ class GetChannelTopicsEntry {
 /// This encapsulates a server-feature check.
 // TODO(server-7): remove this and just use updateUserTopic
 Future<void> updateUserTopicCompat(ApiConnection connection, {
-  required int streamId,
+  required int channelId,
   required TopicName topic,
   required UserTopicVisibilityPolicy visibilityPolicy,
 }) {
@@ -98,13 +113,13 @@ Future<void> updateUserTopicCompat(ApiConnection connection, {
     };
     // https://zulip.com/api/mute-topic
     return connection.patch('muteTopic', (_) {}, 'users/me/subscriptions/muted_topics', {
-      'stream_id': streamId,
+      'stream_id': channelId,
       'topic': RawParameter(topic.apiName),
       'op': RawParameter(op),
     });
   } else {
     return updateUserTopic(connection,
-      streamId: streamId,
+      channelId: channelId,
       topic: topic,
       visibilityPolicy: visibilityPolicy);
   }
@@ -115,14 +130,14 @@ Future<void> updateUserTopicCompat(ApiConnection connection, {
 /// This binding only supports feature levels 170+.
 // TODO(server-7) remove FL 170+ mention in doc, and the related `assert`
 Future<void> updateUserTopic(ApiConnection connection, {
-  required int streamId,
+  required int channelId,
   required TopicName topic,
   required UserTopicVisibilityPolicy visibilityPolicy,
 }) {
   assert(visibilityPolicy != UserTopicVisibilityPolicy.unknown);
   assert(connection.zulipFeatureLevel! >= 170);
   return connection.post('updateUserTopic', (_) {}, 'user_topics', {
-    'stream_id': streamId,
+    'stream_id': channelId,
     'topic': RawParameter(topic.apiName),
     'visibility_policy': visibilityPolicy,
   });

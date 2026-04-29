@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'color.dart';
@@ -39,9 +40,11 @@ class ZulipWebUiKitButton extends StatelessWidget {
           WidgetState.pressed: designVariables.neutralButtonBg.withFadedAlpha(0.3),
           ~WidgetState.pressed: designVariables.neutralButtonBg.withAlpha(0),
         });
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.warning):
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.warning):
         throw UnimplementedError();
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.warning):
         return WidgetStateColor.fromMap({
@@ -53,7 +56,21 @@ class ZulipWebUiKitButton extends StatelessWidget {
           WidgetState.pressed: designVariables.btnBgAttHighIntWarningActive,
           ~WidgetState.pressed: designVariables.btnBgAttHighIntWarningNormal,
         });
+      case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.danger):
+        throw UnimplementedError();
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.danger):
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.btnBgAttLowIntDangerActive,
+          ~WidgetState.pressed: designVariables.btnBgAttLowIntDangerActive.withAlpha(0),
+        });
+      case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.danger):
+        return WidgetStateColor.fromMap({
+          WidgetState.pressed: designVariables.btnBgAttMediumIntDangerActive,
+          ~WidgetState.pressed: designVariables.btnBgAttMediumIntDangerNormal,
+        });
+      case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.danger):
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.info):
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.info):
         throw UnimplementedError();
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.info):
         return WidgetStateColor.fromMap({
@@ -73,15 +90,25 @@ class ZulipWebUiKitButton extends StatelessWidget {
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.neutral):
         // TODO nit: don't fade in pressed state
         return designVariables.neutralButtonLabel.withFadedAlpha(0.85);
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.neutral):
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.warning):
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.warning):
         throw UnimplementedError();
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.warning):
         return designVariables.btnLabelAttMediumIntWarning;
       case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.warning):
         return designVariables.btnLabelAttHighIntWarning;
+      case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.danger):
+        throw UnimplementedError();
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.danger):
+        return designVariables.btnLabelAttLowIntDanger;
+      case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.danger):
+        return designVariables.btnLabelAttMediumIntDanger;
+      case (ZulipWebUiKitButtonAttention.high, ZulipWebUiKitButtonIntent.danger):
       case (ZulipWebUiKitButtonAttention.minimal, ZulipWebUiKitButtonIntent.info):
+      case (ZulipWebUiKitButtonAttention.low, ZulipWebUiKitButtonIntent.info):
         throw UnimplementedError();
       case (ZulipWebUiKitButtonAttention.medium, ZulipWebUiKitButtonIntent.info):
         return designVariables.btnLabelAttMediumIntInfo;
@@ -116,6 +143,7 @@ class ZulipWebUiKitButton extends StatelessWidget {
   BorderSide _borderSide(DesignVariables designVariables) {
     switch (attention) {
       case ZulipWebUiKitButtonAttention.minimal:
+      case ZulipWebUiKitButtonAttention.low:
         return BorderSide.none;
       case ZulipWebUiKitButtonAttention.medium:
         // TODO inner shadow effect like `box-shadow: inset`, following Figma;
@@ -159,7 +187,7 @@ class ZulipWebUiKitButton extends StatelessWidget {
 
     final labelColor = _labelColor(designVariables);
 
-    return AnimatedScaleOnTap(
+    return AnimatedScaleOnPress(
       scaleEnd: 0.96,
       duration: Duration(milliseconds: 100),
       child: TextButton.icon(
@@ -200,10 +228,16 @@ class ZulipWebUiKitButton extends StatelessWidget {
   }
 }
 
+// TODO follow web's rename of "attention" to "variant":
+//   low, medium, high -> text, subtle, solid
+// See web PR:
+//   https://github.com/zulip/zulip/pull/37424
+// and discussion:
+//   https://chat.zulip.org/#narrow/channel/530-mobile-design/topic/Design.20of.20banner.20for.20unsupported.20server/near/2412680
 enum ZulipWebUiKitButtonAttention {
   high,
   medium,
-  // low,
+  low,
 
   /// An ad hoc value for the "Reveal message" button
   /// on a message from a muted sender:
@@ -214,7 +248,7 @@ enum ZulipWebUiKitButtonAttention {
 enum ZulipWebUiKitButtonIntent {
   neutral,
   warning,
-  // danger,
+  danger,
   info,
   // success,
   // brand,
@@ -273,10 +307,10 @@ class ZulipIconButton extends StatelessWidget {
   }
 }
 
-/// Apply [Transform.scale] to the child widget when tapped, and reset its scale
-/// when released, while animating the transitions.
-class AnimatedScaleOnTap extends StatefulWidget {
-  const AnimatedScaleOnTap({
+/// Apply [Transform.scale] to the child widget on primary pointer-down,
+/// and reset its scale on -up or -cancel, with animated transitions.
+class AnimatedScaleOnPress extends StatefulWidget {
+  const AnimatedScaleOnPress({
     super.key,
     required this.scaleEnd,
     required this.duration,
@@ -292,10 +326,10 @@ class AnimatedScaleOnTap extends StatefulWidget {
   final Widget child;
 
   @override
-  State<AnimatedScaleOnTap> createState() => _AnimatedScaleOnTapState();
+  State<AnimatedScaleOnPress> createState() => _AnimatedScaleOnPressState();
 }
 
-class _AnimatedScaleOnTapState extends State<AnimatedScaleOnTap> {
+class _AnimatedScaleOnPressState extends State<AnimatedScaleOnPress> {
   double _scale = 1;
 
   void _changeScale(double scale) {
@@ -304,13 +338,42 @@ class _AnimatedScaleOnTapState extends State<AnimatedScaleOnTap> {
     });
   }
 
+  void _checkBounds(PointerEvent event) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+
+    // The pointer may be out of the child widget's bounds. When this happens,
+    // the child should be full-size even if the primary pointer is down.
+    if (!box.size.contains(box.globalToLocal(event.position))) {
+      _changeScale(1.0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.translucent,
-      onTapDown: (_) =>  _changeScale(widget.scaleEnd),
-      onTapUp: (_) =>    _changeScale(1),
-      onTapCancel: () => _changeScale(1),
+      onPointerDown: (event) {
+        if ((event.buttons & kPrimaryButton) != 0) {
+          _changeScale(widget.scaleEnd);
+        }
+      },
+      onPointerUp: (event) {
+        if ((event.buttons & kPrimaryButton) == 0) {
+          // `.buttons` are the pointer buttons which are pressed
+          // immediately after the action that caused the event.
+          // When the primary button is up, the button should be full-size.
+          _changeScale(1);
+        }
+      },
+      onPointerCancel: (_) {
+        // Return child to full-size on system-level interruption
+        // (e.g., notification, app backgrounding).
+        _changeScale(1);
+      },
+      onPointerMove: (event) {
+        _checkBounds(event);
+      },
       child: AnimatedScale(
         scale: _scale,
         duration: widget.duration,
@@ -454,7 +517,7 @@ class ZulipMenuItemButton extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               spacing: itemSpacingAndEndPadding,
               children: [
-                if (toggle != null) toggle!,
+                ?toggle,
                 if (icon != null) Icon(icon!, color: _iconColor(designVariables)),
               ]))
         : null,
