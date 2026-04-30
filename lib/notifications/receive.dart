@@ -266,7 +266,8 @@ class NotificationService {
       // notifications, this device will potentially continue to get them too.)
       //
       // Just ignore the legacy notification.  // TODO(log)
-      return;
+      // TMP workaround to fix unsupported E2E for direct PUSH.
+      // return;
     }
 
     NotificationDisplayManager.onNotifPayload(data, account);

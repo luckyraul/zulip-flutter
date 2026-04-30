@@ -43,7 +43,7 @@ const kFirebaseOptionsIos = FirebaseOptions(
 );
 
 abstract class _ZulipFirebaseOptions {
-  static const appId = 'APP_ID';
+  static const appId = 'APPID';
   static const projectNumber = 'SENDERID';
   static const projectId = 'zulip-mygento';
   static const firebaseApiKey = 'APIKEY';

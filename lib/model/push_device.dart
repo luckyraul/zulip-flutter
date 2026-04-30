@@ -60,7 +60,7 @@ class PushDeviceManager extends PerAccountStoreBase {
   /// This is an entry in [devices].
   ClientDevice? get thisDevice => _devices[account.deviceId];
 
-  bool get _e2eeAvailable => zulipFeatureLevel >= 468; // TODO(server-12)
+  bool get _e2eeAvailable => false; // TMP workaround to fix unsupported E2E for direct PUSH. // zulipFeatureLevel >= 468; // TODO(server-12)
 
   void handleDeviceEvent(DeviceEvent event) {
     switch (event) {
