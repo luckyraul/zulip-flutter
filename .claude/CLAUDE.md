@@ -106,6 +106,9 @@ UI designs come from Figma (linked in issues). Match colors, padding, and font s
   Use this command: `flutter analyze --no-pub 2>&1 | head -20`
 - When working on an issue, don't try to look at the server/web implementation.
   Stick to the issue's spec and the API docs.
+  Exception: for questions about server behavior that the API docs
+  don't answer, and for work on API documentation or design itself,
+  do read the server code, in `../zulip` if present.
 
 
 ## Writing clear code
@@ -117,11 +120,23 @@ UI designs come from Figma (linked in issues). Match colors, padding, and font s
   (e.g., "// A device-update event acks the new key." before a `handleEvent` call).
 
 
+## Zulip chat links
+
+- When you encounter a chat.zulip.org narrow URL (in an issue, PR, or
+  user message), use the fetch-zulip-messages skill to read the
+  conversation. Don't use WebFetch; it can't access Zulip message
+  content.
+
+
 ## Using Git
 
 - **Use `@` instead of `HEAD`** —
   there may be a stray file named `HEAD`,
   which causes `fatal: ambiguous argument 'HEAD'` errors.
+
+- **Don't use `git -C <path>` to operate on this repo** —
+  it triggers a permission prompt.
+  Run plain `git <subcommand>` from the repository root instead.
 
 - **Always `git add` specific new files** —
   never use `git add -A` or `git add .`.

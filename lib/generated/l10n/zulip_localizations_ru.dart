@@ -277,6 +277,50 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
   String get errorDeleteMessageFailedTitle => 'Не удалось удалить сообщение';
 
   @override
+  String get actionSheetOptionReportMessage => 'Пожаловаться на сообщение';
+
+  @override
+  String get reportMessageDialogTitle => 'Пожаловаться на сообщение';
+
+  @override
+  String get reportMessageDescription =>
+      'Ваша жалоба будет направлена в закрытый канал модерации сообщений этой организации.';
+
+  @override
+  String get messageReportTypeSpam => 'Спам';
+
+  @override
+  String get messageReportTypeHarassment => 'Оскорбления';
+
+  @override
+  String get messageReportTypeInappropriate => 'Неприемлемое содержание';
+
+  @override
+  String get messageReportTypeNorms => 'Нарушение норм сообщества';
+
+  @override
+  String get messageReportTypeOther => 'Другая причина';
+
+  @override
+  String get reportMessageReasonLabel => 'Что не так с этим сообщением?';
+
+  @override
+  String get reportMessageDescriptionLabel => 'Можете добавить подробности?';
+
+  @override
+  String get reportMessageDescriptionRequired =>
+      'Предоставьте пояснения, пожалуйста.';
+
+  @override
+  String get reportMessageSubmitButton => 'Отправить';
+
+  @override
+  String get reportMessageSuccess => 'Жалоба отправлена';
+
+  @override
+  String get errorReportMessageFailedTitle => 'Не удалось отправить жалобу';
+
+  @override
   String get actionSheetOptionMarkTopicAsRead =>
       'Отметить тему как прочитанную';
 
@@ -798,7 +842,7 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get topicValidationErrorMandatoryButEmpty =>
-      'Темы обязательны в этой организации.';
+      'В этом канале темы обязательны.';
 
   @override
   String get errorContentNotInsertedTitle => 'Содержимое не вставлено';
@@ -860,6 +904,13 @@ class ZulipLocalizationsRu extends ZulipLocalizations {
 
   @override
   String get errorVideoPlayerFailed => 'Не удается воспроизвести видео.';
+
+  @override
+  String get errorVideoPlayerFailedTryBrowser =>
+      'Попробуйте открыть видео в браузере.';
+
+  @override
+  String get dialogOpenInBrowser => 'Открыть в браузере';
 
   @override
   String get serverUrlValidationErrorEmpty => 'Пожалуйста, введите URL-адрес.';

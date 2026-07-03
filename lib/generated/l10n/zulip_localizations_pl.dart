@@ -276,6 +276,50 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
       'Kasowanie wiadomości bez powodzenia';
 
   @override
+  String get actionSheetOptionReportMessage => 'Report message';
+
+  @override
+  String get reportMessageDialogTitle => 'Report message';
+
+  @override
+  String get reportMessageDescription =>
+      'Your report will be sent to the private moderation requests channel for this organization.';
+
+  @override
+  String get messageReportTypeSpam => 'Spam';
+
+  @override
+  String get messageReportTypeHarassment => 'Harassment';
+
+  @override
+  String get messageReportTypeInappropriate => 'Inappropriate content';
+
+  @override
+  String get messageReportTypeNorms => 'Violates community norms';
+
+  @override
+  String get messageReportTypeOther => 'Other reason';
+
+  @override
+  String get reportMessageReasonLabel =>
+      'What’s the problem with this message?';
+
+  @override
+  String get reportMessageDescriptionLabel => 'Can you provide more details?';
+
+  @override
+  String get reportMessageDescriptionRequired => 'Please provide details.';
+
+  @override
+  String get reportMessageSubmitButton => 'Submit';
+
+  @override
+  String get reportMessageSuccess => 'Message reported';
+
+  @override
+  String get errorReportMessageFailedTitle => 'Failed to report message';
+
+  @override
   String get actionSheetOptionMarkTopicAsRead =>
       'Oznacz wątek jako przeczytany';
 
@@ -857,6 +901,13 @@ class ZulipLocalizationsPl extends ZulipLocalizations {
 
   @override
   String get errorVideoPlayerFailed => 'Nie da rady odtworzyć wideo.';
+
+  @override
+  String get errorVideoPlayerFailedTryBrowser =>
+      'Try opening it in your browser instead.';
+
+  @override
+  String get dialogOpenInBrowser => 'Open in browser';
 
   @override
   String get serverUrlValidationErrorEmpty => 'Proszę podaj URL.';

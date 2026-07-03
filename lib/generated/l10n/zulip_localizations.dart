@@ -19,11 +19,13 @@ import 'zulip_localizations_ja.dart';
 import 'zulip_localizations_kk.dart';
 import 'zulip_localizations_lv.dart';
 import 'zulip_localizations_nb.dart';
+import 'zulip_localizations_nn.dart';
 import 'zulip_localizations_pl.dart';
 import 'zulip_localizations_pt.dart';
 import 'zulip_localizations_ru.dart';
 import 'zulip_localizations_sk.dart';
 import 'zulip_localizations_sl.dart';
+import 'zulip_localizations_so.dart';
 import 'zulip_localizations_uk.dart';
 import 'zulip_localizations_vi.dart';
 import 'zulip_localizations_zh.dart';
@@ -129,12 +131,14 @@ abstract class ZulipLocalizations {
     Locale('kk'),
     Locale('lv'),
     Locale('nb'),
+    Locale('nn'),
     Locale('pl'),
     Locale('pt'),
     Locale('pt', 'PT'),
     Locale('ru'),
     Locale('sk'),
     Locale('sl'),
+    Locale('so'),
     Locale('uk'),
     Locale('vi'),
     Locale('zh'),
@@ -593,6 +597,90 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Failed to delete message'**
   String get errorDeleteMessageFailedTitle;
+
+  /// Label for the 'Report message' button in the message action sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Report message'**
+  String get actionSheetOptionReportMessage;
+
+  /// Title for the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Report message'**
+  String get reportMessageDialogTitle;
+
+  /// Explanatory text shown under the title in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Your report will be sent to the private moderation requests channel for this organization.'**
+  String get reportMessageDescription;
+
+  /// Label for the 'Spam' report type in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get messageReportTypeSpam;
+
+  /// Label for the 'Harassment' report type in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get messageReportTypeHarassment;
+
+  /// Label for the 'Inappropriate content' report type in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate content'**
+  String get messageReportTypeInappropriate;
+
+  /// Label for the 'Violates community norms' report type in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Violates community norms'**
+  String get messageReportTypeNorms;
+
+  /// Label for the 'Other reason' report type in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Other reason'**
+  String get messageReportTypeOther;
+
+  /// Label text for the report reason dropdown in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'What’s the problem with this message?'**
+  String get reportMessageReasonLabel;
+
+  /// Label text for the description field in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Can you provide more details?'**
+  String get reportMessageDescriptionLabel;
+
+  /// Validation error shown in the report message dialog when the report type is "Other" and no description is provided.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide details.'**
+  String get reportMessageDescriptionRequired;
+
+  /// Label for the submit button in the report message dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get reportMessageSubmitButton;
+
+  /// Snackbar message shown after successfully reporting a message.
+  ///
+  /// In en, this message translates to:
+  /// **'Message reported'**
+  String get reportMessageSuccess;
+
+  /// Error title when reporting a message failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to report message'**
+  String get errorReportMessageFailedTitle;
 
   /// Option to mark a specific topic as read in the action sheet.
   ///
@@ -1427,7 +1515,7 @@ abstract class ZulipLocalizations {
   /// Topic validation error when topic is required but was empty.
   ///
   /// In en, this message translates to:
-  /// **'Topics are required in this organization.'**
+  /// **'Topics are required in this channel.'**
   String get topicValidationErrorMandatoryButEmpty;
 
   /// Title for error dialog when an attempt to insert rich content failed.
@@ -1517,6 +1605,18 @@ abstract class ZulipLocalizations {
   /// In en, this message translates to:
   /// **'Unable to play the video.'**
   String get errorVideoPlayerFailed;
+
+  /// Body of a dialog suggesting the user open a video in the browser, after the app's video player failed to play it.
+  ///
+  /// In en, this message translates to:
+  /// **'Try opening it in your browser instead.'**
+  String get errorVideoPlayerFailedTryBrowser;
+
+  /// Button label to confirm opening a link in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get dialogOpenInBrowser;
 
   /// Error message when URL is empty
   ///
@@ -2400,11 +2500,13 @@ class _ZulipLocalizationsDelegate
     'kk',
     'lv',
     'nb',
+    'nn',
     'pl',
     'pt',
     'ru',
     'sk',
     'sl',
+    'so',
     'uk',
     'vi',
     'zh',
@@ -2473,6 +2575,8 @@ ZulipLocalizations lookupZulipLocalizations(Locale locale) {
       return ZulipLocalizationsLv();
     case 'nb':
       return ZulipLocalizationsNb();
+    case 'nn':
+      return ZulipLocalizationsNn();
     case 'pl':
       return ZulipLocalizationsPl();
     case 'pt':
@@ -2483,6 +2587,8 @@ ZulipLocalizations lookupZulipLocalizations(Locale locale) {
       return ZulipLocalizationsSk();
     case 'sl':
       return ZulipLocalizationsSl();
+    case 'so':
+      return ZulipLocalizationsSo();
     case 'uk':
       return ZulipLocalizationsUk();
     case 'vi':

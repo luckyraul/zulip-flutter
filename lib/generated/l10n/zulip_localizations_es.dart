@@ -109,7 +109,7 @@ class ZulipLocalizationsEs extends ZulipLocalizations {
   String get actionSheetOptionMarkChannelAsRead => 'Marcar canal como leído';
 
   @override
-  String get actionSheetOptionCopyChannelLink => 'Copiar link al canal';
+  String get actionSheetOptionCopyChannelLink => 'Copiar enlace al canal';
 
   @override
   String get actionSheetOptionListOfTopics => 'Lista de temas';
@@ -272,6 +272,51 @@ class ZulipLocalizationsEs extends ZulipLocalizations {
 
   @override
   String get errorDeleteMessageFailedTitle => 'No se pudo eliminar el mensaje';
+
+  @override
+  String get actionSheetOptionReportMessage => 'Denunciar mensaje';
+
+  @override
+  String get reportMessageDialogTitle => 'Denunciar mensaje';
+
+  @override
+  String get reportMessageDescription =>
+      'Tu informe se enviará al canal privado de solicitudes de moderación de esta organización.';
+
+  @override
+  String get messageReportTypeSpam => 'Spam';
+
+  @override
+  String get messageReportTypeHarassment => 'Acoso';
+
+  @override
+  String get messageReportTypeInappropriate => 'Contenido inapropiado';
+
+  @override
+  String get messageReportTypeNorms => 'Incumple las normas de la comunidad';
+
+  @override
+  String get messageReportTypeOther => 'Otra razón';
+
+  @override
+  String get reportMessageReasonLabel => '¿Qué problema tiene este mensaje?';
+
+  @override
+  String get reportMessageDescriptionLabel => '¿Podrías dar más detalles?';
+
+  @override
+  String get reportMessageDescriptionRequired =>
+      'Por favor, facilita más detalles.';
+
+  @override
+  String get reportMessageSubmitButton => 'Enviar';
+
+  @override
+  String get reportMessageSuccess => 'Mensaje denunciado';
+
+  @override
+  String get errorReportMessageFailedTitle =>
+      'No se ha podido enviar el mensaje';
 
   @override
   String get actionSheetOptionMarkTopicAsRead => 'Marcar tema como leído';
@@ -793,7 +838,7 @@ class ZulipLocalizationsEs extends ZulipLocalizations {
 
   @override
   String get topicValidationErrorMandatoryButEmpty =>
-      'Los temas son obligatorios en esta organización.';
+      'En este canal es obligatorio indicar el tema.';
 
   @override
   String get errorContentNotInsertedTitle => 'Contenido no insertado';
@@ -858,15 +903,22 @@ class ZulipLocalizationsEs extends ZulipLocalizations {
   String get errorVideoPlayerFailed => 'No se ha podido reproducir el video.';
 
   @override
-  String get serverUrlValidationErrorEmpty => 'Por favor introduce una URL.';
+  String get errorVideoPlayerFailedTryBrowser =>
+      'Prueba a abrirlo en tu navegador.';
+
+  @override
+  String get dialogOpenInBrowser => 'Abrir en el navegador';
+
+  @override
+  String get serverUrlValidationErrorEmpty => 'Por favor, introduce una URL.';
 
   @override
   String get serverUrlValidationErrorInvalidUrl =>
-      'Por favor introduce una URL válida.';
+      'Por favor, introduce una URL válida.';
 
   @override
   String get serverUrlValidationErrorNoUseEmail =>
-      'Por favor introduce la ULR del servidor, no tu correo electrónico.';
+      'Por favor, introduce la ULR del servidor, no tu correo electrónico.';
 
   @override
   String get serverUrlValidationErrorUnsupportedScheme =>

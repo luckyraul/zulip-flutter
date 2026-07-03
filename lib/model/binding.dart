@@ -7,7 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart' as firebase_messagin
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart' as image_picker;
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
-import 'package:sodium_libs/sodium_libs.dart';
+import 'package:sodium/sodium.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:wakelock_plus/wakelock_plus.dart' as wakelock_plus;
 
@@ -168,11 +168,11 @@ abstract class ZulipBinding {
   /// or null if that hasn't resolved yet.
   PackageInfo? get syncPackageInfo;
 
-  /// Get the singleton for `package:sodium_libs` aka libsodium,
+  /// Get the singleton for `package:sodium` aka libsodium,
   /// used for cryptography.
   ///
   /// This wraps [SodiumInit.init].
-  Future<Sodium> sodiumInit();
+  FutureOr<Sodium> sodiumInit();
 
   /// Initialize Firebase, to use for notifications.
   ///
@@ -261,6 +261,17 @@ class IosDeviceInfo extends BaseDeviceInfo {
   ///
   /// See: https://developer.apple.com/documentation/uikit/uidevice/1620043-systemversion
   final String systemVersion;
+
+  /// The major component of the iOS version, from [systemVersion].
+  ///
+  /// Returns null if [systemVersion] can't be parsed.
+  ///
+  /// Callers should write e.g. `// TODO(ios-18)`
+  /// so we remember to simplify our code as our minimum iOS version advances.
+  // TODO(log) if can't be parsed
+  int? get majorVersion =>
+    // [IosDeviceInfo.systemVersion] is a dotted string, e.g. "17.5.1".
+    int.tryParse(systemVersion.split('.').first, radix: 10);
 
   const IosDeviceInfo({required this.systemVersion});
 }
@@ -489,7 +500,7 @@ class LiveZulipBinding extends ZulipBinding {
   }
 
   @override
-  Future<Sodium> sodiumInit() => SodiumInit.init();
+  FutureOr<Sodium> sodiumInit() => SodiumInit.init();
 
   @override
   Future<void> firebaseInitializeApp({
@@ -530,7 +541,7 @@ class LiveZulipBinding extends ZulipBinding {
     bool withReadStream = false,
     file_picker.FileType type = file_picker.FileType.any,
   }) async {
-    return file_picker.FilePicker.platform.pickFiles(
+    return file_picker.FilePicker.pickFiles(
       allowMultiple: allowMultiple,
       withReadStream: withReadStream,
       type: type,

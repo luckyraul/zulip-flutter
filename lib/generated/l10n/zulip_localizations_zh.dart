@@ -266,6 +266,50 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
   String get errorDeleteMessageFailedTitle => 'Failed to delete message';
 
   @override
+  String get actionSheetOptionReportMessage => 'Report message';
+
+  @override
+  String get reportMessageDialogTitle => 'Report message';
+
+  @override
+  String get reportMessageDescription =>
+      'Your report will be sent to the private moderation requests channel for this organization.';
+
+  @override
+  String get messageReportTypeSpam => 'Spam';
+
+  @override
+  String get messageReportTypeHarassment => 'Harassment';
+
+  @override
+  String get messageReportTypeInappropriate => 'Inappropriate content';
+
+  @override
+  String get messageReportTypeNorms => 'Violates community norms';
+
+  @override
+  String get messageReportTypeOther => 'Other reason';
+
+  @override
+  String get reportMessageReasonLabel =>
+      'What’s the problem with this message?';
+
+  @override
+  String get reportMessageDescriptionLabel => 'Can you provide more details?';
+
+  @override
+  String get reportMessageDescriptionRequired => 'Please provide details.';
+
+  @override
+  String get reportMessageSubmitButton => 'Submit';
+
+  @override
+  String get reportMessageSuccess => 'Message reported';
+
+  @override
+  String get errorReportMessageFailedTitle => 'Failed to report message';
+
+  @override
   String get actionSheetOptionMarkTopicAsRead => 'Mark topic as read';
 
   @override
@@ -780,7 +824,7 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get topicValidationErrorMandatoryButEmpty =>
-      'Topics are required in this organization.';
+      'Topics are required in this channel.';
 
   @override
   String get errorContentNotInsertedTitle => 'Content not inserted';
@@ -842,6 +886,13 @@ class ZulipLocalizationsZh extends ZulipLocalizations {
 
   @override
   String get errorVideoPlayerFailed => 'Unable to play the video.';
+
+  @override
+  String get errorVideoPlayerFailedTryBrowser =>
+      'Try opening it in your browser instead.';
+
+  @override
+  String get dialogOpenInBrowser => 'Open in browser';
 
   @override
   String get serverUrlValidationErrorEmpty => 'Please enter a URL.';
@@ -1625,6 +1676,14 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get actionSheetOptionCopyTopicLink => '复制话题链接';
 
   @override
+  String actionSheetTitleDm(String user) {
+    return '与$user的私信';
+  }
+
+  @override
+  String get actionSheetTitleSelfDm => '与自己的私信';
+
+  @override
   String get errorWebAuthOperationalErrorTitle => '出现了一些问题';
 
   @override
@@ -1935,7 +1994,7 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
   String get emptyMessageListSearch => '没有搜索结果。';
 
   @override
-  String get messageListGroupYouWithYourself => '与自己的私信';
+  String get messageListGroupYouWithYourself => '与自己的消息';
 
   @override
   String get contentValidationErrorTooLong => '消息的长度不能超过10000个字符。';
@@ -2019,7 +2078,13 @@ class ZulipLocalizationsZhHansCn extends ZulipLocalizationsZh {
 
   @override
   String topicValidationErrorTooLong(int maxLength) {
-    return '话题长度不应该超过 60 个字符。';
+    String _temp0 = intl.Intl.pluralLogic(
+      maxLength,
+      locale: localeName,
+      other: '$maxLength 字符',
+      one: '1 character',
+    );
+    return '话题长度不应该大于$_temp0。';
   }
 
   @override

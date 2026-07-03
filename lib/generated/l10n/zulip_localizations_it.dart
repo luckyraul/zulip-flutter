@@ -277,6 +277,51 @@ class ZulipLocalizationsIt extends ZulipLocalizations {
       'Non è stato possibile eliminare il messaggio';
 
   @override
+  String get actionSheetOptionReportMessage => 'Segnala il messaggio';
+
+  @override
+  String get reportMessageDialogTitle => 'Segnala il messaggio';
+
+  @override
+  String get reportMessageDescription =>
+      'La tua segnalazione sarà inviata al canale privato delle richieste di moderazione di questa organizzazione.';
+
+  @override
+  String get messageReportTypeSpam => 'Spam';
+
+  @override
+  String get messageReportTypeHarassment => 'Harassment';
+
+  @override
+  String get messageReportTypeInappropriate => 'Contenuto inappropriato';
+
+  @override
+  String get messageReportTypeNorms => 'Viola le norme della comunità';
+
+  @override
+  String get messageReportTypeOther => 'Altro motivo';
+
+  @override
+  String get reportMessageReasonLabel =>
+      'Qual è il problema con questo messaggio?';
+
+  @override
+  String get reportMessageDescriptionLabel => 'Puoi fornire maggiori dettagli?';
+
+  @override
+  String get reportMessageDescriptionRequired => 'Please provide details.';
+
+  @override
+  String get reportMessageSubmitButton => 'Invia';
+
+  @override
+  String get reportMessageSuccess => 'Messaggio segnalato';
+
+  @override
+  String get errorReportMessageFailedTitle =>
+      'Non è stato possibile segnalare il messaggio';
+
+  @override
   String get actionSheetOptionMarkTopicAsRead =>
       'Segna l\'argomento come letto';
 
@@ -819,16 +864,16 @@ class ZulipLocalizationsIt extends ZulipLocalizations {
 
   @override
   String serverCompatBannerAdminMessage(String url, String zulipVersion) {
-    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please upgrade your server as soon as possible.';
+    return '$url sta usando la versione $zulipVersion di Zulip Server, che non è più supportata. Si prega di aggiornare il server al più presto.';
   }
 
   @override
   String serverCompatBannerUserMessage(String url, String zulipVersion) {
-    return '$url is running Zulip Server $zulipVersion, which is unsupported. Please contact your server administrator about upgrading.';
+    return '$url sta usando la versione $zulipVersion di Zulip Server, che non è più supportata. Contatta l\'amministratore del server per provvedere all\'aggiornamento.';
   }
 
   @override
-  String get serverCompatBannerDismissLabel => 'Dismiss';
+  String get serverCompatBannerDismissLabel => 'Ignora';
 
   @override
   String get serverCompatBannerLearnMoreLabel => 'Per saperne di più';
@@ -862,6 +907,13 @@ class ZulipLocalizationsIt extends ZulipLocalizations {
 
   @override
   String get errorVideoPlayerFailed => 'Impossibile riprodurre il video.';
+
+  @override
+  String get errorVideoPlayerFailedTryBrowser =>
+      'Try opening it in your browser instead.';
+
+  @override
+  String get dialogOpenInBrowser => 'Apri nel browser';
 
   @override
   String get serverUrlValidationErrorEmpty => 'Inserire un URL.';
